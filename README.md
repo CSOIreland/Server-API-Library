@@ -8,9 +8,9 @@ The system is powered by a lightweight engine and provides a modern, responsive 
 
 ## [Wiki](https://github.com/CSOIreland/Server-API-Library/wiki)
 The Wiki centrally hosts all the technicall and business information about the system:
-* [Installation Library](https://github.com/CSOIreland/Server-API-Library/wiki/Installation)
-* [API Library](https://github.com/CSOIreland/Server-API-Library/wiki/API)
-* [Developer Library](https://github.com/CSOIreland/Server-API-Library/wiki/Developer)
+* [Installation](https://github.com/CSOIreland/Server-API-Library/wiki/Server-API-Library-Installation)
+* [Server API Library](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library)
+* [Server API Library Template](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library-Template)
 
 ## [Issues](https://github.com/CSOIreland/Server-API-Library/issues/new/choose)
 Please raise a new Issue in GitHub if you wan to suggest an **Enhancement**, file a **Bug**, submit a **General Query** or report a **Security Vulnerability**.
