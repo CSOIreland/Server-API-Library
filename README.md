@@ -4,8 +4,6 @@
 # Server API Library
 Server API Library is a **Library** especially designed for National Statistical Institutes and Statistical Organisations, developed by the **CSO** (Central Statistics Office, Ireland) with the support of the **PcAxis** statistical community and the collaboration of the **Open Source** community.
 
-The system is powered by a lightweight engine and provides a modern, responsive and efficient Web interface and Web services.
-
 ## [Wiki](https://github.com/CSOIreland/Server-API-Library/wiki)
 The Wiki centrally hosts all the technicall and business information about the system:
 * [Installation](https://github.com/CSOIreland/Server-API-Library/wiki/Server-API-Library-Installation)
