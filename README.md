@@ -10,7 +10,7 @@ The Wiki centrally hosts all the technicall and business information about the *
 * [Server API Library](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library)
 * [Server API Library Template](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library-Template)
 
-## [Questions](https://github.com/CSOIreland/Server-API-Library/issues/new/choose)
+## [Questions](https://github.com/CSOIreland/Server-API-Library/issues/new)
 Please raise a new [Issues](https://github.com/CSOIreland/Server-API-Library/issues/new/choose) in GitHub if you want to suggest an **Enhancement**, file a **Bug**, submit a **General Query** or report a **Security Vulnerability**.
 
 ***
