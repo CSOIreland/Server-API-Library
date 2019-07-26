@@ -11,7 +11,7 @@ The Wiki centrally hosts all the technicall and business information about the *
 * [Server API Library Template](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library-Template)
 
 ## [Questions](https://github.com/CSOIreland/Server-API-Library/issues/new)
-Please raise a new [Issues](https://github.com/CSOIreland/Server-API-Library/issues/new/choose) in GitHub if you want to suggest an **Enhancement**, file a **Bug**, submit a **General Query** or report a **Security Vulnerability**.
+Please raise a new [Issues](https://github.com/CSOIreland/Server-API-Library/issues/new) in GitHub if you want to suggest an **Enhancement**, file a **Bug**, submit a **General Query** or report a **Security Vulnerability**.
 
 ***
 <img src="https://user-images.githubusercontent.com/5030226/60980383-47ccbf80-a32c-11e9-8572-3c234abcd9fb.png" Title="CSO" alt="CSO" width="24"> [Central Statistics Office, Ireland](https://www.cso.ie/)   
