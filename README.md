@@ -7,6 +7,7 @@
 ## [Wiki](https://github.com/CSOIreland/Server-API-Library/wiki)
 The Wiki centrally hosts all the technicall and business information about the **Server API Library**:
 * [Installation](https://github.com/CSOIreland/Server-API-Library/wiki/Server-API-Library-Installation)
+* [Configuration](https://github.com/CSOIreland/Server-API-Library/wiki/Configuration)
 * [Server API Library](https://github.com/CSOIreland/Server-API-Library/wiki/API-Library)
 * [Server API Test](https://github.com/CSOIreland/Server-API-Library/wiki/API-Test)
 
