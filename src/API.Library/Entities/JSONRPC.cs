@@ -8,6 +8,8 @@ using System.Configuration;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace API
 {
@@ -43,6 +45,16 @@ namespace API
         public static string success = ConfigurationManager.AppSettings["API_JSONRPC_SUCCESS"];
 
         /// <summary>
+        /// Authentication type
+        /// </summary>
+        private static string API_JSONRPC_AUTHENTICATION_TYPE = ConfigurationManager.AppSettings["API_JSONRPC_AUTHENTICATION_TYPE"];
+
+        /// <summary>
+        /// Mask parametrs 
+        /// </summary>
+        private static List<string> API_JSONRPC_MASK_PARAMETERS = (ConfigurationManager.AppSettings["API_JSONRPC_MASK_PARAMETERS"]).Split(',').ToList<string>();
+
+        /// <summary>
         /// Active Directory Domain
         /// </summary>
         private static string API_AD_DOMAIN = ConfigurationManager.AppSettings["API_AD_DOMAIN"];
@@ -56,11 +68,6 @@ namespace API
         /// Active Directory Password for Querying 
         /// </summary>
         private static string API_AD_PASSWORD = ConfigurationManager.AppSettings["API_AD_PASSWORD"];
-
-        /// <summary>
-        /// Authentication type
-        /// </summary>
-        private static string API_JSONRPC_AUTHENTICATION_TYPE = ConfigurationManager.AppSettings["API_JSONRPC_AUTHENTICATION_TYPE"];
 
         /// <summary>
         /// Windows Authentication constant
@@ -220,12 +227,14 @@ namespace API
             {
                 // Read the request from GET 
                 requestGET = context.Request.QueryString[JSONRPC_Container];
-                Log.Instance.Info("GET request: " + requestGET);
+                // Hide password from logging
+                Log.Instance.Info("GET request: " + MaskParameters(requestGET));
 
                 // Read the request from POST
                 StreamReader HttpReader = new StreamReader(context.Request.InputStream);
                 requestPOST = HttpReader.ReadToEnd();
-                Log.Instance.Info("POST request: " + requestPOST);
+                // Hide password from logging
+                Log.Instance.Info("POST request: " + MaskParameters(requestPOST));
             }
             catch (Exception e)
             {
@@ -600,13 +609,39 @@ namespace API
             apiRequest.ipAddress = Utility.IpAddress;
             apiRequest.userAgent = Utility.UserAgent;
 
-            Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
+            // Hide password from logs
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(apiRequest)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(JSONRPC_Request);
 
             //Invoke the API Method
             return methodInfo.Invoke(null, new object[] { apiRequest });
+        }
+
+        /// <summary>
+        /// Mask an input password
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private string MaskParameters(string input)
+        {
+            if (String.IsNullOrEmpty(input))
+            {
+                return "";
+            }
+            // Init the output
+            string output = input;
+
+            // Loop trough the parameters to mask
+            foreach (var param in API_JSONRPC_MASK_PARAMETERS)
+            {
+                // https://stackoverflow.com/questions/171480/regex-grabbing-values-between-quotation-marks
+                Log.Instance.Info("\"" + param + "\"\\s*:\\s*([\"])(?:(?=(\\\\?))\\2.)*?\\1");
+                output = Regex.Replace(output, "\"" + param + "\"\\s*:\\s*([\"])(?:(?=(\\\\?))\\2.)*?\\1", "\"" + param + "\": \"********\"", RegexOptions.IgnoreCase);
+            }
+
+            return output;
         }
 
         /// <summary>

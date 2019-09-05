@@ -17,7 +17,12 @@ namespace API
         private static readonly bool API_EMAIL_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_EMAIL_ENABLED"]);
 
         /// <summary>
-        /// Sender (it covers From and ReplyTo as well) 
+        /// NoReply email address
+        /// </summary>
+        private static readonly string API_EMAIL_MAIL_NOREPLY = ConfigurationManager.AppSettings["API_EMAIL_MAIL_NOREPLY"];
+
+        /// <summary>
+        /// Sender email address
         /// </summary>
         private static readonly string API_EMAIL_MAIL_SENDER = ConfigurationManager.AppSettings["API_EMAIL_MAIL_SENDER"];
 
@@ -29,7 +34,7 @@ namespace API
         /// <summary>
         /// Port number
         /// </summary>
-        private static readonly int API_EMAIL_SMTP_PORT = Convert.ToInt32(ConfigurationManager.AppSettings["API_EMAIL_SMTP_PORT"]);
+        private static readonly string API_EMAIL_SMTP_PORT = ConfigurationManager.AppSettings["API_EMAIL_SMTP_PORT"];
 
         /// <summary>
         /// Flag to indicate if SMTP authentication is required
@@ -66,6 +71,7 @@ namespace API
         public void Send()
         {
             Log.Instance.Info("Email Enabled: " + API_EMAIL_ENABLED);
+            Log.Instance.Info("Email NoReply: " + API_EMAIL_MAIL_NOREPLY);
             Log.Instance.Info("Email Sender: " + API_EMAIL_MAIL_SENDER);
             Log.Instance.Info("SMTP Server: " + API_EMAIL_SMTP_SERVER);
             Log.Instance.Info("SMTP Port: " + API_EMAIL_SMTP_PORT);
@@ -82,7 +88,7 @@ namespace API
             try
             {
                 // Initiate new SMTP Client
-                SmtpClient smtpClient = new SmtpClient(API_EMAIL_SMTP_SERVER, API_EMAIL_SMTP_PORT);
+                SmtpClient smtpClient = new SmtpClient(API_EMAIL_SMTP_SERVER, Convert.ToInt32(API_EMAIL_SMTP_PORT));
                 smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
 
                 if (API_EMAIL_SMTP_AUTHENTICATION
@@ -102,7 +108,7 @@ namespace API
 
                 // Override Sender, From, Reply To for security
                 this.ReplyToList.Clear();
-                this.ReplyToList.Add(new MailAddress(API_EMAIL_MAIL_SENDER));
+                this.ReplyToList.Add(new MailAddress(API_EMAIL_MAIL_NOREPLY));
                 this.From = new MailAddress(API_EMAIL_MAIL_SENDER);
                 this.Sender = new MailAddress(API_EMAIL_MAIL_SENDER);
 
