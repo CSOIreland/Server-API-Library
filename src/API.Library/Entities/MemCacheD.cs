@@ -733,14 +733,6 @@ namespace API
         /// <param name="validFor"></param>
         private static bool ValidateExpiry(ref DateTime expiresAt, ref TimeSpan validFor)
         {
-            // Cache cannot be in the past
-            if (expiresAt < DateTime.Now
-                || validFor.Ticks < 0)
-            {
-                Log.Instance.Info("WARNING: Cache Validity cannot be in the past");
-                return false;
-            }
-
             if (expiresAt == new DateTime(0))
             {
                 // Set Max if expiresAt is Default DateTime
@@ -750,6 +742,14 @@ namespace API
             {
                 // Set Max if validFor is 0
                 validFor = maxTimeSpan;
+            }
+
+            // Cache cannot be in the past
+            if (expiresAt < DateTime.Now
+                || validFor.Ticks < 0)
+            {
+                Log.Instance.Info("WARNING: Cache Validity cannot be in the past");
+                return false;
             }
 
             if (expiresAt > DateTime.Now.Add(maxTimeSpan))

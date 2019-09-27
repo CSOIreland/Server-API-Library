@@ -227,14 +227,10 @@ namespace API
             {
                 // Read the request from GET 
                 requestGET = context.Request.QueryString[JSONRPC_Container];
-                // Hide password from logging
-                Log.Instance.Info("GET request: " + MaskParameters(requestGET));
 
                 // Read the request from POST
                 StreamReader HttpReader = new StreamReader(context.Request.InputStream);
                 requestPOST = HttpReader.ReadToEnd();
-                // Hide password from logging
-                Log.Instance.Info("POST request: " + MaskParameters(requestPOST));
             }
             catch (Exception e)
             {
@@ -256,10 +252,12 @@ namespace API
             if (!string.IsNullOrWhiteSpace(requestPOST))
             {
                 request = requestPOST;
+                Log.Instance.Info("Request type: POST");
             }
             else
             {
                 request = requestGET;
+                Log.Instance.Info("Request type: GET");
             }
 
             JSONRPC_Request JSONRPC_Request = new JSONRPC_Request();
@@ -624,7 +622,7 @@ namespace API
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        private string MaskParameters(string input)
+        public static string MaskParameters(string input)
         {
             if (String.IsNullOrEmpty(input))
             {
@@ -637,8 +635,8 @@ namespace API
             foreach (var param in API_JSONRPC_MASK_PARAMETERS)
             {
                 // https://stackoverflow.com/questions/171480/regex-grabbing-values-between-quotation-marks
-                Log.Instance.Info("\"" + param + "\"\\s*:\\s*([\"])(?:(?=(\\\\?))\\2.)*?\\1");
-                output = Regex.Replace(output, "\"" + param + "\"\\s*:\\s*([\"])(?:(?=(\\\\?))\\2.)*?\\1", "\"" + param + "\": \"********\"", RegexOptions.IgnoreCase);
+                Log.Instance.Info("Masked parameter: " + param);
+                output = Regex.Replace(output, "\"" + param + "\"\\s*:\\s*\"(.*?[^\\\\])\"", "\"" + param + "\": \"********\"", RegexOptions.IgnoreCase);
             }
 
             return output;
