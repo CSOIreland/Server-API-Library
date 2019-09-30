@@ -5,7 +5,7 @@
 The **Server API Library** is a library of [C# (.NET)](https://docs.microsoft.com/en-us/dotnet/csharp/) namespaced methods with a **JSON-RPC** listener for building fast, efficient and modular **API** / **Web-Services**.
 
 ## [Wiki](https://github.com/CSOIreland/Server-API-Library/wiki)
-The Wiki centrally hosts all the technicall and business information about the **Server API Library**:
+The Wiki centrally hosts all the technical and business information about the **Server API Library**:
 
 * [Installation](https://github.com/CSOIreland/Server-API-Library/wiki/Server-API-Library-Installation)
 * [Configuration](https://github.com/CSOIreland/Server-API-Library/wiki/Configuration)
