@@ -125,12 +125,12 @@ namespace API
             if (result == null)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
-                this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
+                this.ParseError(ref context, JSONRPC_Request.id, error);
             }
             else if (result.error != null)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32099, message = result.error };
-                this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
+                this.ParseError(ref context, JSONRPC_Request.id, error);
             }
             else
             {
@@ -172,7 +172,7 @@ namespace API
         /// <param name="response"></param>
         /// <param name="id"></param>
         /// <param name="error"></param>
-        private void ParseError(ref HttpContext context, string id, JSONRPC_Error error)
+        private void ParseError(ref HttpContext context, object id, JSONRPC_Error error)
         {
             if (error.message == null)
                 switch (error.code.ToString())
@@ -275,12 +275,7 @@ namespace API
                 this.ParseError(ref context, null, error);
             }
 
-            // Validate the request
-            if (JSONRPC_Request.id == null)
-            {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32600 };
-                this.ParseError(ref context, null, error);
-            }
+            // N.B. JSONRPC_Request.id is recommended but optional anyway 
 
             // Validate the request
             if (JSONRPC_Request.jsonrpc == null
