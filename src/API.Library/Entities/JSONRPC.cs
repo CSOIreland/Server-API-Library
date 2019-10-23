@@ -22,17 +22,32 @@ namespace API
         /// <summary>
         /// JSON RPC version in use
         /// </summary>
-        private static string JSONRPC_Version = "2.0";
+        const string JSONRPC_Version = "2.0";
 
         /// <summary>
         ///  GET request parameter
         /// </summary>
-        private static string JSONRPC_Container = "data";
+        const string JSONRPC_Container = "data";
 
         /// <summary>
         /// Active Directory userPrincipal parameter
         /// </summary>
-        private static string JSONRPC_userPrincipal = "userPrincipal";
+        const string JSONRPC_userPrincipal = "userPrincipal";
+
+        /// <summary>
+        /// Windows Authentication constant
+        /// </summary>
+        const string AUTHENTICATION_TYPE_WINDOWS = "WINDOWS";
+
+        /// <summary>
+        /// Anonymous Authentication constant
+        /// </summary>
+        const string AUTHENTICATION_TYPE_ANONYMOUS = "ANONYMOUS";
+
+        /// <summary>
+        /// Any Authentication constant
+        /// </summary>
+        const string AUTHENTICATION_TYPE_ANY = "ANY";
 
         /// <summary>
         /// Active Directory userPrincipal
@@ -48,6 +63,11 @@ namespace API
         /// Authentication type
         /// </summary>
         private static string API_JSONRPC_AUTHENTICATION_TYPE = ConfigurationManager.AppSettings["API_JSONRPC_AUTHENTICATION_TYPE"];
+
+        /// <summary>
+        /// Stateless
+        /// </summary>
+        private static bool API_JSONRPC_STATELESS = Convert.ToBoolean(ConfigurationManager.AppSettings["API_JSONRPC_STATELESS"]);
 
         /// <summary>
         /// Mask parametrs 
@@ -68,21 +88,6 @@ namespace API
         /// Active Directory Password for Querying 
         /// </summary>
         private static string API_AD_PASSWORD = ConfigurationManager.AppSettings["API_AD_PASSWORD"];
-
-        /// <summary>
-        /// Windows Authentication constant
-        /// </summary>
-        private static string AUTHENTICATION_TYPE_WINDOWS = "WINDOWS";
-
-        /// <summary>
-        /// Anonymous Authentication constant
-        /// </summary>
-        private static string AUTHENTICATION_TYPE_ANONYMOUS = "ANONYMOUS";
-
-        /// <summary>
-        /// Any Authentication constant
-        /// </summary>
-        private static string AUTHENTICATION_TYPE_ANY = "ANY";
 
         /// <summary>
         /// Authenticaiton Types allowed
@@ -145,7 +150,7 @@ namespace API
                         id = JSONRPC_Request.id
                     };
                     // Output the JSON-RPC repsonse with JRaw data
-                    context.Response.Write(JsonConvert.SerializeObject(output));
+                    context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
                 }
                 else
                 {
@@ -156,7 +161,7 @@ namespace API
                         id = JSONRPC_Request.id
                     };
                     // Output the JSON-RPC repsonse
-                    context.Response.Write(JsonConvert.SerializeObject(output));
+                    context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
                 }
             }
 
@@ -207,7 +212,7 @@ namespace API
 
             Log.Instance.Info("IP: " + Utility.IpAddress + ", Error Code: " + error.code + ", Error Message: " + error.message);
             object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
-            context.Response.Write(JsonConvert.SerializeObject(output));
+            context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
             context.Response.End();
         }
 
@@ -265,7 +270,7 @@ namespace API
             try
             {
                 // Deserialize JSON to an Object dynamically
-                JSONRPC_Request = JsonConvert.DeserializeObject<JSONRPC_Request>(request);
+                JSONRPC_Request = Utility.JsonDeserialize_IgnoreLoopingReference<JSONRPC_Request>(request);
             }
             catch (Exception e)
             {
@@ -316,17 +321,7 @@ namespace API
         /// <param name="JSONRPC_Request"></param>
         private void Authenticate(ref HttpContext context, ref JSONRPC_Request JSONRPC_Request)
         {
-            Log.Instance.Info("Authentication Types Allowed: " + AUTHENTICATION_TYPE_WINDOWS + ", " + AUTHENTICATION_TYPE_ANONYMOUS + ", " + AUTHENTICATION_TYPE_ANY);
-            Log.Instance.Info("Authentication Type Selected: " + API_JSONRPC_AUTHENTICATION_TYPE);
-
-            // Validate the Authentication type
-            if (!AUTHENTICATION_TYPE_ALLOWED.Contains(API_JSONRPC_AUTHENTICATION_TYPE))
-            {
-                Log.Instance.Fatal("Invalid Authentication Type: " + API_JSONRPC_AUTHENTICATION_TYPE);
-
-                JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
-            }
+            Log.Instance.Info("Stateless: " + API_JSONRPC_STATELESS);
 
             // Get the username if any
             if (context.User.Identity.IsAuthenticated)
@@ -348,62 +343,93 @@ namespace API
             Log.Instance.Info("AD Username: " + API_AD_USERNAME);
             Log.Instance.Info("AD Password: ********"); // Hide API_AD_PASSWORD from logs
 
-            // Get the userPrincipal from Session if any
-            string sessionUserPrincipal = (string)(context.Session[JSONRPC_userPrincipal]);
-            if (String.IsNullOrEmpty(sessionUserPrincipal))
+            // Check if the request is Stateless
+            if (API_JSONRPC_STATELESS)
             {
-                // Process the Windows Authentication
-                if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_WINDOWS)
+                // Check for the cached userPrincipal
+                MemCachedD_Value userPricipalCache = MemCacheD.Get_BSO<dynamic>("API", "JSONRPC", "Authenticate", networkIdentity);
+                if (userPricipalCache.hasData)
                 {
-                    // Process the Windows Authentication
-                    if (!WindowsAuthentication(ref context, ref JSONRPC_Request))
-                    {
-                        JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                        this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
-                    }
+                    userPrincipal = userPricipalCache.data == null ? null : userPricipalCache.data;
+                    Log.Instance.Info("Authentication retrieved from Cache");
                 }
-                // Process the Anonymous Authentication
-                else if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_ANONYMOUS)
+                else
                 {
-                    // Process the Windows Authentication
-                    AnonymousAuthentication(ref context, ref JSONRPC_Request);
-                }
-                // Process Any Authentication
-                else if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_ANY)
-                {
-                    // Process the Any Authentication
-                    AnyAuthentication(ref context, ref JSONRPC_Request);
+                    AuthenticateByType(ref context, ref JSONRPC_Request);
+
+                    // Set the cache to expire at midnight
+                    MemCacheD.Store_BSO<dynamic>("API", "JSONRPC", "Authenticate", networkIdentity, userPrincipal, DateTime.Today.AddDays(1));
+                    Log.Instance.Info("Authentication stored in Cache");
                 }
             }
             else
             {
-                //Query Session for Authentication
-                userPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference(sessionUserPrincipal);
-
-                // Process the Windows Authentication
-                if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_WINDOWS)
+                // Check if a new Session has been instantiated
+                if (context.Session.IsNewSession)
                 {
-                    if (userPrincipal == null)
-                    {
-                        Log.Instance.Fatal("Undefined User Principal in the Session");
+                    // Call the SessionID to initiate the Session
+                    Log.Instance.Info("Session ID: " + context.Session.SessionID);
 
+                    AuthenticateByType(ref context, ref JSONRPC_Request);
+
+                    // Save the serialized userPrincipal in the Session
+                    context.Session[JSONRPC_userPrincipal] = Utility.JsonSerialize_IgnoreLoopingReference(userPrincipal);
+                    Log.Instance.Info("Authentication stored in Session");
+                }
+                else
+                {
+                    // Call the SessionID to initiate the Session
+                    Log.Instance.Info("Session ID: " + context.Session.SessionID);
+
+                    // Deserialise userPrincipal from Session
+                    userPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference((string)(context.Session[JSONRPC_userPrincipal]));
+                    Log.Instance.Info("Authentication retrieved from Session");
+                }
+            }
+
+            // Log userPrincipal
+            Log.Instance.Info("User Principal: " + Utility.JsonSerialize_IgnoreLoopingReference(userPrincipal));
+        }
+
+        /// <summary>
+        /// Authenticate the user by the relative Authentication Type
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="JSONRPC_Request"></param>
+        private void AuthenticateByType(ref HttpContext context, ref JSONRPC_Request JSONRPC_Request)
+        {
+            Log.Instance.Info("Authentication Types Allowed: " + AUTHENTICATION_TYPE_WINDOWS + ", " + AUTHENTICATION_TYPE_ANONYMOUS + ", " + AUTHENTICATION_TYPE_ANY);
+            Log.Instance.Info("Authentication Type Selected: " + API_JSONRPC_AUTHENTICATION_TYPE);
+
+            // Validate the Authentication type
+            if (!AUTHENTICATION_TYPE_ALLOWED.Contains(API_JSONRPC_AUTHENTICATION_TYPE))
+            {
+                Log.Instance.Fatal("Invalid Authentication Type: " + API_JSONRPC_AUTHENTICATION_TYPE);
+
+                JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
+                this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
+            }
+
+            switch (API_JSONRPC_AUTHENTICATION_TYPE)
+            {
+                case AUTHENTICATION_TYPE_ANY:
+                    // Process the Any Authentication
+                    AnyAuthentication(ref context, ref JSONRPC_Request);
+                    break;
+                case AUTHENTICATION_TYPE_WINDOWS:
+                    // Process the Windows Authentication
+                    if (!WindowsAuthentication(ref context, ref JSONRPC_Request))
+                    {
+                        // Return a JSONRPC erorr for security reason
                         JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
                         this.ParseError(ref context, JSONRPC_Request.id.ToString(), error);
                     }
-                }
-                // Process the Anonymous Authentication
-                else if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_ANONYMOUS)
-                {
-                    // Override userPrincipal for security
-                    userPrincipal = null;
-                }
-                // Process Any Authentication
-                else if (API_JSONRPC_AUTHENTICATION_TYPE == AUTHENTICATION_TYPE_ANY)
-                {
-                    // Do nothing
-                }
-
-                Log.Instance.Info("Authentication retrieved from the Session");
+                    break;
+                case AUTHENTICATION_TYPE_ANONYMOUS:
+                default:
+                    // Process the Windows Authentication
+                    AnonymousAuthentication(ref context, ref JSONRPC_Request);
+                    break;
             }
         }
 
@@ -414,6 +440,9 @@ namespace API
         /// <param name="JSONRPC_Request"></param>
         private Boolean WindowsAuthentication(ref HttpContext context, ref JSONRPC_Request JSONRPC_Request)
         {
+            // Override userPrincipal for security
+            userPrincipal = null;
+
             // Check the username exists
             if (string.IsNullOrEmpty(networkUsername))
             {
@@ -444,24 +473,16 @@ namespace API
                 }
 
                 userPrincipal = JSONRPC_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, networkUsername);
-                string userPrincipal_serialized = Utility.JsonSerialize_IgnoreLoopingReference(userPrincipal);
-                Log.Instance.Info("User Principal: " + userPrincipal_serialized);
-
                 if (userPrincipal == null)
                 {
-                    Log.Instance.Fatal("Undefined User Principal");
+                    Log.Instance.Fatal("Undefined User Principal against AD");
                     return false;
                 }
-
-                // Save the serialized userPrincipal in the Session
-                context.Session[JSONRPC_userPrincipal] = userPrincipal_serialized;
-
-                Log.Instance.Info("Authentication saved in the Session");
                 return true;
             }
             catch (Exception e)
             {
-                Log.Instance.Fatal("Unable to connect or query AD");
+                Log.Instance.Fatal("Unable to connect/query AD");
                 Log.Instance.Fatal(e);
                 return false;
             }
@@ -476,10 +497,6 @@ namespace API
         {
             // Override userPrincipal for security
             userPrincipal = null;
-            string userPrincipal_serialized = null;
-
-            // Override the serialized userPrincipal in the Session
-            context.Session[JSONRPC_userPrincipal] = userPrincipal_serialized;
         }
 
         /// <summary>
@@ -491,9 +508,8 @@ namespace API
         {
             // Override userPrincipal for security
             userPrincipal = null;
-            string userPrincipal_serialized = null;
 
-            // Check the username exists agains tthe domain
+            // Check the username exists agains the domain
             if (!string.IsNullOrEmpty(networkUsername) && !String.IsNullOrEmpty(API_AD_DOMAIN))
             {
                 // Query AD
@@ -514,21 +530,13 @@ namespace API
 
                     // Query AD and get the logged username
                     userPrincipal = JSONRPC_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, networkUsername);
-                    userPrincipal_serialized = Utility.JsonSerialize_IgnoreLoopingReference(userPrincipal);
-
-                    Log.Instance.Info("User Principal: " + userPrincipal_serialized);
                 }
                 catch (Exception e)
                 {
-                    Log.Instance.Fatal("Unable to connect or query AD");
+                    Log.Instance.Fatal("Unable to connect/query AD");
                     Log.Instance.Fatal(e);
                 }
             }
-
-            // Save the serialized userPrincipal in the Session
-            context.Session[JSONRPC_userPrincipal] = userPrincipal_serialized;
-
-            Log.Instance.Info("Authentication saved in the Session");
         }
 
         /// <summary>

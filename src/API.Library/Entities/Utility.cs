@@ -150,7 +150,7 @@ namespace API
         /// <returns></returns>
         public static string JsonSerialize_IgnoreLoopingReference(dynamic input)
         {
-            return JsonConvert.SerializeObject(input, Formatting.None, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto, ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
+            return JsonConvert.SerializeObject(input, Formatting.None, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None, ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
         }
 
         /// <summary>
@@ -160,7 +160,17 @@ namespace API
         /// <returns></returns>
         public static dynamic JsonDeserialize_IgnoreLoopingReference(string input)
         {
-            return JsonConvert.DeserializeObject<dynamic>(input, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+            return JsonConvert.DeserializeObject<dynamic>(input, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
+        }
+
+        /// <summary>
+        /// Deserialize from JSON ignoring looping references
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static dynamic JsonDeserialize_IgnoreLoopingReference<T>(string input)
+        {
+            return JsonConvert.DeserializeObject<T>(input, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
         }
 
         /// <summary>

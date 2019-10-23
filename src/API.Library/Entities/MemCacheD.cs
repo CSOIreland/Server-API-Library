@@ -333,7 +333,7 @@ namespace API
             try
             {
                 // The value must be serialised
-                string serializedValue = JsonConvert.SerializeObject(value);
+                string serializedValue = Utility.JsonSerialize_IgnoreLoopingReference(value);
 
                 bool isStored = false;
 
@@ -557,7 +557,7 @@ namespace API
                 {
                     Log.Instance.Info("Cache found: " + key);
                     // The value must be deserialised
-                    dynamic cache = JsonConvert.DeserializeObject(cacheSerialised);
+                    dynamic cache = Utility.JsonDeserialize_IgnoreLoopingReference(cacheSerialised);
 
                     DateTime cacheDateTime = (DateTime)cache.datetime;
                     DateTime cacheExpiresAt = (DateTime)cache.expiresAt;

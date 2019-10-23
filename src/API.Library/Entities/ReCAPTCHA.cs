@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Configuration;
 
 namespace API
 {
@@ -15,17 +16,17 @@ namespace API
         /// <summary>
         /// Flag to indicate if ReCAPTCHA is enabled
         /// </summary>
-        private static readonly bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(System.Web.Configuration.WebConfigurationManager.AppSettings["API_RECAPTCHA_ENABLED"]);
+        private static readonly bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_RECAPTCHA_ENABLED"]);
 
         /// <summary>
         /// URL
         /// </summary>
-        private static readonly string API_RECAPTCHA_URL = System.Web.Configuration.WebConfigurationManager.AppSettings["API_RECAPTCHA_URL"];
+        private static readonly string API_RECAPTCHA_URL = ConfigurationManager.AppSettings["API_RECAPTCHA_URL"];
 
         /// <summary>
         /// private key
         /// </summary>
-        private static readonly string API_RECAPTCHA_PRIVATE_KEY = System.Web.Configuration.WebConfigurationManager.AppSettings["API_RECAPTCHA_PRIVATE_KEY"];
+        private static readonly string API_RECAPTCHA_PRIVATE_KEY = ConfigurationManager.AppSettings["API_RECAPTCHA_PRIVATE_KEY"];
 
         #endregion
 
@@ -65,7 +66,7 @@ namespace API
                 // Validate the response against the server
                 var client = new WebClient();
                 var responseString = client.DownloadString(string.Format(API_RECAPTCHA_URL, API_RECAPTCHA_PRIVATE_KEY, encodedResponse));
-                var responseObject = JsonConvert.DeserializeObject<JObject>(responseString);
+                var responseObject = Utility.JsonDeserialize_IgnoreLoopingReference<JObject>(responseString);
                 var responseSuccess = (string)responseObject["success"];
 
                 Log.Instance.Info("Server Response: " + responseString);
