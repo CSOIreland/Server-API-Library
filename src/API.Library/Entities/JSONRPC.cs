@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.DirectoryServices.AccountManagement;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.SessionState;
-using System.Reflection;
-using System.IO;
-using System.DirectoryServices.AccountManagement;
-using System.Configuration;
-using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
 
 namespace API
 {
@@ -23,6 +23,11 @@ namespace API
         /// JSON RPC version in use
         /// </summary>
         const string JSONRPC_Version = "2.0";
+
+        /// <summary>
+        ///  JSON RPC mime-type
+        /// </summary>
+        const string JSONRPC_MimeType = "application/json";
 
         /// <summary>
         ///  GET request parameter
@@ -118,6 +123,12 @@ namespace API
         public void ProcessRequest(HttpContext context)
         {
             Log.Instance.Info("API Interface Opened");
+
+            // Set Mime-Type for the Content Type and override the Charset
+            context.Response.ContentType = JSONRPC_MimeType;
+            context.Response.Charset = null;
+            // Set CacheControl to no-cache
+            context.Response.CacheControl = "no-cache";
 
             // Deserialize and parse the JSON request into an Object dynamically
             JSONRPC_Request JSONRPC_Request = this.ParseRequest(ref context);
