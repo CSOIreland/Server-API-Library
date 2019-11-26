@@ -1,10 +1,9 @@
-﻿using System;
-using System.Configuration;
-using System.Collections.Generic;
-using System.Dynamic;
-using Newtonsoft.Json;
-using Enyim.Caching;
+﻿using Enyim.Caching;
 using Enyim.Caching.Memcached;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Dynamic;
 
 namespace API
 {
@@ -333,13 +332,18 @@ namespace API
             try
             {
                 // The value must be serialised
-                string serializedValue = Utility.JsonSerialize_IgnoreLoopingReference(value);
+                string cacheSerialised = Utility.JsonSerialize_IgnoreLoopingReference(value);
+                Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
+
+                // The value must be compressed
+                string cacheCompressed = Utility.GZipCompress(cacheSerialised);
+                Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
 
                 bool isStored = false;
 
                 // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
                 // validFor and expiresAt match each other
-                isStored = MemcachedClient.Store(StoreMode.Set, key, serializedValue, validFor);
+                isStored = MemcachedClient.Store(StoreMode.Set, key, cacheCompressed, validFor);
 
                 // Store Value by Key
                 if (isStored)
@@ -550,12 +554,18 @@ namespace API
 
             try
             {
-                // Get serialised cache by Key
-                string cacheSerialised = MemcachedClient.Get<string>(key);
+                // Get the compressed cache by Key
+                string cacheCompressed = MemcachedClient.Get<string>(key);
 
-                if (!String.IsNullOrEmpty(cacheSerialised))
+                if (!String.IsNullOrEmpty(cacheCompressed))
                 {
                     Log.Instance.Info("Cache found: " + key);
+                    Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
+
+                    // Decompress the cache
+                    string cacheSerialised = Utility.GZipDecompress(cacheCompressed);
+                    Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
+
                     // The value must be deserialised
                     dynamic cache = Utility.JsonDeserialize_IgnoreLoopingReference(cacheSerialised);
 

@@ -1,14 +1,16 @@
-﻿using System.Reflection;
-using log4net;
-using System.Text;
-using System.Security.Cryptography;
-using System;
-using System.Configuration;
-using System.Net;
-using System.Linq;
-using System.Net.Sockets;
+﻿using log4net;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Specialized;
+using System.Configuration;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Web;
 
 namespace API
@@ -230,6 +232,47 @@ namespace API
             }
         }
 
+        /// <summary>
+        /// Compress a UTF8 input string into Base64
+        /// </summary>
+        /// <param name="inputUTF8"></param>
+        /// <returns></returns>
+        public static string GZipCompress(string inputUTF8)
+        {
+            var byteInput = Encoding.UTF8.GetBytes(inputUTF8);
+
+            using (var msInput = new MemoryStream(byteInput))
+            using (var msOutput = new MemoryStream())
+            {
+                using (var stream = new GZipStream(msOutput, CompressionMode.Compress))
+                {
+                    msInput.CopyTo(stream);
+                }
+
+                return Convert.ToBase64String(msOutput.ToArray());
+            }
+        }
+
+        /// <summary>
+        /// Decompress a Base64 input string into UTF8
+        /// </summary>
+        /// <param name="inputBase64"></param>
+        /// <returns></returns>
+        public static string GZipDecompress(string inputBase64)
+        {
+            byte[] byteInput = Convert.FromBase64String(inputBase64);
+
+            using (var msInput = new MemoryStream(byteInput))
+            using (var msOutput = new MemoryStream())
+            {
+                using (var stream = new GZipStream(msInput, CompressionMode.Decompress))
+                {
+                    stream.CopyTo(msOutput);
+                }
+
+                return Encoding.UTF8.GetString(msOutput.ToArray());
+            }
+        }
         #endregion
     }
 }
