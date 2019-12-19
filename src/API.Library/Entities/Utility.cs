@@ -239,6 +239,11 @@ namespace API
         /// <returns></returns>
         public static string GZipCompress(string inputUTF8)
         {
+            if (String.IsNullOrEmpty(inputUTF8))
+            {
+                return inputUTF8;
+            }
+
             var byteInput = Encoding.UTF8.GetBytes(inputUTF8);
 
             using (var msInput = new MemoryStream(byteInput))
@@ -260,6 +265,11 @@ namespace API
         /// <returns></returns>
         public static string GZipDecompress(string inputBase64)
         {
+            if (String.IsNullOrEmpty(inputBase64))
+            {
+                return inputBase64;
+            }
+
             byte[] byteInput = Convert.FromBase64String(inputBase64);
 
             using (var msInput = new MemoryStream(byteInput))
