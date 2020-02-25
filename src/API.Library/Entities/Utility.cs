@@ -355,38 +355,46 @@ namespace API
         /// <returns></returns>
         public static string GetUserAcceptLanguage()
         {
-            List<string> acceptLanguages = HttpContext.Current.Request.UserLanguages.ToList<string>();
-            List<dynamic> outLanguages = new List<dynamic>();
-
-            if (acceptLanguages.Count() == 0)
+            try
             {
-                acceptLanguages.Add(CultureInfo.CurrentCulture.Name);
-            }
-            acceptLanguages.Add(CultureInfo.CurrentCulture.Name);
-            foreach (string al in acceptLanguages)
-            {
+                List<string> acceptLanguages = HttpContext.Current.Request.UserLanguages == null ? new List<string>() { CultureInfo.CurrentCulture.Name } : HttpContext.Current.Request.UserLanguages.ToList<string>();
+                List<dynamic> outLanguages = new List<dynamic>();
 
-                string[] bits = al.Split(';');
-                string[] ietf = bits[0].Split('-');
-                bool hasScript = ietf.Length == 3;
-                string q = "1.0";
-
-                if (bits.Count() > 1)
+                if (acceptLanguages.Count() == 0)
                 {
-                    string[] innerBits = bits[1].Split('=');
-                    q = innerBits.Count() > 1 ? innerBits[1] : "1.0";
+                    return null;
                 }
 
-                outLanguages.Add(new
+                foreach (string al in acceptLanguages)
                 {
-                    code = ietf[0],
-                    script = hasScript && ietf.Count() > 1 ? ietf[1] : null,
-                    region = hasScript && ietf.Count() > 2 ? ietf[2] : (ietf.Count() > 1 ? ietf[1] : null),
-                    quality = Convert.ToDouble(q)
-                });
-            }
 
-            return outLanguages.OrderByDescending(x => x.quality).FirstOrDefault().code;
+                    string[] bits = al.Split(';');
+                    string[] ietf = bits[0].Split('-');
+                    bool hasScript = ietf.Length == 3;
+                    string q = "1.0";
+
+                    if (bits.Count() > 1)
+                    {
+                        string[] innerBits = bits[1].Split('=');
+                        q = innerBits.Count() > 1 ? innerBits[1] : "1.0";
+                    }
+
+                    outLanguages.Add(new
+                    {
+                        code = ietf[0],
+                        script = hasScript && ietf.Count() > 1 ? ietf[1] : null,
+                        region = hasScript && ietf.Count() > 2 ? ietf[2] : (ietf.Count() > 1 ? ietf[1] : null),
+                        quality = Convert.ToDouble(q)
+                    });
+                }
+
+                return outLanguages.OrderByDescending(x => x.quality).FirstOrDefault().code;
+            }
+            catch (Exception)
+            {
+                //Do not trow nor log. Instead, return null if language cannot be detected
+                return null;
+            }
         }
         #endregion
     }
