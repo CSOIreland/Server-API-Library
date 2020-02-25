@@ -2,7 +2,7 @@
 [![GitHub Watches](https://img.shields.io/github/watchers/goncaloperes/Project-CodeIgniter-CMS.svg?style=social&label=Watch&maxAge=2592000)](https://github.com/goncaloperes/Project-CodeIgniter-CMS/watchers)
 
 # Server API Library
-The **Server API Library** is a library of [C# (.NET)](https://docs.microsoft.com/en-us/dotnet/csharp/) namespaced methods with a **JSON-RPC** listener for building fast, efficient and modular **API** / **Web-Services**.
+The **Server API Library** is a library of [C# (.NET)](https://docs.microsoft.com/en-us/dotnet/csharp/) namespaced methods with a [JSON-RPC](https://www.jsonrpc.org/specification) listener for building fast, efficient and modular **API** / **Web-Services**.
 
 ## [Wiki](https://github.com/CSOIreland/Server-API-Library/wiki)
 The Wiki centrally hosts all the technical and business information about the **Server API Library**:
