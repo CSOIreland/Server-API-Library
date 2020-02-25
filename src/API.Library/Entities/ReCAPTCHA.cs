@@ -1,8 +1,7 @@
-﻿using System.Net;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Configuration;
+using System.Net;
 
 namespace API
 {
@@ -87,7 +86,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                throw;
+                return false;
             }
         }
 

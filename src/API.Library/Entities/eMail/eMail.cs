@@ -68,7 +68,7 @@ namespace API
         /// Send an Email
         /// </summary>
         /// <returns></returns>
-        public void Send()
+        public bool Send()
         {
             Log.Instance.Info("Email Enabled: " + API_EMAIL_ENABLED);
             Log.Instance.Info("Email NoReply: " + API_EMAIL_MAIL_NOREPLY);
@@ -82,7 +82,7 @@ namespace API
 
             if (!API_EMAIL_ENABLED)
             {
-                return;
+                return false;
             }
 
             try
@@ -119,11 +119,12 @@ namespace API
                 smtpClient.Send(this);
 
                 Log.Instance.Info("eMail sent");
+                return true;
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                throw;
+                return false;
             }
         }
 

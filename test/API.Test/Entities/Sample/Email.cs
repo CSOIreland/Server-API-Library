@@ -58,14 +58,23 @@ namespace Sample
 
                 eMail.Body = eMail.ParseTemplate(Properties.Resources.eMail, listToParse);
 
-                //Send the eMail once ready
-                eMail.Send();
+                //Fire & Forget the email
+                if (eMail.Send())
+                {
+                    // Log a debug message to help yourself :-)
+                    Log.Instance.Debug("Email fired");
+                    // If all goes well, then return the agreed success message with the front-end developer
+                    output.data = JSONRPC.success;
+                }
+                else
+                {
+                    // Log a debug message to help yourself :-)
+                    Log.Instance.Debug("Something wrong with firing the email?!");
+                    // If all goes well, then return the agreed success message with the front-end developer
+                    output.error = "Something wrong with firing the email?!";
+                }
 
-                // If all goes well, then return the agreed success message with the front-end developer
-                output.data = "success";
 
-                // Log a debug message to help yourself :-)
-                Log.Instance.Debug("Email sent");
             }
             catch (Exception e)
             {

@@ -137,7 +137,7 @@ namespace API
             this.Authenticate(ref context, ref JSONRPC_Request);
 
             // Get results from the relevant method with the params
-            dynamic result = GetResult(ref context, JSONRPC_Request);
+            JSONRPC_Output result = GetResult(ref context, JSONRPC_Request);
             if (result == null)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
@@ -145,19 +145,19 @@ namespace API
             }
             else if (result.error != null)
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32099, message = result.error };
+                JSONRPC_Error error = new JSONRPC_Error { code = -32099, data = result.error };
                 this.ParseError(ref context, JSONRPC_Request.id, error);
             }
             else
             {
-                // Check if the request.data is already a JSON type casted as: new JRaw(data); 
+                // Check if the result.data is already a JSON type casted as: new JRaw(data); 
                 var jsonRaw = result.data as JRaw;
                 if (jsonRaw != null)
                 {
                     JSONRPC_API_ResponseDataJRaw output = new JSONRPC_API_ResponseDataJRaw
                     {
                         jsonrpc = JSONRPC_Request.jsonrpc,
-                        data = jsonRaw,
+                        result = jsonRaw,
                         id = JSONRPC_Request.id
                     };
                     // Output the JSON-RPC repsonse with JRaw data
@@ -168,7 +168,7 @@ namespace API
                     JSONRPC_API_ResponseData output = new JSONRPC_API_ResponseData
                     {
                         jsonrpc = JSONRPC_Request.jsonrpc,
-                        data = result.data,
+                        result = result.data,
                         id = JSONRPC_Request.id
                     };
                     // Output the JSON-RPC repsonse
@@ -181,8 +181,7 @@ namespace API
 
         /// <summary> 
         /// Parse the API error
-        /// From -32000 to -32098 reserved for implementation-defined errors.
-        /// -32099 reserved for application errors
+        /// From -32000 to -32099 reserved for implementation-defined errors.
         /// </summary>
         ///
         /// <param name="response"></param>
@@ -191,37 +190,40 @@ namespace API
         private void ParseError(ref HttpContext context, object id, JSONRPC_Error error)
         {
             if (error.message == null)
-                switch (error.code.ToString())
+                switch (error.code)
                 {
                     // Custom codes and messages
-                    case "-32000":
+                    case -32000:
                         error.message = "Invalid version";
                         break;
-                    case "-32002":
+                    case -32002:
                         error.message = "Invalid authentication";
+                        break;
+                    case -32099:
+                        error.message = "Application error";
                         break;
 
                     // Standard codes and messages
-                    case "-32700":
+                    case -32700:
                         error.message = "Parse error";
                         break;
-                    case "-32600":
+                    case -32600:
                         error.message = "Invalid request";
                         break;
-                    case "-32601":
+                    case -32601:
                         error.message = "Method not found";
                         break;
-                    case "-32602":
+                    case -32602:
                         error.message = "Invalid params";
                         break;
-                    case "-32603":
+                    case -32603:
                     default:
-                        error.code = "-32603";
+                        error.code = -32603;
                         error.message = "Internal error";
                         break;
                 }
 
-            Log.Instance.Info("IP: " + Utility.IpAddress + ", Error Code: " + error.code + ", Error Message: " + error.message);
+            Log.Instance.Info("IP: " + Utility.IpAddress + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
             object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
             context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
             context.Response.End();
@@ -747,12 +749,17 @@ namespace API
         /// <summary>
         /// JSON-RPC error code
         /// </summary>
-        public object code;
+        public int code;
 
         /// <summary>
         /// JSON-RPC error message
         /// </summary>
-        public object message;
+        public string message;
+
+        /// <summary>
+        /// JSON-RPC error data
+        /// </summary>
+        public dynamic data;
 
         #endregion
     }
@@ -828,9 +835,9 @@ namespace API
         public object jsonrpc { get; set; }
 
         /// <summary>
-        /// JSON-RPC data as object
+        /// JSON-RPC result as object
         /// </summary>
-        public object data { get; set; }
+        public object result { get; set; }
 
         /// <summary>
         /// JSON-RPC id
@@ -852,9 +859,9 @@ namespace API
         public object jsonrpc { get; set; }
 
         /// <summary>
-        /// JSON-RPC data as raw json
+        /// JSON-RPC result as raw json
         /// </summary>
-        public JRaw data { get; set; }
+        public JRaw result { get; set; }
 
         /// <summary>
         /// JSON-RPC id

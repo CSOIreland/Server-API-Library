@@ -1,8 +1,10 @@
 ﻿using log4net;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -203,7 +205,69 @@ namespace API
         }
 
         /// <summary>
-        /// Decode a base64 data into a UTF8 string
+        /// Encode a byte array into a base64 string
+        /// N.B. UFT8 in C# includes UTF16 too
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static string EncodeBase64FromByteArray(byte[] byteArray, string mimeType = null)
+        {
+            try
+            {
+                if (byteArray == null)
+                {
+                    return null;
+                }
+
+                if (String.IsNullOrEmpty(mimeType))
+                {
+                    return System.Convert.ToBase64String(byteArray);
+                }
+                else
+                {
+                    return "data:" + mimeType + ";base64," + System.Convert.ToBase64String(byteArray);
+                }
+            }
+            catch (Exception)
+            {
+                //Do not trow nor log. Instead, return null if data cannot be decoded
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Encode a string into a base64 string
+        /// N.B. UFT8 in C# includes UTF16 too
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static string EncodeBase64FromUTF8(string data, string mimeType = null)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(data))
+                {
+                    return null;
+                }
+
+                if (String.IsNullOrEmpty(mimeType))
+                {
+                    return System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(data));
+                }
+                else
+                {
+                    return "data:" + mimeType + ";base64," + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(data));
+                }
+            }
+            catch (Exception)
+            {
+                //Do not trow nor log. Instead, return null if data cannot be decoded
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Decode a base64 string into a UTF8 string
         /// N.B. UFT8 in C# includes UTF16 too
         /// </summary>
         /// <param name="data"></param>
@@ -217,10 +281,10 @@ namespace API
                     return null;
                 }
 
-                if (data.ToLower().Contains("base64,"))
+                if (data.ToLower().Contains(";base64,"))
                 {
                     // i.e. data:*/*;base64,cdsckdslfkdsfos
-                    data = data.Split(new[] { "base64," }, StringSplitOptions.None)[1];
+                    data = data.Split(new[] { ";base64," }, StringSplitOptions.None)[1];
                 }
 
                 return Encoding.UTF8.GetString(Convert.FromBase64String(data));
@@ -282,6 +346,47 @@ namespace API
 
                 return Encoding.UTF8.GetString(msOutput.ToArray());
             }
+        }
+
+        /// <summary>
+        /// Get the User's enviornment language from the http request Accept Languages
+        /// C# code reverse engineered from JS https://github.com/opentable/accept-language-parser/
+        /// </summary>
+        /// <returns></returns>
+        public static string GetUserAcceptLanguage()
+        {
+            List<string> acceptLanguages = HttpContext.Current.Request.UserLanguages.ToList<string>();
+            List<dynamic> outLanguages = new List<dynamic>();
+
+            if (acceptLanguages.Count() == 0)
+            {
+                acceptLanguages.Add(CultureInfo.CurrentCulture.Name);
+            }
+            acceptLanguages.Add(CultureInfo.CurrentCulture.Name);
+            foreach (string al in acceptLanguages)
+            {
+
+                string[] bits = al.Split(';');
+                string[] ietf = bits[0].Split('-');
+                bool hasScript = ietf.Length == 3;
+                string q = "1.0";
+
+                if (bits.Count() > 1)
+                {
+                    string[] innerBits = bits[1].Split('=');
+                    q = innerBits.Count() > 1 ? innerBits[1] : "1.0";
+                }
+
+                outLanguages.Add(new
+                {
+                    code = ietf[0],
+                    script = hasScript && ietf.Count() > 1 ? ietf[1] : null,
+                    region = hasScript && ietf.Count() > 2 ? ietf[2] : (ietf.Count() > 1 ? ietf[1] : null),
+                    quality = Convert.ToDouble(q)
+                });
+            }
+
+            return outLanguages.OrderByDescending(x => x.quality).FirstOrDefault().code;
         }
         #endregion
     }
