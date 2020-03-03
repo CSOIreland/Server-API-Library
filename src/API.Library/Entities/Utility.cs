@@ -109,6 +109,17 @@ namespace API
 
             try
             {
+                // check if this is a HTTP request
+                if (HttpContext.Current == null)
+                {
+                    // Look for the Network Host information
+                    IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+                    ipAddress = Convert.ToString(ipHostInfo.AddressList.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork));
+
+                    Log.Instance.Info("IP Address (IPHostEntry): " + ipAddress);
+                    return ipAddress;
+                }
+
                 // Look for the Server Variable HTTP_X_FORWARDED_FOR
                 ipAddress = HttpContext.Current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
                 if (IPAddress.TryParse(ipAddress, out ip))
@@ -125,12 +136,7 @@ namespace API
                     return ipAddress;
                 }
 
-                // Look for the Network Host information
-                IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-                ipAddress = Convert.ToString(ipHostInfo.AddressList.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork));
-
-                Log.Instance.Info("IP Address (IPHostEntry): " + ipAddress);
-                return ipAddress;
+                throw new Exception("IP Address not found");
             }
             catch (Exception e)
             {

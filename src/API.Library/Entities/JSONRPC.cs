@@ -60,6 +60,11 @@ namespace API
         private dynamic userPrincipal = null;
 
         /// <summary>
+        /// Maintenance flag
+        /// </summary>
+        public static bool maintenance = Convert.ToBoolean(ConfigurationManager.AppSettings["API_JSONRPC_MAINTENANCE"]);
+
+        /// <summary>
         /// Successfull response (case sensitive)
         /// </summary>
         public static string success = ConfigurationManager.AppSettings["API_JSONRPC_SUCCESS"];
@@ -70,7 +75,7 @@ namespace API
         private static string API_JSONRPC_AUTHENTICATION_TYPE = ConfigurationManager.AppSettings["API_JSONRPC_AUTHENTICATION_TYPE"];
 
         /// <summary>
-        /// Stateless
+        /// Stateless flag
         /// </summary>
         private static bool API_JSONRPC_STATELESS = Convert.ToBoolean(ConfigurationManager.AppSettings["API_JSONRPC_STATELESS"]);
 
@@ -129,6 +134,13 @@ namespace API
             context.Response.Charset = null;
             // Set CacheControl to no-cache
             context.Response.CacheControl = "no-cache";
+
+            // Check for the maintenance flag
+            if (maintenance)
+            {
+                JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance. \r\nPlease try again later." };
+                this.ParseError(ref context, null, error);
+            }
 
             // Deserialize and parse the JSON request into an Object dynamically
             JSONRPC_Request JSONRPC_Request = this.ParseRequest(ref context);
@@ -195,6 +207,9 @@ namespace API
                     // Custom codes and messages
                     case -32000:
                         error.message = "Invalid version";
+                        break;
+                    case -32001:
+                        error.message = "System maintenance";
                         break;
                     case -32002:
                         error.message = "Invalid authentication";
