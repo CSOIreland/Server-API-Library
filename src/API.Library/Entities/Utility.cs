@@ -150,7 +150,7 @@ namespace API
         /// </summary>
         private static string GetUserAgent()
         {
-            return HttpContext.Current.Request.UserAgent.ToString();
+            return HttpContext.Current == null ? "" : HttpContext.Current.Request.UserAgent.ToString();
         }
 
         /// <summary>
