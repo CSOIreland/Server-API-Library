@@ -135,15 +135,15 @@ namespace API
             // Set CacheControl to no-cache
             context.Response.CacheControl = "no-cache";
 
+            // Deserialize and parse the JSON request into an Object dynamically
+            JSONRPC_Request JSONRPC_Request = this.ParseRequest(ref context);
+
             // Check for the maintenance flag
             if (maintenance)
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance. \r\nPlease try again later." };
-                this.ParseError(ref context, null, error);
+                JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
+                this.ParseError(ref context, JSONRPC_Request.id, error);
             }
-
-            // Deserialize and parse the JSON request into an Object dynamically
-            JSONRPC_Request JSONRPC_Request = this.ParseRequest(ref context);
 
             // Authenticate and append credentials to the JSON request
             this.Authenticate(ref context, ref JSONRPC_Request);
