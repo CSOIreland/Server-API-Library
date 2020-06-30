@@ -1,5 +1,4 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub Watches](https://img.shields.io/github/watchers/goncaloperes/Project-CodeIgniter-CMS.svg?style=social&label=Watch&maxAge=2592000)](https://github.com/goncaloperes/Project-CodeIgniter-CMS/watchers)
 
 # Server API Library
 The **Server API Library** is a library of [C# (.NET)](https://docs.microsoft.com/en-us/dotnet/csharp/) namespaced methods with a [JSON-RPC](https://www.jsonrpc.org/specification) and [RESTful](https://en.wikipedia.org/wiki/Representational_state_transfer) listener for building fast, efficient and modular **API** / **Web-Services**.
