@@ -34,12 +34,16 @@ namespace Sample
                 {
                     // Test  as null
                     output.data = null;
+                    // Test  as success
+                    output.data = JSONRPC.success;
                     // Test data as string
                     output.data = "Place your data here, either as an Object, String, Int, JRaw... anything you need and the API will take care of converting and streaming anything";
                     // Test data as object
                     output.data = new { test = 123 };
                     // Test data as JRaw (json string)
                     output.data = new JRaw("{\"test\":123}");
+                    // Test data as your input
+                    output.data = apiRequest;
                     // Log a debug message to help yourself :-)
                     Log.Instance.Debug("Place your debug log-message here");
                 }

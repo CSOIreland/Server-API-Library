@@ -273,6 +273,35 @@ namespace API
         }
 
         /// <summary>
+        ///  Decode a base64 string into a byte array
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static byte[] DecodeBase64ToByteArray(string data)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(data))
+                {
+                    return null;
+                }
+
+                if (data.Contains(";base64,"))
+                {
+                    // i.e. data:*/*;base64,cdsckdslfkdsfos
+                    data = data.Split(new[] { ";base64," }, StringSplitOptions.None)[1];
+                }
+
+                return Convert.FromBase64String(data);
+            }
+            catch (Exception)
+            {
+                //Do not trow nor log. Instead, return null if data cannot be decoded
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Decode a base64 string into a UTF8 string
         /// N.B. UFT8 in C# includes UTF16 too
         /// </summary>
@@ -287,7 +316,7 @@ namespace API
                     return null;
                 }
 
-                if (data.ToLower().Contains(";base64,"))
+                if (data.Contains(";base64,"))
                 {
                     // i.e. data:*/*;base64,cdsckdslfkdsfos
                     data = data.Split(new[] { ";base64," }, StringSplitOptions.None)[1];

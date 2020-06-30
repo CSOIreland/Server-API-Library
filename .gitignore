@@ -6,3 +6,4 @@
 /test/API.Test/obj
 /test/API.Test/Logs
 /test/API.Test/API.Test.csproj.user
+/src/API.Library/API.Library.csproj.user
