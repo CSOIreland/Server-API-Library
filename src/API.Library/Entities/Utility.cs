@@ -431,6 +431,42 @@ namespace API
                 return null;
             }
         }
+
+        /// <summary>
+        /// Get the HTTP request for the GET method
+        /// </summary>
+        /// <returns></returns>
+        public static NameValueCollection HttpGET()
+        {
+            try
+            {
+                // Read the request from GET 
+                return HttpContext.Current.Request.QueryString;
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Info(e);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get the HTTP request for the POST method
+        /// </summary>
+        /// <returns></returns>
+        public static string HttpPOST()
+        {
+            try
+            {
+                // Read the request from POST
+                return new StreamReader(HttpContext.Current.Request.InputStream).ReadToEnd();
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Info(e);
+                return null;
+            }
+        }
         #endregion
     }
 }

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -25,7 +24,7 @@ namespace API
         /// <summary>
         ///  GET request parameter
         /// </summary>
-        internal const string JSONRPC_Container = "data";
+        internal const string JSONRPC_GETparam = "data";
 
         /// <summary>
         ///  JSON-stat mimetype
@@ -175,43 +174,32 @@ namespace API
         {
             // Initialise requests
             string request = null;
-            string requestGET = null;
-            string requestPOST = null;
+            string DATArequest = null;
+            string POSTrequest = null;
 
-            try
-            {
-                // Read the request from GET 
-                requestGET = context.Request.QueryString[JSONRPC_Container];
+            // Read the request from GET 
+            DATArequest = Utility.HttpGET()[JSONRPC_GETparam];
 
-                // Read the request from POST
-                StreamReader HttpReader = new StreamReader(context.Request.InputStream);
-                requestPOST = HttpReader.ReadToEnd();
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Fatal(e);
-
-                JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
-                ParseError(ref context, null, error);
-            }
+            // Read the request from POST
+            POSTrequest = Utility.HttpPOST();
 
             // Check the query input exists
-            if (string.IsNullOrWhiteSpace(requestGET)
-            && string.IsNullOrWhiteSpace(requestPOST))
+            if (string.IsNullOrWhiteSpace(DATArequest)
+            && string.IsNullOrWhiteSpace(POSTrequest))
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
                 ParseError(ref context, null, error);
             }
 
             // POST request overrides GET one
-            if (!string.IsNullOrWhiteSpace(requestPOST))
+            if (!string.IsNullOrWhiteSpace(POSTrequest))
             {
-                request = requestPOST;
+                request = POSTrequest;
                 Log.Instance.Info("Request type: POST");
             }
             else
             {
-                request = requestGET;
+                request = DATArequest;
                 Log.Instance.Info("Request type: GET");
             }
 

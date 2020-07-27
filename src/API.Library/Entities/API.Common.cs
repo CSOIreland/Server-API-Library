@@ -84,7 +84,6 @@ namespace API
         /// </summary>
         internal string NetworkUsername = null;
 
-
         /// <summary>
         /// Authenticate the user in the context
         /// </summary>
