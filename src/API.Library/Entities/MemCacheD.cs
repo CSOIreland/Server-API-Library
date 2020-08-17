@@ -709,6 +709,29 @@ namespace API
         }
 
         /// <summary>
+        /// Get server stats
+        /// </summary>
+        /// <returns></returns>
+        public static ServerStats GetStats()
+        {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
+
+            try
+            {
+                return MemcachedClient.Stats();
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Set the Value object
         /// </summary>
         /// <param name="data"></param>
