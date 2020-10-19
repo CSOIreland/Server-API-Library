@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
@@ -94,7 +95,7 @@ namespace API
         /// <param name="statusDescription"></param>
         private void ParseError(ref HttpContext context, HttpStatusCode statusCode, string statusDescription = "")
         {
-            Log.Instance.Info("IP: " + Utility.IpAddress + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
+            Log.Instance.Info("IP: " + Utility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
             context.Response.StatusCode = (int)statusCode;
             if (!string.IsNullOrEmpty(statusDescription))
@@ -235,8 +236,10 @@ namespace API
             apiRequest.method = RequestParams[0];
             apiRequest.parameters = RequestParams;
             apiRequest.userPrincipal = UserPrincipal;
-            apiRequest.ipAddress = Utility.IpAddress;
-            apiRequest.userAgent = Utility.UserAgent;
+            apiRequest.ipAddress = Utility.GetIP();
+            apiRequest.userAgent = Utility.GetUserAgent();
+            apiRequest.httpGET = httpGET;
+            apiRequest.httpPOST = httpPOST;
 
             // Hide password from logs
             Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
@@ -318,6 +321,16 @@ namespace API
         /// Client user agent
         /// </summary>
         public string userAgent { get; internal set; }
+
+        /// <summary>
+        /// GET request
+        /// </summary>
+        public NameValueCollection httpGET { get; internal set; }
+
+        /// <summary>
+        /// POST request
+        /// </summary>
+        public string httpPOST { get; internal set; }
 
         #endregion
     }

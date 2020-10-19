@@ -28,7 +28,9 @@ namespace API
                 parameters = RestfulApi.parameters,
                 userPrincipal = RestfulApi.userPrincipal,
                 ipAddress = RestfulApi.ipAddress,
-                userAgent = RestfulApi.userAgent
+                userAgent = RestfulApi.userAgent,
+                httpGET = RestfulApi.httpGET,
+                httpPOST = RestfulApi.httpPOST
             };
         }
 
@@ -48,7 +50,9 @@ namespace API
                 parameters = JsonRpcApi.parameters,
                 userPrincipal = JsonRpcApi.userPrincipal,
                 ipAddress = JsonRpcApi.ipAddress,
-                userAgent = JsonRpcApi.userAgent
+                userAgent = JsonRpcApi.userAgent,
+                httpGET = JsonRpcApi.httpGET,
+                httpPOST = JsonRpcApi.httpPOST
             };
         }
 

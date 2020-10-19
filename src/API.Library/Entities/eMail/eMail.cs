@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Net.Mail;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Net.Mail;
 
 namespace API
 {
@@ -136,7 +136,7 @@ namespace API
         public string ParseTemplate(string template, List<eMail_KeyValuePair> eMail_KeyValuePair)
         {
             eMail_KeyValuePair.Add(new eMail_KeyValuePair() { key = "{datetime}", value = DateTime.Now.ToString(API_EMAIL_DATETIME_MASK) });
-            eMail_KeyValuePair.Add(new eMail_KeyValuePair() { key = "{ip}", value = Utility.IpAddress });
+            eMail_KeyValuePair.Add(new eMail_KeyValuePair() { key = "{ip}", value = Utility.GetIP() });
 
             Log.Instance.Info("eMail String-Template to parse: " + template);
             Log.Instance.Info("eMail List to parse: " + Utility.JsonSerialize_IgnoreLoopingReference(eMail_KeyValuePair));

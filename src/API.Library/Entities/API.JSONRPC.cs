@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
 using System.Reflection;
@@ -24,7 +25,7 @@ namespace API
         /// <summary>
         ///  GET request parameter
         /// </summary>
-        internal const string JSONRPC_GETparam = "data";
+        internal const string JSONRPC_GetParam = "data";
 
         /// <summary>
         ///  JSON-stat mimetype
@@ -159,7 +160,7 @@ namespace API
                         break;
                 }
 
-            Log.Instance.Info("IP: " + Utility.IpAddress + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
+            Log.Instance.Info("IP: " + Utility.GetIP() + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
             object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
             context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
             context.Response.End();
@@ -174,32 +175,24 @@ namespace API
         {
             // Initialise requests
             string request = null;
-            string DATArequest = null;
-            string POSTrequest = null;
-
-            // Read the request from GET 
-            DATArequest = Utility.HttpGET()[JSONRPC_GETparam];
-
-            // Read the request from POST
-            POSTrequest = Utility.HttpPOST();
 
             // Check the query input exists
-            if (string.IsNullOrWhiteSpace(DATArequest)
-            && string.IsNullOrWhiteSpace(POSTrequest))
+            if (string.IsNullOrWhiteSpace(httpGET[JSONRPC_GetParam])
+            && string.IsNullOrWhiteSpace(httpPOST))
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
                 ParseError(ref context, null, error);
             }
 
             // POST request overrides GET one
-            if (!string.IsNullOrWhiteSpace(POSTrequest))
+            if (!string.IsNullOrWhiteSpace(httpPOST))
             {
-                request = POSTrequest;
+                request = httpPOST;
                 Log.Instance.Info("Request type: POST");
             }
             else
             {
-                request = DATArequest;
+                request = httpGET[JSONRPC_GetParam];
                 Log.Instance.Info("Request type: GET");
             }
 
@@ -320,8 +313,10 @@ namespace API
             apiRequest.method = JSONRPC_Request.method;
             apiRequest.parameters = JSONRPC_Request.@params;
             apiRequest.userPrincipal = UserPrincipal;
-            apiRequest.ipAddress = Utility.IpAddress;
-            apiRequest.userAgent = Utility.UserAgent;
+            apiRequest.ipAddress = Utility.GetIP();
+            apiRequest.userAgent = Utility.GetUserAgent();
+            apiRequest.httpGET = httpGET;
+            apiRequest.httpPOST = httpPOST;
 
             // Hide password from logs
             Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(apiRequest)));
@@ -471,6 +466,16 @@ namespace API
         /// Client user agent
         /// </summary>
         public string userAgent { get; internal set; }
+
+        /// <summary>
+        /// GET request
+        /// </summary>
+        public NameValueCollection httpGET { get; internal set; }
+
+        /// <summary>
+        /// POST request
+        /// </summary>
+        public string httpPOST { get; internal set; }
         #endregion
     }
 

@@ -1,7 +1,9 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.DirectoryServices.AccountManagement;
+using System.IO;
 using System.Linq;
 using System.Web;
 
@@ -83,6 +85,16 @@ namespace API
         /// Network Username from IIS authentication
         /// </summary>
         internal string NetworkUsername = null;
+
+        /// <summary>
+        /// HTTP GET Request
+        /// </summary>
+        internal NameValueCollection httpGET = GetHttpGET();
+
+        /// <summary>
+        /// HTTP POST Request
+        /// </summary>
+        internal string httpPOST = GetHttpPOST();
 
         /// <summary>
         /// Authenticate the user in the context
@@ -315,6 +327,42 @@ namespace API
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Get the HTTP request for the GET method
+        /// </summary>
+        /// <returns></returns>
+        internal static NameValueCollection GetHttpGET()
+        {
+            try
+            {
+                // Read the request from GET 
+                return HttpContext.Current.Request.QueryString;
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Info(e);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get the HTTP request for the POST method
+        /// </summary>
+        /// <returns></returns>
+        internal static string GetHttpPOST()
+        {
+            try
+            {
+                // Read the request from POST
+                return new StreamReader(HttpContext.Current.Request.InputStream).ReadToEnd();
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Info(e);
+                return null;
+            }
         }
     }
 

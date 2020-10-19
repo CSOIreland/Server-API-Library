@@ -1,5 +1,4 @@
-﻿using log4net;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -10,7 +9,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
@@ -23,21 +21,6 @@ namespace API
     public static class Utility
     {
         #region Properties
-
-        /// <summary>
-        /// Initiate Log4Net
-        /// </summary>
-        private static readonly ILog logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
-        /// <summary>
-        /// Set the IP Address
-        /// </summary>
-        public static string IpAddress = GetIP();
-
-        /// <summary>
-        /// Set the User Agent
-        /// </summary>
-        public static string UserAgent = GetUserAgent();
 
         #endregion
 
@@ -101,7 +84,7 @@ namespace API
         /// Get the IP Address of the current request
         /// </summary>
         /// <returns></returns>
-        private static string GetIP()
+        public static string GetIP()
         {
             // Initialise
             string ipAddress = "";
@@ -148,7 +131,7 @@ namespace API
         /// <summary>
         /// Get the User Agent from the Current Context
         /// </summary>
-        private static string GetUserAgent()
+        public static string GetUserAgent()
         {
             return HttpContext.Current == null ? "" : HttpContext.Current.Request.UserAgent.ToString();
         }
@@ -428,42 +411,6 @@ namespace API
             catch (Exception)
             {
                 //Do not trow nor log. Instead, return null if language cannot be detected
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Get the HTTP request for the GET method
-        /// </summary>
-        /// <returns></returns>
-        public static NameValueCollection HttpGET()
-        {
-            try
-            {
-                // Read the request from GET 
-                return HttpContext.Current.Request.QueryString;
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Info(e);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Get the HTTP request for the POST method
-        /// </summary>
-        /// <returns></returns>
-        public static string HttpPOST()
-        {
-            try
-            {
-                // Read the request from POST
-                return new StreamReader(HttpContext.Current.Request.InputStream).ReadToEnd();
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Info(e);
                 return null;
             }
         }
