@@ -88,9 +88,9 @@ namespace API
         /// Authenticate the user in the context
         /// </summary>
         /// <param name="context"></param>
-        internal bool Authenticate(ref HttpContext context)
+        internal bool? Authenticate(ref HttpContext context)
         {
-            bool isAuthenticated = false;
+            bool? isAuthenticated = null;
             Log.Instance.Info("Stateless: " + API_STATELESS);
 
             // Get the username if any
@@ -129,10 +129,14 @@ namespace API
                 {
                     isAuthenticated = AuthenticateByType();
 
-                    // Set the cache to expire at midnight
-                    if (MemCacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
+                    // Store the cache only when authentication works.
+                    if (isAuthenticated != null)
                     {
-                        Log.Instance.Info("Authentication stored in Cache");
+                        // Set the cache to expire at midnight
+                        if (MemCacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
+                        {
+                            Log.Instance.Info("Authentication stored in Cache");
+                        }
                     }
                 }
             }
@@ -146,9 +150,13 @@ namespace API
 
                     isAuthenticated = AuthenticateByType();
 
-                    // Save the serialized userPrincipal in the Session
-                    context.Session[UserPrincipal_Container] = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
-                    Log.Instance.Info("Authentication stored in Session");
+                    // Initiate a new Session only when authentication works.
+                    if (isAuthenticated != null)
+                    {
+                        // Save the serialized userPrincipal in the Session
+                        context.Session[UserPrincipal_Container] = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
+                        Log.Instance.Info("Authentication stored in Session");
+                    }
                 }
                 else
                 {
@@ -171,7 +179,7 @@ namespace API
         /// <summary>
         /// Authenticate the user by the relative Authentication Type
         /// </summary>
-        private bool AuthenticateByType()
+        private bool? AuthenticateByType()
         {
             string[] AuthenticationTypeAllowed = new string[]
             {
@@ -207,7 +215,7 @@ namespace API
         /// <summary>
         /// Process Windows Authentication
         /// </summary>
-        private bool WindowsAuthentication()
+        private bool? WindowsAuthentication()
         {
             // Override userPrincipal for security
             UserPrincipal = null;
@@ -216,13 +224,13 @@ namespace API
             if (string.IsNullOrEmpty(NetworkUsername))
             {
                 Log.Instance.Fatal("Undefined Network Username");
-                return false;
+                return null;
             }
 
             if (String.IsNullOrEmpty(API_AD_DOMAIN))
             {
                 Log.Instance.Fatal("Undefined AD Domain");
-                return false;
+                return null;
             }
 
             // Query AD
@@ -245,7 +253,7 @@ namespace API
                 if (UserPrincipal == null)
                 {
                     Log.Instance.Fatal("Undefined User Principal against AD");
-                    return false;
+                    return null;
                 }
                 return true;
             }
@@ -253,14 +261,14 @@ namespace API
             {
                 Log.Instance.Fatal("Unable to connect/query AD");
                 Log.Instance.Fatal(e);
-                return false;
+                return null;
             }
         }
 
         /// <summary>
         /// Process Anonymous Authentication
         /// </summary>
-        private bool AnonymousAuthentication()
+        private bool? AnonymousAuthentication()
         {
             // Override userPrincipal for security
             UserPrincipal = null;
@@ -270,7 +278,7 @@ namespace API
         /// <summary>
         /// Process Any Authentication
         /// </summary>
-        private bool AnyAuthentication()
+        private bool? AnyAuthentication()
         {
             // Override userPrincipal for security
             UserPrincipal = null;
@@ -302,7 +310,7 @@ namespace API
                 {
                     Log.Instance.Fatal("Unable to connect/query AD");
                     Log.Instance.Fatal(e);
-                    return false;
+                    return null;
                 }
             }
 

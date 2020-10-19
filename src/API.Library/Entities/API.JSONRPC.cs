@@ -63,7 +63,7 @@ namespace API
             }
 
             // Authenticate and append credentials
-            if (!Authenticate(ref context))
+            if (Authenticate(ref context) == false)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
                 ParseError(ref context, JSONRPC_Request.id, error);

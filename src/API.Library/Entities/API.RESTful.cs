@@ -47,7 +47,7 @@ namespace API
             }
 
             // Authenticate and append credentials
-            if (!Authenticate(ref context))
+            if (Authenticate(ref context) == false)
             {
                 ParseError(ref context, HttpStatusCode.Unauthorized, "Invalid authentication");
             }
