@@ -89,12 +89,12 @@ namespace API
         /// <summary>
         /// HTTP GET Request
         /// </summary>
-        internal NameValueCollection httpGET = GetHttpGET();
+        internal NameValueCollection httpGET = null;
 
         /// <summary>
         /// HTTP POST Request
         /// </summary>
-        internal string httpPOST = GetHttpPOST();
+        internal string httpPOST = null;
 
         /// <summary>
         /// Authenticate the user in the context

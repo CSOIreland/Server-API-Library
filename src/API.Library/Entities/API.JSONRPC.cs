@@ -47,6 +47,10 @@ namespace API
         {
             Log.Instance.Info("API Interface Opened");
 
+            // Set HTTP Requests
+            httpGET = GetHttpGET();
+            httpPOST = GetHttpPOST();
+
             // Set Mime-Type for the Content Type and override the Charset
             context.Response.ContentType = JSONRPC_MimeType;
             context.Response.Charset = null;
