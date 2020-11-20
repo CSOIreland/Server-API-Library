@@ -114,6 +114,8 @@
     <Compile Include="Entities\MemCacheD.cs" />
     <Compile Include="Entities\eMail\eMail.cs" />
     <Compile Include="Entities\ADO.cs" />
+    <Compile Include="Entities\Performance.cs" />
+    <Compile Include="Entities\Performance.ADO.cs" />
     <Compile Include="Entities\ReCAPTCHA.cs" />
     <Compile Include="Entities\Utility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

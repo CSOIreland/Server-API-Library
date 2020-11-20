@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Web;
 using System.Web.SessionState;
 
@@ -45,76 +47,103 @@ namespace API
         /// <param name="context"></param>
         public void ProcessRequest(HttpContext context)
         {
-            Log.Instance.Info("API Interface Opened");
+            // Initiate Stopwatch
+            Stopwatch sw = new Stopwatch();
+            // Start Stopwatch
+            sw.Start();
 
-            // Set HTTP Requests
-            httpGET = GetHttpGET();
-            httpPOST = GetHttpPOST();
+            // Thread a PerfomanceCollector
+            PerfomanceCollector performanceCollector = new PerfomanceCollector();
+            Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
+            performanceThread.Start();
 
-            // Set Mime-Type for the Content Type and override the Charset
-            context.Response.ContentType = JSONRPC_MimeType;
-            context.Response.Charset = null;
-            // Set CacheControl to no-cache
-            context.Response.CacheControl = "no-cache";
-
-            // Deserialize and parse the JSON request into an Object dynamically
-            JSONRPC_Request JSONRPC_Request = ParseRequest(ref context);
-
-            // Check for the maintenance flag
-            if (Maintenance)
+            try
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
-                ParseError(ref context, JSONRPC_Request.id, error);
-            }
+                Log.Instance.Info("API Interface Opened");
 
-            // Authenticate and append credentials
-            if (Authenticate(ref context) == false)
-            {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                ParseError(ref context, JSONRPC_Request.id, error);
-            }
+                // Set HTTP Requests
+                httpGET = GetHttpGET();
+                httpPOST = GetHttpPOST();
 
-            // Get results from the relevant method with the params
-            JSONRPC_Output result = GetResult(ref context, JSONRPC_Request);
-            if (result == null)
-            {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
-                ParseError(ref context, JSONRPC_Request.id, error);
-            }
-            else if (result.error != null)
-            {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32099, data = result.error };
-                ParseError(ref context, JSONRPC_Request.id, error);
-            }
-            else
-            {
-                // Check if the result.data is already a JSON type casted as: new JRaw(data); 
-                var jsonRaw = result.data as JRaw;
-                if (jsonRaw != null)
+                // Set Mime-Type for the Content Type and override the Charset
+                context.Response.ContentType = JSONRPC_MimeType;
+                context.Response.Charset = null;
+                // Set CacheControl to no-cache
+                context.Response.CacheControl = "no-cache";
+
+                // Deserialize and parse the JSON request into an Object dynamically
+                JSONRPC_Request JSONRPC_Request = ParseRequest(ref context);
+
+                // Check for the maintenance flag
+                if (Maintenance)
                 {
-                    JSONRPC_API_ResponseDataJRaw output = new JSONRPC_API_ResponseDataJRaw
-                    {
-                        jsonrpc = JSONRPC_Request.jsonrpc,
-                        result = jsonRaw,
-                        id = JSONRPC_Request.id
-                    };
-                    // Output the JSON-RPC repsonse with JRaw data
-                    context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
+                    ParseError(ref context, JSONRPC_Request.id, error);
+                }
+
+                // Authenticate and append credentials
+                if (Authenticate(ref context) == false)
+                {
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
+                    ParseError(ref context, JSONRPC_Request.id, error);
+                }
+
+                // Get results from the relevant method with the params
+                JSONRPC_Output result = GetResult(ref context, JSONRPC_Request);
+                if (result == null)
+                {
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
+                    ParseError(ref context, JSONRPC_Request.id, error);
+                }
+                else if (result.error != null)
+                {
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32099, data = result.error };
+                    ParseError(ref context, JSONRPC_Request.id, error);
                 }
                 else
                 {
-                    JSONRPC_API_ResponseData output = new JSONRPC_API_ResponseData
+                    // Check if the result.data is already a JSON type casted as: new JRaw(data); 
+                    var jsonRaw = result.data as JRaw;
+                    if (jsonRaw != null)
                     {
-                        jsonrpc = JSONRPC_Request.jsonrpc,
-                        result = result.data,
-                        id = JSONRPC_Request.id
-                    };
-                    // Output the JSON-RPC repsonse
-                    context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                        JSONRPC_API_ResponseDataJRaw output = new JSONRPC_API_ResponseDataJRaw
+                        {
+                            jsonrpc = JSONRPC_Request.jsonrpc,
+                            result = jsonRaw,
+                            id = JSONRPC_Request.id
+                        };
+                        // Output the JSON-RPC repsonse with JRaw data
+                        context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                    }
+                    else
+                    {
+                        JSONRPC_API_ResponseData output = new JSONRPC_API_ResponseData
+                        {
+                            jsonrpc = JSONRPC_Request.jsonrpc,
+                            result = result.data,
+                            id = JSONRPC_Request.id
+                        };
+                        // Output the JSON-RPC repsonse
+                        context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                throw;
+            }
+            finally
+            {
+                // Terminate Perfomance collection
+                performanceThread.Abort();
 
-            Log.Instance.Info("API Interface Closed");
+                // Stop Stopwatch
+                sw.Stop();
+
+                Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
+                Log.Instance.Info("API Interface Closed");
+            }
         }
 
         /// <summary> 

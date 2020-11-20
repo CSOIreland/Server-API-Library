@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Web;
 using System.Web.SessionState;
 
@@ -31,64 +33,92 @@ namespace API
         /// <param name="context"></param>
         public void ProcessRequest(HttpContext context)
         {
-            Log.Instance.Info("API Interface Opened");
+            // Initiate Stopwatch
+            Stopwatch sw = new Stopwatch();
+            // Start Stopwatch
+            sw.Start();
 
-            // Set HTTP Requests
-            httpGET = GetHttpGET();
-            httpPOST = GetHttpPOST();
+            // Thread a PerfomanceCollector
+            PerfomanceCollector performanceCollector = new PerfomanceCollector();
+            Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
+            performanceThread.Start();
 
-            // Set Mime-Type for the Content Type and override the Charset
-            context.Response.Charset = null;
-            // Set CacheControl to no-cache
-            context.Response.CacheControl = "no-cache";
-
-            // Extract the request parameters from the URL
-            ParseRequest(ref context);
-
-            // Check for the maintenance flag
-            if (Maintenance)
+            try
             {
-                ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
-            }
+                Log.Instance.Info("API Interface Opened");
 
-            // Authenticate and append credentials
-            if (Authenticate(ref context) == false)
-            {
-                ParseError(ref context, HttpStatusCode.Unauthorized, "Invalid authentication");
-            }
+                // Set HTTP Requests
+                httpGET = GetHttpGET();
+                httpPOST = GetHttpPOST();
 
-            // Get results from the relevant method with the params
-            RESTful_Output result = GetResult(ref context);
+                // Set Mime-Type for the Content Type and override the Charset
+                context.Response.Charset = null;
+                // Set CacheControl to no-cache
+                context.Response.CacheControl = "no-cache";
 
-            if (result == null)
-            {
-                ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
-            }
-            else if (result.statusCode == HttpStatusCode.OK)
-            {
-                context.Response.StatusCode = (int)result.statusCode;
-                context.Response.ContentType = result.mimeType;
+                // Extract the request parameters from the URL
+                ParseRequest(ref context);
 
-                if (!String.IsNullOrEmpty(result.fileName))
+                // Check for the maintenance flag
+                if (Maintenance)
                 {
-                    context.Response.AppendHeader("Content-Disposition", new ContentDisposition { Inline = true, FileName = result.fileName }.ToString());
+                    ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
                 }
 
-                if (result.response?.GetType() == typeof(byte[]))
+                // Authenticate and append credentials
+                if (Authenticate(ref context) == false)
                 {
-                    context.Response.BinaryWrite(result.response);
+                    ParseError(ref context, HttpStatusCode.Unauthorized, "Invalid authentication");
+                }
+
+                // Get results from the relevant method with the params
+                RESTful_Output result = GetResult(ref context);
+
+                if (result == null)
+                {
+                    ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
+                }
+                else if (result.statusCode == HttpStatusCode.OK)
+                {
+                    context.Response.StatusCode = (int)result.statusCode;
+                    context.Response.ContentType = result.mimeType;
+
+                    if (!String.IsNullOrEmpty(result.fileName))
+                    {
+                        context.Response.AppendHeader("Content-Disposition", new ContentDisposition { Inline = true, FileName = result.fileName }.ToString());
+                    }
+
+                    if (result.response?.GetType() == typeof(byte[]))
+                    {
+                        context.Response.BinaryWrite(result.response);
+                    }
+                    else
+                    {
+                        context.Response.Write(result.response);
+                    }
                 }
                 else
                 {
-                    context.Response.Write(result.response);
+                    ParseError(ref context, result.statusCode, result.response);
                 }
-            }
-            else
-            {
-                ParseError(ref context, result.statusCode, result.response);
-            }
 
-            Log.Instance.Info("API Interface Closed");
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                throw;
+            }
+            finally
+            {
+                // Terminate Perfomance collection
+                performanceThread.Abort();
+
+                // Stop Stopwatch
+                sw.Stop();
+
+                Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
+                Log.Instance.Info("API Interface Closed");
+            }
         }
 
         /// <summary>
