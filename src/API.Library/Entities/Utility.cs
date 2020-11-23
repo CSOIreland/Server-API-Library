@@ -133,7 +133,7 @@ namespace API
         /// </summary>
         public static string GetUserAgent()
         {
-            return HttpContext.Current == null ? "" : HttpContext.Current.Request.UserAgent.ToString();
+            return HttpContext.Current.Request.UserAgent == null ? "" : HttpContext.Current.Request.UserAgent;
         }
 
         /// <summary>

@@ -134,7 +134,15 @@ namespace API
             context.Response.StatusCode = (int)statusCode;
             if (!string.IsNullOrEmpty(statusDescription))
                 context.Response.StatusDescription = statusDescription;
-            context.Response.End();
+
+            try
+            {
+                context.Response.End();
+            }
+            catch (ThreadAbortException e)
+            {
+                // Thread intentially aborted, do nothing
+            }
         }
 
         /// <summary>

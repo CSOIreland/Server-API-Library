@@ -128,6 +128,11 @@ namespace API
                     }
                 }
             }
+            catch (ThreadAbortException e)
+            {
+                // Thread aborted, do nothing
+                // The finally block will take care of everything safely
+            }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
@@ -196,7 +201,15 @@ namespace API
             Log.Instance.Info("IP: " + Utility.GetIP() + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
             object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
             context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
-            context.Response.End();
+
+            try
+            {
+                context.Response.End();
+            }
+            catch (ThreadAbortException e)
+            {
+                // Thread intentially aborted, do nothing
+            }
         }
 
         /// <summary>
