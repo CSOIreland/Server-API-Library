@@ -103,6 +103,11 @@ namespace API
                 }
 
             }
+            catch (ThreadAbortException e)
+            {
+                // Thread aborted, do nothing
+                // The finally block will take care of everything safely
+            }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
