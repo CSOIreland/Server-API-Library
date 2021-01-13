@@ -14,10 +14,10 @@ namespace API
         /// </summary>
         internal static bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_PERFORMANCE_ENABLED"]);
 
-        internal static PerformanceCounter ProcessorPercentage = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-        internal static PerformanceCounter MemoryAvailableMBytes = new PerformanceCounter("Memory", "Available MBytes");
-        internal static PerformanceCounter RequestPerSec = new PerformanceCounter("ASP.NET Applications", "Requests/Sec", "__Total__");
-        internal static PerformanceCounter RequestsQueued = new PerformanceCounter("ASP.NET", "Requests Queued");
+        internal static PerformanceCounter ProcessorPercentage = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Processor", "% Processor Time", "_Total") : null;
+        internal static PerformanceCounter MemoryAvailableMBytes = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Memory", "Available MBytes") : null;
+        internal static PerformanceCounter RequestPerSec = API_PERFORMANCE_ENABLED ? new PerformanceCounter("ASP.NET Applications", "Requests/Sec", "__Total__") : null;
+        internal static PerformanceCounter RequestsQueued = API_PERFORMANCE_ENABLED ? new PerformanceCounter("ASP.NET", "Requests Queued") : null;
 
         // Extension method to trim to whole minute
         internal static DateTime TrimToMinute(this DateTime date, long ticks)
