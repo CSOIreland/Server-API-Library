@@ -1,7 +1,7 @@
 ﻿using System;
-using System.DirectoryServices.AccountManagement;
 using System.Collections.Generic;
 using System.Configuration;
+using System.DirectoryServices.AccountManagement;
 using System.Dynamic;
 using System.Linq;
 
@@ -145,6 +145,23 @@ namespace API
                 return false;
             else
                 return true;
+        }
+
+        /// <summary>
+        /// Validate a Password against an AD account
+        /// </summary>
+        /// <param name="userPrincipal"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        public static bool IsPasswordValid(dynamic userPrincipal, string password)
+        {
+            bool isValid = false;
+            using (PrincipalContext pricipalContext = new PrincipalContext(ContextType.Domain, adDomain, String.IsNullOrEmpty(adPath) ? null : adPath, String.IsNullOrEmpty(adUsername) ? null : adUsername, String.IsNullOrEmpty(adPassword) ? null : adPassword))
+            {
+                // validate the credentials
+                isValid = pricipalContext.ValidateCredentials(userPrincipal, password);
+            }
+            return isValid;
         }
         #endregion
 

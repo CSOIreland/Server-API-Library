@@ -51,6 +51,16 @@ namespace API
         }
 
         /// <summary>
+        /// Get a random MD5 hash code
+        /// </summary>
+        /// <param name="salsa"></param>
+        /// <returns></returns>
+        public static string GetRandomMD5(string salsa)
+        {
+            return GetMD5(new Random().Next().ToString() + salsa + DateTime.Now.Millisecond);
+        }
+
+        /// <summary>
         /// Geberate the SHA256 hash of the input parameter
         /// </summary>
         /// <param name="input"></param>
@@ -78,6 +88,16 @@ namespace API
                 Log.Instance.Info("Output hash: " + hashSHA256);
                 return hashSHA256;
             }
+        }
+
+        /// <summary>
+        /// Get a random SHA256 hash code
+        /// </summary>
+        /// <param name="salsa"></param>
+        /// <returns></returns>
+        public static string GetRandomSHA256(string salsa)
+        {
+            return GetSHA256(new Random().Next().ToString() + salsa + DateTime.Now.Millisecond);
         }
 
         /// <summary>

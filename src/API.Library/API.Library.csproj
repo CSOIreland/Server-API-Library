@@ -117,6 +117,7 @@
     <Compile Include="Entities\Performance.cs" />
     <Compile Include="Entities\Performance.ADO.cs" />
     <Compile Include="Entities\ReCAPTCHA.cs" />
+    <Compile Include="Entities\TwoFA.cs" />
     <Compile Include="Entities\Utility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

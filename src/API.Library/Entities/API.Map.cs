@@ -30,7 +30,8 @@ namespace API
                 ipAddress = RestfulApi.ipAddress,
                 userAgent = RestfulApi.userAgent,
                 httpGET = RestfulApi.httpGET,
-                httpPOST = RestfulApi.httpPOST
+                httpPOST = RestfulApi.httpPOST,
+                sessionCookie = RestfulApi.sessionCookie
             };
         }
 
@@ -52,7 +53,8 @@ namespace API
                 ipAddress = JsonRpcApi.ipAddress,
                 userAgent = JsonRpcApi.userAgent,
                 httpGET = JsonRpcApi.httpGET,
-                httpPOST = JsonRpcApi.httpPOST
+                httpPOST = JsonRpcApi.httpPOST,
+                sessionCookie = JsonRpcApi.sessionCookie
             };
         }
 

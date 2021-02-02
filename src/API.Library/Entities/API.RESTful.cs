@@ -65,23 +65,59 @@ namespace API
                     ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
                 }
 
-                // Authenticate and append credentials
-                if (Authenticate(ref context) == false)
+                // Get Session Cookie
+                HttpCookie sessionCookie = null;
+                if (!String.IsNullOrEmpty(SessionCookieName))
                 {
-                    ParseError(ref context, HttpStatusCode.Unauthorized, "Invalid authentication");
+                    sessionCookie = context.Request.Cookies[SessionCookieName];
                 }
 
-                // Get results from the relevant method with the params
-                RESTful_Output result = GetResult(ref context);
+                RESTful_Output result = null;
+
+                bool? isAuthenticated = Authenticate(ref context);
+                switch (isAuthenticated)
+                {
+                    case null: //Anonymous authentication
+                        result = GetResult(ref context, sessionCookie);
+                        break;
+                    case true: //Windows Authentication
+                        result = GetResult(ref context);
+
+                        break;
+                    case false: //Error
+                        ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
+                        break;
+                }
+
+
 
                 if (result == null)
                 {
                     ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
                 }
+
+
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
                     context.Response.StatusCode = (int)result.statusCode;
                     context.Response.ContentType = result.mimeType;
+
+                    // Set the Session Cookie if requested
+                    if (!String.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
+                    {
+                        // No expiry time allowed in the future
+                        if (result.sessionCookie.Expires > DateTime.Now)
+                        {
+                            result.sessionCookie.Expires = default;
+                        }
+
+                        result.sessionCookie.Secure = true;
+                        result.sessionCookie.Domain = null;
+                        result.sessionCookie.HttpOnly = true;
+                        result.sessionCookie.SameSite = SameSiteMode.Strict;
+                        context.Response.Cookies.Add(result.sessionCookie);
+                    }
+
 
                     if (!String.IsNullOrEmpty(result.fileName))
                     {
@@ -276,7 +312,7 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context)
+        private dynamic GetResult(ref HttpContext context, HttpCookie sessionCookie = null)
         {
             // Set the API object
             RESTful_API apiRequest = new RESTful_API();
@@ -287,6 +323,7 @@ namespace API
             apiRequest.userAgent = Utility.GetUserAgent();
             apiRequest.httpGET = httpGET;
             apiRequest.httpPOST = httpPOST;
+            apiRequest.sessionCookie = sessionCookie;
 
             // Hide password from logs
             Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
@@ -335,6 +372,11 @@ namespace API
         /// RESTful filename (optional)
         /// </summary>
         public string fileName { get; set; }
+
+        /// <summary>
+        /// Session Cookie
+        /// </summary>
+        public HttpCookie sessionCookie { get; set; }
         #endregion
     }
 
@@ -379,6 +421,10 @@ namespace API
         /// </summary>
         public string httpPOST { get; internal set; }
 
+        /// <summary>
+        /// Session Cookie
+        /// </summary>
+        public HttpCookie sessionCookie { get; internal set; }
         #endregion
     }
 }

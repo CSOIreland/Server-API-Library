@@ -95,6 +95,10 @@ namespace API
         /// HTTP POST Request
         /// </summary>
         internal string httpPOST = null;
+        /// <summary>
+        /// Session cookie
+        /// </summary>
+        public static string SessionCookieName = ConfigurationManager.AppSettings["API_SESSION_COOKIE"];
 
         /// <summary>
         /// Authenticate the user in the context
@@ -236,13 +240,13 @@ namespace API
             if (string.IsNullOrEmpty(NetworkUsername))
             {
                 Log.Instance.Fatal("Undefined Network Username");
-                return null;
+                return false;
             }
 
             if (String.IsNullOrEmpty(API_AD_DOMAIN))
             {
                 Log.Instance.Fatal("Undefined AD Domain");
-                return null;
+                return false;
             }
 
             // Query AD
@@ -265,7 +269,7 @@ namespace API
                 if (UserPrincipal == null)
                 {
                     Log.Instance.Fatal("Undefined User Principal against AD");
-                    return null;
+                    return false;
                 }
                 return true;
             }
@@ -273,7 +277,7 @@ namespace API
             {
                 Log.Instance.Fatal("Unable to connect/query AD");
                 Log.Instance.Fatal(e);
-                return null;
+                return false;
             }
         }
 
@@ -284,7 +288,7 @@ namespace API
         {
             // Override userPrincipal for security
             UserPrincipal = null;
-            return true;
+            return null;
         }
 
         /// <summary>
@@ -316,17 +320,23 @@ namespace API
 
                     // Query AD and get the logged username
                     UserPrincipal = API_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, NetworkUsername);
+                    if (UserPrincipal == null)
+                    {
+                        Log.Instance.Fatal("Undefined User Principal against AD");
+                        return false;
+                    }
+
                     return true;
                 }
                 catch (Exception e)
                 {
                     Log.Instance.Fatal("Unable to connect/query AD");
                     Log.Instance.Fatal(e);
-                    return null;
+                    return false;
                 }
             }
 
-            return true;
+            return null;
         }
 
         /// <summary>

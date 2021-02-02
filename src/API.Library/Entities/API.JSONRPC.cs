@@ -38,6 +38,7 @@ namespace API
         /// Mask parametrs 
         /// </summary>
         private static List<string> API_JSONRPC_MASK_PARAMETERS = (ConfigurationManager.AppSettings["API_JSONRPC_MASK_PARAMETERS"]).Split(',').ToList<string>();
+
         #endregion
 
         #region Methods
@@ -81,15 +82,30 @@ namespace API
                     ParseError(ref context, JSONRPC_Request.id, error);
                 }
 
-                // Authenticate and append credentials
-                if (Authenticate(ref context) == false)
+                // Get Session Cookie
+                HttpCookie sessionCookie = null;
+                if (!String.IsNullOrEmpty(SessionCookieName))
                 {
-                    JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                    ParseError(ref context, JSONRPC_Request.id, error);
+                    sessionCookie = context.Request.Cookies[SessionCookieName];
                 }
 
-                // Get results from the relevant method with the params
-                JSONRPC_Output result = GetResult(ref context, JSONRPC_Request);
+                JSONRPC_Output result = null;
+
+                bool? isAuthenticated = Authenticate(ref context);
+                switch (isAuthenticated)
+                {
+                    case null: //Anonymous authentication
+                        result = GetResult(ref context, JSONRPC_Request, sessionCookie);
+                        break;
+                    case true: //Windows Authentication
+                        result = GetResult(ref context, JSONRPC_Request, null);
+                        break;
+                    case false: //Error
+                        JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
+                        ParseError(ref context, JSONRPC_Request.id, error);
+                        break;
+                }
+
                 if (result == null)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
@@ -102,6 +118,22 @@ namespace API
                 }
                 else
                 {
+                    // Set the Session Cookie if requested
+                    if (!String.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
+                    {
+                        // No expiry time allowed in the future
+                        if (result.sessionCookie.Expires > DateTime.Now)
+                        {
+                            result.sessionCookie.Expires = default;
+                        }
+
+                        result.sessionCookie.Secure = true;
+                        result.sessionCookie.Domain = null;
+                        result.sessionCookie.HttpOnly = true;
+                        result.sessionCookie.SameSite = SameSiteMode.Strict;
+                        context.Response.Cookies.Add(result.sessionCookie);
+                    }
+
                     // Check if the result.data is already a JSON type casted as: new JRaw(data); 
                     var jsonRaw = result.data as JRaw;
                     if (jsonRaw != null)
@@ -352,7 +384,7 @@ namespace API
         /// </summary>
         /// <param name="JSONRPC_Request"></param>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context, JSONRPC_Request JSONRPC_Request)
+        private dynamic GetResult(ref HttpContext context, JSONRPC_Request JSONRPC_Request, HttpCookie sessionCookie = null)
         {
             // Set the API object
             JSONRPC_API apiRequest = new JSONRPC_API();
@@ -363,6 +395,7 @@ namespace API
             apiRequest.userAgent = Utility.GetUserAgent();
             apiRequest.httpGET = httpGET;
             apiRequest.httpPOST = httpPOST;
+            apiRequest.sessionCookie = sessionCookie;
 
             // Hide password from logs
             Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(apiRequest)));
@@ -455,6 +488,10 @@ namespace API
         /// </summary>
         public dynamic error { get; set; }
 
+        /// <summary>
+        /// Session Cookie
+        /// </summary>
+        public HttpCookie sessionCookie { get; set; }
         #endregion
     }
 
@@ -522,6 +559,11 @@ namespace API
         /// POST request
         /// </summary>
         public string httpPOST { get; internal set; }
+
+        /// <summary>
+        /// Session Cookie
+        /// </summary>
+        public HttpCookie sessionCookie { get; internal set; }
         #endregion
     }
 
