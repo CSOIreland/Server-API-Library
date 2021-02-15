@@ -79,7 +79,7 @@ namespace API
                 else
                 {
                     // Something went wrong
-                    Log.Instance.Fatal("Invalid Encoded Response: " + encodedResponse);
+                    Log.Instance.Info("Invalid Encoded Response: " + encodedResponse);
                     return false;
                 }
             }
