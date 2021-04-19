@@ -1,5 +1,6 @@
 ﻿using Enyim.Caching;
 using Enyim.Caching.Memcached;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -17,6 +18,11 @@ namespace API
         /// Flag to indicate if MemCacheD is enabled 
         /// </summary>
         internal static bool API_MEMCACHED_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_MEMCACHED_ENABLED"]);
+
+        /// <summary>
+        /// Max size in MB before splitting a string record in sub-cache entries 
+        /// </summary>
+        internal static uint API_MEMCACHED_MAX_SIZE = Convert.ToUInt32(ConfigurationManager.AppSettings["API_MEMCACHED_MAX_SIZE"]);
 
         /// <summary>
         /// Maximum validity in number of seconds that MemCacheD can handle (30 days = 2592000)
@@ -37,6 +43,11 @@ namespace API
         /// Initiate MemCacheD
         /// </summary>
         internal static MemcachedClient MemcachedClient = API_MEMCACHED_ENABLED ? new MemcachedClient() : null;
+
+        /// <summary>
+        /// SubKey prefix
+        /// </summary>
+        internal static String SubKeyPrefix = "subKey_";
 
         #endregion
 
@@ -99,7 +110,7 @@ namespace API
         }
 
         /// <summary>
-        /// Generate the Key for ADO
+        /// Generate the Key for BSO
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="nameSpace"></param>
@@ -140,6 +151,35 @@ namespace API
                 Log.Instance.Fatal(e);
                 return hashKey;
             }
+        }
+
+        /// <summary>
+        /// Get a SubKey for a Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        private static string GetSubKey(string key)
+        {
+            return SubKeyPrefix + key;
+        }
+
+        /// <summary>
+        /// Check if a subKey exists
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        private static bool IsSubKey(dynamic data, string key)
+        {
+            // A key must be either a String or a JValue returned from deserialisation
+            if (data.GetType() == typeof(String) || data.GetType() == typeof(JValue))
+            {
+                // Check the explicit casting to String against the subKey 
+                if ((String)data == GetSubKey(key))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -326,9 +366,33 @@ namespace API
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="validFor"></param>
+        /// <param name="repository"></param>
         /// <returns></returns>
         private static bool Store(string key, MemCachedD_Value value, TimeSpan validFor, string repository)
         {
+            // Check if data is of type String or JValue 
+            if (value.data.GetType() == typeof(String) || value.data.GetType() == typeof(JValue))
+            {
+                // Cast data to String and check if oversized
+                string sData = (String)value.data;
+                if (sData.Length * sizeof(Char) > API_MEMCACHED_MAX_SIZE * 1024 * 1024)
+                {
+                    // Get a subKey
+                    string subKey = GetSubKey(key);
+
+                    // SubStore the data by subKey
+                    if (SubStore(subKey, sData, validFor, repository))
+                    {
+                        // Override data with the subKey to fish it out later
+                        value.data = subKey;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
             try
             {
                 // The value must be serialised
@@ -361,6 +425,57 @@ namespace API
                 else
                 {
                     Log.Instance.Fatal("Store failed: " + key);
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// SubStore the data string by subKey
+        /// </summary>
+        /// <param name="subKey"></param>
+        /// <param name="data"></param>
+        /// <param name="validFor"></param>
+        /// <param name="repository"></param>
+        /// <returns></returns>
+        private static bool SubStore(string subKey, string data, TimeSpan validFor, string repository)
+        {
+            try
+            {
+                // The data is a string, no need to serialize
+                Log.Instance.Info("SubCache Size Uncompressed (Byte): " + data.Length * sizeof(Char));
+
+                // The data must be compressed
+                string subCacheCompressed = Utility.GZipCompress(data);
+                Log.Instance.Info("SubCache Size Compressed (Byte): " + subCacheCompressed.Length * sizeof(Char));
+
+                bool isStored = false;
+
+                // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
+                // validFor and expiresAt match each other
+                isStored = MemcachedClient.Store(StoreMode.Set, subKey, subCacheCompressed, validFor);
+
+                // Store Value by Key
+                if (isStored)
+                {
+                    Log.Instance.Info("SubStore succesfull: " + subKey);
+
+                    // Add the cached record into a Repository
+                    if (!String.IsNullOrEmpty(repository))
+                    {
+                        CasRepositoryStore(subKey, repository);
+                    }
+
+                    return true;
+                }
+                else
+                {
+                    Log.Instance.Fatal("SubStore failed: " + subKey);
                     return false;
                 }
             }
@@ -578,12 +693,10 @@ namespace API
                     Log.Instance.Info("Cache Valid For (s): " + cacheValidFor.TotalSeconds.ToString());
                     Log.Instance.Info("Cache Has Data: " + cache.hasData.ToString());
 
-                    if (!Convert.ToBoolean(cache.hasData))
-                    {
-                        Log.Instance.Info("Force removal of cache without data");
-                        // Remove the record with no data
-                        Remove(key);
-                    }
+                    // Init subKey
+                    string subKey = GetSubKey(key);
+                    // Init isSubKey
+                    bool isSubKey = IsSubKey(cache.data, key);
 
                     // double check the cache record is still valid if not cleared by the garbage collector
                     if (cacheExpiresAt > DateTime.Now
@@ -594,22 +707,45 @@ namespace API
                         value.expiresAt = cacheExpiresAt;
                         value.validFor = cacheValidFor;
                         value.hasData = Convert.ToBoolean(cache.hasData);
-                        value.data = cache.data;
+                        value.data = isSubKey ? null : cache.data;
+
+                        // Check for data in the subKey
+                        if (isSubKey)
+                        {
+                            // Get subCacheCompressed from the subKey
+                            string subCacheCompressed = MemcachedClient.Get<string>(subKey);
+
+                            if (!String.IsNullOrEmpty(subCacheCompressed))
+                            {
+                                Log.Instance.Info("SubCache found: " + subKey);
+                                Log.Instance.Info("SubCache Size Compressed (Byte): " + subCacheCompressed.Length * sizeof(Char));
+
+                                // Decompress the cache
+                                string subCache = Utility.GZipDecompress(subCacheCompressed);
+                                Log.Instance.Info("SubCache Size Decompressed (Byte): " + subCache.Length * sizeof(Char));
+
+                                value.data = subCache;
+                            }
+                            else
+                            {
+                                Log.Instance.Info("SubCache not found: " + key);
+                            }
+                        }
 
                         return value;
                     }
                     else
                     {
-                        Log.Instance.Info("Force removal of expired cache");
+                        Log.Instance.Info("Forced removal of expired cache");
                         // Remove the expired record
                         Remove(key);
+
                     }
                 }
                 else
                 {
                     Log.Instance.Info("Cache not found: " + key);
                 }
-
             }
             catch (Exception e)
             {
@@ -666,7 +802,15 @@ namespace API
 
             try
             {
-                // Remove the record by the Key
+                string subKey = GetSubKey(key);
+
+                // Remove the (optional) subKey
+                if (MemcachedClient.Remove(subKey))
+                {
+                    Log.Instance.Info("SubRemoval succesfull: " + subKey);
+                }
+
+                // Remove the Key
                 if (MemcachedClient.Remove(key))
                 {
                     Log.Instance.Info("Removal succesfull: " + key);

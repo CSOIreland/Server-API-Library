@@ -13,6 +13,7 @@ namespace API
         /// Flag to indicate if Performance is enabled 
         /// </summary>
         internal static bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_PERFORMANCE_ENABLED"]);
+        internal static string API_PERFORMANCE_DATABASE = ConfigurationManager.AppSettings["API_PERFORMANCE_DATABASE"];
 
         internal static PerformanceCounter ProcessorPercentage = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Processor", "% Processor Time", "_Total") : null;
         internal static PerformanceCounter MemoryAvailableMBytes = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Memory", "Available MBytes") : null;
@@ -107,7 +108,7 @@ namespace API
             if (disposing)
             {
                 // Store data
-                Performance_ADO.Create(new ADO(), items);
+                Performance_ADO.Create(String.IsNullOrEmpty(Performance.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(Performance.API_PERFORMANCE_DATABASE), items);
             }
         }
     }

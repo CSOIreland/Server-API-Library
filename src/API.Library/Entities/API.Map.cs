@@ -65,7 +65,7 @@ namespace API
         /// <param name="mimeType"></param>
         /// <param name="statusCode4NoContent"></param>
         /// <returns></returns>
-        public static RESTful_Output JSONRPC2RESTful_Output(JSONRPC_Output JsonRpcOutput, string mimeType = null, HttpStatusCode statusCode4NoContent = HttpStatusCode.NoContent)
+        public static RESTful_Output JSONRPC2RESTful_Output(JSONRPC_Output JsonRpcOutput, string mimeType = null, HttpStatusCode statusCode4NoContent = HttpStatusCode.NoContent, HttpStatusCode statusCode4Error = HttpStatusCode.InternalServerError)
         {
             Log.Instance.Info("Map JSON-RPC Output to RESTful Output");
 
@@ -78,7 +78,7 @@ namespace API
                 return new RESTful_Output
                 {
                     mimeType = null,
-                    statusCode = HttpStatusCode.InternalServerError,
+                    statusCode = statusCode4Error,
                     response = JsonRpcOutput.error
                 };
             }
