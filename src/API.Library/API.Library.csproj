@@ -109,6 +109,7 @@
     <Compile Include="Entities\API.Common.cs" />
     <Compile Include="Entities\API.Map.cs" />
     <Compile Include="Entities\API.JSONRPC.cs" />
+    <Compile Include="Entities\API.Static.cs" />
     <Compile Include="Entities\API.RESTful.cs" />
     <Compile Include="Entities\Log.cs" />
     <Compile Include="Entities\MemCacheD.cs" />

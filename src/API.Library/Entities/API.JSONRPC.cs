@@ -56,7 +56,6 @@ namespace API
             // Thread a PerfomanceCollector
             PerfomanceCollector performanceCollector = new PerfomanceCollector();
             Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
-            performanceThread.Start();
 
             try
             {
@@ -95,9 +94,11 @@ namespace API
                 switch (isAuthenticated)
                 {
                     case null: //Anonymous authentication
+                        performanceThread.Start();
                         result = GetResult(ref context, JSONRPC_Request, sessionCookie);
                         break;
                     case true: //Windows Authentication
+                        performanceThread.Start();
                         result = GetResult(ref context, JSONRPC_Request, null);
                         break;
                     case false: //Error

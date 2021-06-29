@@ -14,9 +14,9 @@ using System.Web.SessionState;
 namespace API
 {
     /// <summary>
-    /// RESTful implementation
+    /// Static implementation
     /// </summary>
-    public class RESTful : Common, IHttpHandler, IRequiresSessionState
+    public class Static : Common, IHttpHandler, IRequiresSessionState
     {
 
         #region Properties
@@ -33,6 +33,21 @@ namespace API
         /// <param name="context"></param>
         public void ProcessRequest(HttpContext context)
         {
+            // Set Mime-Type for the Content Type and override the Charset
+            context.Response.Charset = null;
+
+            // Set CacheControl to public 
+            context.Response.CacheControl = "public";
+
+            // Check if the client has already a cached record
+            string rawIfModifiedSince = context.Request.Headers.Get("If-Modified-Since");
+            if (!string.IsNullOrEmpty(rawIfModifiedSince))
+            {
+                context.Response.StatusCode = 304;
+                // Do not process the request at all, stop here.
+                return;
+            }
+
             // Initiate Stopwatch
             Stopwatch sw = new Stopwatch();
             // Start Stopwatch
@@ -50,11 +65,6 @@ namespace API
                 httpGET = GetHttpGET();
                 httpPOST = GetHttpPOST();
 
-                // Set Mime-Type for the Content Type and override the Charset
-                context.Response.Charset = null;
-                // Set CacheControl to no-cache
-                context.Response.CacheControl = "no-cache";
-
                 // Extract the request parameters from the URL
                 ParseRequest(ref context);
 
@@ -64,56 +74,21 @@ namespace API
                     ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
                 }
 
-                // Get Session Cookie
-                HttpCookie sessionCookie = null;
-                if (!String.IsNullOrEmpty(SessionCookieName))
-                {
-                    sessionCookie = context.Request.Cookies[SessionCookieName];
-                }
+                Static_Output result = null;
 
-                RESTful_Output result = null;
-
-                bool? isAuthenticated = Authenticate(ref context);
-                switch (isAuthenticated)
-                {
-                    case null: //Anonymous authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context, sessionCookie);
-                        break;
-                    case true: //Windows Authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context);
-                        break;
-                    case false: //Error
-                        ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
-                        break;
-                }
-
+                // Call the public method
+                performanceThread.Start();
+                result = GetResult(ref context);
                 if (result == null)
                 {
                     ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
                 }
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
-                    context.Response.StatusCode = (int)result.statusCode;
+                    context.Response.StatusCode = (int)HttpStatusCode.OK;
                     context.Response.ContentType = result.mimeType;
-
-                    // Set the Session Cookie if requested
-                    if (!String.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
-                    {
-                        // No expiry time allowed in the future
-                        if (result.sessionCookie.Expires > DateTime.Now)
-                        {
-                            result.sessionCookie.Expires = default;
-                        }
-
-                        result.sessionCookie.Secure = true;
-                        result.sessionCookie.Domain = null;
-                        result.sessionCookie.HttpOnly = true;
-                        result.sessionCookie.SameSite = SameSiteMode.Strict;
-                        context.Response.Cookies.Add(result.sessionCookie);
-                    }
-
+                    context.Response.Cache.SetLastModified(DateTime.Now);
+                    context.Response.Cache.SetExpires(DateTime.Now.AddYears(1));
 
                     if (!String.IsNullOrEmpty(result.fileName))
                     {
@@ -218,27 +193,27 @@ namespace API
 
                 // Read the URL parameters and split the URL Absolute Path
                 Log.Instance.Info("URL Absolute Path: " + context.Request.Url.AbsolutePath);
-                RequestParams = Regex.Split(context.Request.Url.AbsolutePath, "api.restful/", RegexOptions.IgnoreCase).ToList();
+                RequestParams = Regex.Split(context.Request.Url.AbsolutePath, "api.static/", RegexOptions.IgnoreCase).ToList();
 
                 // Validate the Application path
                 if (RequestParams.Count() != 2)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid RESTful handler");
+                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid Static handler");
                 }
-                // Get the RESTful parameters
+                // Get the Static parameters
                 RequestParams = RequestParams[1].Split('/').ToList();
                 Log.Instance.Info("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
 
                 // Validate the request
                 if (RequestParams.Count() == 0)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid RESTful parameters");
+                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid Static parameters");
                 }
 
                 // Verify the method exists
                 if (!ValidateMethod(RequestParams))
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "RESTful method not found");
+                    ParseError(ref context, HttpStatusCode.BadRequest, "Static method not found");
                 }
             }
             catch (Exception e)
@@ -293,7 +268,7 @@ namespace API
                 Type StaticClass = currentassembly.GetType(methodPath, false, true);
                 if (StaticClass != null)
                 {
-                    MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(RESTful_API) });
+                    MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(Static_API) });
                     if (methodInfo == null)
                         return null;
                     else
@@ -311,15 +286,13 @@ namespace API
         private dynamic GetResult(ref HttpContext context, HttpCookie sessionCookie = null)
         {
             // Set the API object
-            RESTful_API apiRequest = new RESTful_API();
+            Static_API apiRequest = new Static_API();
             apiRequest.method = RequestParams[0];
             apiRequest.parameters = RequestParams;
-            apiRequest.userPrincipal = UserPrincipal;
             apiRequest.ipAddress = Utility.GetIP();
             apiRequest.userAgent = Utility.GetUserAgent();
             apiRequest.httpGET = httpGET;
             apiRequest.httpPOST = httpPOST;
-            apiRequest.sessionCookie = sessionCookie;
 
             // Hide password from logs
             Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
@@ -346,40 +319,35 @@ namespace API
     /// <summary>
     /// Define the Output structure required by the exposed API
     /// </summary>
-    public class RESTful_Output
+    public class Static_Output
     {
         #region Properties
         /// <summary>
-        /// RESTful response
+        /// Static response
         /// </summary>
         public dynamic response { get; set; }
 
         /// <summary>
-        /// RESTful mime type
+        /// Static mime type
         /// </summary>
         public string mimeType { get; set; }
 
         /// <summary>
-        /// RESTful status code
+        /// Static status code
         /// </summary>
         public HttpStatusCode statusCode { get; set; }
 
         /// <summary>
-        /// RESTful filename (optional)
+        /// Static filename (optional)
         /// </summary>
         public string fileName { get; set; }
-
-        /// <summary>
-        /// Session Cookie
-        /// </summary>
-        public HttpCookie sessionCookie { get; set; }
         #endregion
     }
 
     /// <summary>
     /// Define the API Class to pass to the exposed API 
     /// </summary>
-    public class RESTful_API
+    public class Static_API
     {
         #region Properties
         /// <summary>
@@ -391,11 +359,6 @@ namespace API
         /// API parameters
         /// </summary>
         public dynamic parameters { get; set; }
-
-        /// <summary>
-        /// Active Directory userPrincipal
-        /// </summary>
-        public dynamic userPrincipal { get; internal set; }
 
         /// <summary>
         /// Client IP address
@@ -416,11 +379,6 @@ namespace API
         /// POST request
         /// </summary>
         public string httpPOST { get; internal set; }
-
-        /// <summary>
-        /// Session Cookie
-        /// </summary>
-        public HttpCookie sessionCookie { get; internal set; }
         #endregion
     }
 }
