@@ -32,6 +32,11 @@ namespace API
         /// Active Directory Password for Querying 
         /// </summary>
         private static string adPassword = ConfigurationManager.AppSettings["API_AD_PASSWORD"];
+
+        /// <summary>
+        /// Active Directory custom properties for Querying
+        /// </summary>
+        private static List<string> adCustomProperties = (ConfigurationManager.AppSettings["API_AD_CUSTOM_PROPERTIES"]).Split(',').ToList<string>();
         #endregion
 
         #region Methods
@@ -39,19 +44,18 @@ namespace API
         /// This method returns the entire Active Directory list for the configure Domain
         /// </summary>
         /// <returns></returns>
-        private static IDictionary<string, dynamic> GetDirectory()
+        private static IDictionary<string, dynamic> GetDirectory<T>() where T : UserPrincipal
         {
             Log.Instance.Info("AD Domain: " + adDomain);
             Log.Instance.Info("AD Path: " + adPath);
             Log.Instance.Info("AD Username: " + adUsername);
             Log.Instance.Info("AD Password: ********"); // Hide adPassword from logs
 
-            // Initilise a new dynamic object
-            dynamic adUsers = new ExpandoObject();
-            // Implement the interface for handling dynamic properties
-            var adUsers_IDictionary = adUsers as IDictionary<string, dynamic>;
+            // new ExpandoObject() and implement the interface for handling dynamic properties
+            var adUsers_IDictionary = new ExpandoObject() as IDictionary<string, dynamic>;
 
-            MemCachedD_Value adCache = MemCacheD.Get_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", null);
+            var inputDTO = Utility.JsonSerialize_IgnoreLoopingReference(Activator.CreateInstance(typeof(T), new object[] { new PrincipalContext(ContextType.Domain) }) as T);
+            MemCachedD_Value adCache = MemCacheD.Get_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", inputDTO);
             if (adCache.hasData)
                 return adCache.data.ToObject<Dictionary<string, dynamic>>();
 
@@ -60,11 +64,20 @@ namespace API
                 // Get to the Domain
                 using (var context = new PrincipalContext(ContextType.Domain, adDomain, String.IsNullOrEmpty(adPath) ? null : adPath, String.IsNullOrEmpty(adUsername) ? null : adUsername, String.IsNullOrEmpty(adPassword) ? null : adPassword))
                 {
-                    // Get to the Search, filtering by Enabled accounts, exclude accounts with blank properties
-                    using (var searcher = new PrincipalSearcher(new UserPrincipal(context) { Enabled = true, SamAccountName = "*", EmailAddress = "*", GivenName = "*", Surname = "*" }))
+                    // Crete the query filterusing enabled accounts and excluding those with blank basic properties
+                    var queryFilter = Activator.CreateInstance(typeof(T), new object[] { context }) as T;
+                    queryFilter.Enabled = true;
+                    queryFilter.SamAccountName = "*";
+                    queryFilter.EmailAddress = "*";
+                    queryFilter.GivenName = "*";
+                    queryFilter.Surname = "*";
+
+                    // Run the search
+                    using (var searcher = new PrincipalSearcher(queryFilter))
                     {
                         // Loop trough the results and sort then by SamAccountName
-                        foreach (var result in searcher.FindAll().Cast<UserPrincipal>().OrderBy(x => x.SamAccountName))
+                        // Cast to dynamic to get all properties including any custom one
+                        foreach (var result in searcher.FindAll().Cast<dynamic>().OrderBy(x => x.SamAccountName))
                         {
                             // Check for duplicate accounts
                             if (adUsers_IDictionary.ContainsKey(result.SamAccountName))
@@ -74,23 +87,30 @@ namespace API
                             }
                             else
                             {
-                                // Create a shallow copy of the UserPrincipal with the main proprieties for caching/serialising it later on
-                                dynamic userPrincipal_ShallowCopy = new ExpandoObject();
-                                userPrincipal_ShallowCopy.SamAccountName = result.SamAccountName;
-                                userPrincipal_ShallowCopy.UserPrincipalName = result.UserPrincipalName;
-                                userPrincipal_ShallowCopy.DistinguishedName = result.DistinguishedName;
-                                userPrincipal_ShallowCopy.DisplayName = result.DisplayName;
-                                userPrincipal_ShallowCopy.Name = result.Name;
-                                userPrincipal_ShallowCopy.GivenName = result.GivenName;
-                                userPrincipal_ShallowCopy.MiddleName = result.MiddleName;
-                                userPrincipal_ShallowCopy.Surname = result.Surname;
-                                userPrincipal_ShallowCopy.EmailAddress = result.EmailAddress;
-                                userPrincipal_ShallowCopy.EmployeeId = result.EmployeeId;
-                                userPrincipal_ShallowCopy.VoiceTelephoneNumber = result.VoiceTelephoneNumber;
-                                userPrincipal_ShallowCopy.Description = result.Description;
+                                // Create a shallow copy of AD with the mandatory proprieties for caching/serialising it later on
+                                var userPrincipal_ShallowCopy = new ExpandoObject() as IDictionary<string, Object>;
+
+                                userPrincipal_ShallowCopy.Add("SamAccountName", result.SamAccountName);
+                                userPrincipal_ShallowCopy.Add("UserPrincipalName", result.UserPrincipalName);
+                                userPrincipal_ShallowCopy.Add("DistinguishedName", result.DistinguishedName);
+                                userPrincipal_ShallowCopy.Add("DisplayName", result.DisplayName);
+                                userPrincipal_ShallowCopy.Add("Name", result.Name);
+                                userPrincipal_ShallowCopy.Add("GivenName", result.GivenName);
+                                userPrincipal_ShallowCopy.Add("MiddleName", result.MiddleName);
+                                userPrincipal_ShallowCopy.Add("Surname", result.Surname);
+                                userPrincipal_ShallowCopy.Add("EmailAddress", result.EmailAddress);
+                                userPrincipal_ShallowCopy.Add("EmployeeId", result.EmployeeId);
+                                userPrincipal_ShallowCopy.Add("VoiceTelephoneNumber", result.VoiceTelephoneNumber);
+                                userPrincipal_ShallowCopy.Add("Description", result.Description);
+
+                                // Add the cusotm properties to the shallow copy if any
+                                foreach (string property in adCustomProperties)
+                                {
+                                    userPrincipal_ShallowCopy.Add(property, result.GetType().GetProperty(property)?.GetValue(result, null));
+                                }
 
                                 // Add user to the dictionary, serialise/deserialise to avoid looping references
-                                adUsers_IDictionary.Add(result.SamAccountName, userPrincipal_ShallowCopy);
+                                adUsers_IDictionary.Add(result.SamAccountName, userPrincipal_ShallowCopy as ExpandoObject);
                             }
                         }
                     }
@@ -103,7 +123,7 @@ namespace API
             }
 
             // Set the cache to expire at midnight
-            MemCacheD.Store_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", null, adUsers_IDictionary, DateTime.Today.AddDays(1));
+            MemCacheD.Store_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", inputDTO, adUsers_IDictionary, DateTime.Today.AddDays(1));
 
             return adUsers_IDictionary;
         }
@@ -115,7 +135,12 @@ namespace API
         public static IDictionary<string, dynamic> List()
         {
             // Get the full directory
-            return GetDirectory();
+            return List<UserPrincipal>();
+        }
+        public static IDictionary<string, dynamic> List<T>() where T : UserPrincipal
+        {
+            // Get the full directory
+            return GetDirectory<T>();
         }
 
         /// <summary>
@@ -125,8 +150,12 @@ namespace API
         /// <returns></returns>
         public static dynamic Search(string username)
         {
+            return Search<UserPrincipal>(username);
+        }
+        public static dynamic Search<T>(string username) where T : UserPrincipal
+        {
             // Get the full director
-            IDictionary<string, dynamic> adDirectory = GetDirectory();
+            IDictionary<string, dynamic> adDirectory = GetDirectory<T>();
 
             if (adDirectory.ContainsKey(username))
                 return adDirectory[username];
@@ -167,4 +196,30 @@ namespace API
 
     }
 
+    /// <summary>
+    /// Template to implement a extended UserPrincipal to retrieve custom AD properties (i.e. Sample)
+    /// </summary>
+    /*
+    [DirectoryRdnPrefix("CN")]
+    [DirectoryObjectClass("Person")]
+    public partial class UserPrincipalExtended : UserPrincipal
+    {
+        public UserPrincipalExtended(PrincipalContext context) : base(context) { }
+
+        
+        // Create the "Sample" property.    
+        [DirectoryProperty("sample")]
+        public string Sample
+        {
+            get
+            {
+                if (ExtensionGet("sample").Length != 1)
+                    return string.Empty;
+
+                return (string)ExtensionGet("sample")[0];
+            }
+            set { ExtensionSet("sample", value); }
+        }
+    }
+    */
 }

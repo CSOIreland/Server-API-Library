@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Configuration;
-using System.Linq;
-using System.Data.SqlClient;
-using System.Data;
 using System.Collections.Generic;
-using System.Dynamic;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Dynamic;
+using System.Linq;
 
 namespace API
 {
@@ -199,9 +199,10 @@ namespace API
 
         /// <summary>
         /// Start a SQL Server transaction
+        /// Consider setting "Is Read Committed Snapshot On" to TRUE in the Database options for better performance
         /// </summary>
         /// <param name="transactionIsolation"></param>
-        public void StartTransaction(IsolationLevel transactionIsolation = IsolationLevel.Snapshot)
+        public void StartTransaction(IsolationLevel transactionIsolation = IsolationLevel.ReadCommitted)
         {
             // Check if a transaction already exists
             if (!CheckTransaction())
