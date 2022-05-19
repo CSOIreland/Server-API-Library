@@ -13,7 +13,21 @@ namespace API
     /// ADO to handle SQL Server
     /// https://docs.microsoft.com/en-us/visualstudio/code-quality/ca1063-implement-idisposable-correctly?view=vs-2017
     /// </summary>
-    public class ADO : IDisposable
+    ///
+
+    public interface IADO : IDisposable
+    {
+        void CloseConnection(bool onDispose = false);
+        void CommitTransaction();
+        void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0);
+        void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam);
+        void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam, ref ADO_outputParam outputParam);
+        ADO_readerOutput ExecuteReaderProcedure(string procedureName, List<ADO_inputParams> inputParams);
+        void OpenConnection(string connectionName);
+        void RollbackTransaction();
+        void StartTransaction(IsolationLevel transactionIsolation = IsolationLevel.ReadCommitted);
+    }
+    public class ADO : IDisposable, IADO
     {
         #region Properties
         /// <summary>
@@ -360,6 +374,68 @@ namespace API
                 {
                     Log.Instance.Info("Get Return Parameter: Value[" + returnParam.value.ToString() + "]");
                     returnParam.value = (int)command.Parameters[returnParam.name].Value;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Execute a Bulk Copy
+        /// </summary>
+        /// <param name="destinationTableName"></param>
+        /// <param name="mappings"></param>
+        /// <param name="dt"></param>
+        /// <param name="useCurrentTransaction"></param>
+        /// <param name="copyOptions"></param>
+        public void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0)
+        {
+            Log.Instance.Info("Bulk Copy to Table " + destinationTableName.ToUpper());
+            Log.Instance.Info("Bulk Copy Timeout (s): " + API_ADO_BULKCOPY_TIMEOUT.ToString());
+            Log.Instance.Info("Bulk Copy BatchSize: " + API_ADO_BULKCOPY_BATCHSIZE.ToString());
+            Log.Instance.Info("Bulk Copy Use Current Transation: " + useCurrentTransaction.ToString());
+            Log.Instance.Info("Bulk Copy Options: " + copyOptions.ToString());
+
+            // Check the connection exists
+            if (!CheckConnection())
+            {
+                Log.Instance.Fatal("No SQL Server Connection avaialble");
+                return;
+            }
+
+            // Initiate Stopwatch
+            Stopwatch sw = new Stopwatch();
+
+            try
+            {
+                // Initiate a new Bulk Copy
+                using (var bulkCopy = useCurrentTransaction ? new SqlBulkCopy(connection, (SqlBulkCopyOptions)copyOptions, transaction) : new SqlBulkCopy(connection, (SqlBulkCopyOptions)copyOptions, null))
+                {
+                    // Set the target table
+                    bulkCopy.DestinationTableName = destinationTableName;
+                    // Set the timeout
+                    bulkCopy.BulkCopyTimeout = API_ADO_BULKCOPY_TIMEOUT;
+                    // Set the BatchSize
+                    bulkCopy.BatchSize = API_ADO_BULKCOPY_BATCHSIZE;
+
+                    // Add the list of mapped columns
+                    foreach (var mapping in mappings)
+                    {
+                        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping() { SourceColumn = mapping.Key, DestinationColumn = mapping.Value });
+                    }
+
+                    // Start the watch
+                    sw.Start();
+
+                    // Begin the copy
+                    bulkCopy.WriteToServer(dt);
+
+                    sw.Stop();
+
+                    Log.Instance.Info("Bulk Copy Procedure completed (s): " + Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3).ToString());
                 }
             }
             catch (Exception e)

@@ -369,6 +369,8 @@ namespace API
                 Type StaticClass = currentassembly.GetType(methodPath, false, true);
                 if (StaticClass != null)
                 {
+                    if (StaticClass.CustomAttributes.Where(x => x.AttributeType.Name == "AllowAPICall").ToList().Count == 0) { break; }
+
                     MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(JSONRPC_API) });
                     if (methodInfo == null)
                         return null;

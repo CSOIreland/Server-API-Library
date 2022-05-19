@@ -65,6 +65,11 @@ namespace API
         /// </summary>
         internal static string API_AD_PASSWORD = ConfigurationManager.AppSettings["API_AD_PASSWORD"];
 
+        /// <summary>
+        /// Firebase Authentication
+        /// </summary>
+        internal static bool FirebaseEnabled = Convert.ToBoolean(ConfigurationManager.AppSettings["API_FIREBASE_ENABLED"]);
+
 
         /// <summary>
         /// Active Directory User Principal
@@ -100,12 +105,15 @@ namespace API
         /// </summary>
         public static string SessionCookieName = ConfigurationManager.AppSettings["API_SESSION_COOKIE"];
 
+        public static string FirebaseId = null;
+
         /// <summary>
         /// Authenticate the user in the context
         /// </summary>
         /// <param name="context"></param>
         internal bool? Authenticate(ref HttpContext context)
         {
+
             bool? isAuthenticated = null;
             Log.Instance.Info("Stateless: " + API_STATELESS);
 
