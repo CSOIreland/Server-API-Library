@@ -54,11 +54,14 @@ namespace API
                 }
 
                 //validate the token
-                Task<FirebaseToken> tToken = FirebaseAdmin.Auth.FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(AccessToken);
+                Task<FirebaseToken> tToken = FirebaseAdmin.Auth.FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(AccessToken, true);
+
                 tToken.Wait();
 
                 if (tToken?.Result == null)
                     return false;
+                var usr = FirebaseAdmin.Auth.FirebaseAuth.DefaultInstance.GetUserAsync(Uid);
+                usr.Wait();
 
                 return tToken.Result.Uid.Equals(Uid);
 
@@ -71,6 +74,73 @@ namespace API
             }
         }
 
+        public static bool Logout(string Uid, string AccessToken)
+        {
+            try
+            {
+                if (Uid == null || AccessToken == null) return false;
+
+                string configPath = HostingEnvironment.MapPath(@"~\Resources\") + "FirebaseKey.json";
+
+
+                //Create the app if we need to
+                if (FirebaseAdmin.Auth.FirebaseAuth.DefaultInstance == null)
+                {
+                    try
+                    {
+                        var defaultApp = FirebaseApp.Create(new AppOptions()
+                        {
+
+                            Credential = GoogleCredential.FromFile(configPath)
+                        });
+                    }
+                    //FirebaseApp already exists - continue
+                    catch (System.ArgumentException)
+                    {
+                        Log.Instance.Error("Firebase app exists already - attempt to continue");
+                        var defaultApp = FirebaseApp.GetInstance(ConfigurationManager.AppSettings["API_FIREBASE_APP_NAME"]);
+
+                    }
+                }
+                var revoke = FirebaseAuth.DefaultInstance.RevokeRefreshTokensAsync(Uid);
+                revoke.Wait();
+
+
+                //validate the token
+                Task<FirebaseToken> tToken = FirebaseAdmin.Auth.FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(AccessToken, true);
+
+                tToken.Wait();
+            }
+            catch (FirebaseAuthException ex)
+            {
+                //The token has been revoked- logout successful
+                if (ex.AuthErrorCode == AuthErrorCode.RevokedIdToken)
+                {
+                    return true;
+                }
+                else
+                {
+                    //something else happened
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex.InnerException != null)
+                {
+                    var a = ex.InnerException.GetType();
+                    if (ex.InnerException.GetType().Name.Equals("FirebaseAuthException"))
+                    {
+
+                        return true;
+                    }
+                }
+                Log.Instance.Error("Error authenticating Firebase token: " + ex.Message + ": " + ex.GetType());
+                return false;
+            }
+
+            return true;
+        }
         /// <summary>
         /// Get all of the Firebase users for this Firebase Project
         /// </summary>

@@ -1,10 +1,12 @@
-﻿using Newtonsoft.Json.Linq;
+﻿//using Ganss.XSS;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -85,7 +87,7 @@ namespace API
                 HttpCookie sessionCookie = null;
                 if (!String.IsNullOrEmpty(SessionCookieName))
                 {
-                    sessionCookie = context.Request.Cookies[SessionCookieName];
+                    sessionCookie = context.Request.Cookies[SessionCookieName]; //new HttpCookie("session", "84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2");// 
                 }
 
                 JSONRPC_Output result = null;
@@ -156,7 +158,12 @@ namespace API
                             result = result.data,
                             id = JSONRPC_Request.id
                         };
+
                         // Output the JSON-RPC repsonse
+                        //var cleanString = Utility.JsonSerialize_IgnoreLoopingReference(output);
+                        //var sanitizer = new HtmlSanitizer();
+                        //cleanString = sanitizer.Sanitize(cleanString);
+                        //context.Response.Write(cleanString);
                         context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
                     }
                 }
@@ -274,6 +281,8 @@ namespace API
                 request = httpGET[JSONRPC_GetParam];
                 Log.Instance.Info("Request type: GET");
             }
+            //HtmlSanitizer sanitizer = new HtmlSanitizer();
+            //request=sanitizer.Sanitize(request);
 
             JSONRPC_Request JSONRPC_Request = new JSONRPC_Request();
 
@@ -478,7 +487,7 @@ namespace API
     /// <summary>
     /// Define the Output structure required by the exposed API
     /// </summary>
-    public class JSONRPC_Output
+    public class JSONRPC_Output : IResponseOutput
     {
         #region Properties
         /// <summary>
@@ -495,6 +504,10 @@ namespace API
         /// Session Cookie
         /// </summary>
         public HttpCookie sessionCookie { get; set; }
+        public dynamic response { get; set; }
+        public string mimeType { get; set; }
+        public HttpStatusCode statusCode { get; set; }
+        public string fileName { get; set; }
         #endregion
     }
 
@@ -525,13 +538,13 @@ namespace API
     /// <summary>
     /// Define the API Class to pass to the exposed API 
     /// </summary>
-    public class JSONRPC_API
+    public class JSONRPC_API : IRequest
     {
         #region Properties
         /// <summary>
         /// API method
         /// </summary>
-        public string method { get; internal set; }
+        public string method { get; set; }
 
         /// <summary>
         /// API parameters
@@ -541,32 +554,32 @@ namespace API
         /// <summary>
         /// Active Directory userPrincipal
         /// </summary>
-        public dynamic userPrincipal { get; internal set; }
+        public dynamic userPrincipal { get; set; }
 
         /// <summary>
         /// Client IP address
         /// </summary>
-        public string ipAddress { get; internal set; }
+        public string ipAddress { get; set; }
 
         /// <summary>
         /// Client user agent
         /// </summary>
-        public string userAgent { get; internal set; }
+        public string userAgent { get; set; }
 
         /// <summary>
         /// GET request
         /// </summary>
-        public NameValueCollection httpGET { get; internal set; }
+        public NameValueCollection httpGET { get; set; }
 
         /// <summary>
         /// POST request
         /// </summary>
-        public string httpPOST { get; internal set; }
+        public string httpPOST { get; set; }
 
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; internal set; }
+        public HttpCookie sessionCookie { get; set; }
         #endregion
     }
 

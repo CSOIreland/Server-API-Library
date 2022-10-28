@@ -123,8 +123,12 @@ namespace API
                     return;
                 }
 
+                //check what type of DB connection is to be made
+                string connectionType = ConfigurationManager.AppSettings["API_ADO_DB_CONNECTION_TYPE"];
+
                 // Get the Connection String form the associated Name
                 string connectionString = ConfigurationManager.ConnectionStrings[connectionName].ConnectionString;
+
 
                 Log.Instance.Info("SQL Server Connection Name: " + connectionName);
                 Log.Instance.Info("SQL Server Connection String: ********"); // Hide connectionString from logs
@@ -135,9 +139,42 @@ namespace API
                     return;
                 }
 
-                // Open a connection
-                connection = new SqlConnection(connectionString);
-                connection.Open();
+                if (connectionType.Equals("AD"))
+                {
+                    //need to impersonate as the AD user when creating the connection
+
+                    var execUsername = ConfigurationManager.AppSettings["API_ADO_DB_AD_CONNECTION_USERNAME"];
+                    var execPassword = ConfigurationManager.AppSettings["API_ADO_DB_AD_CONNECTION_PASSWORD"];
+                    var executeDomain = ConfigurationManager.AppSettings["API_ADO_DB_AD_DOMAIN"];
+
+
+                    if (Impersonization.impersonateValidUser(execUsername, executeDomain, execPassword))
+                    {
+                        connection = new SqlConnection(connectionString);
+                        connection.Open();
+                        Impersonization.undoImpersonation();
+                    }
+                    else
+                    {
+                        Log.Instance.Fatal("Error connection to database");
+                        throw new Exception("Error connection to database");
+                    }
+
+
+
+                }
+                else if (connectionType.Equals("SQL"))
+                {
+                    // Open a connection
+                    connection = new SqlConnection(connectionString);
+                    connection.Open();
+                }
+                else
+                {
+                    Log.Instance.Fatal("Database Connection Type not supported");
+                    throw new Exception("Database Connection Type not supported");
+                }
+
             }
             catch (Exception e)
             {
@@ -788,7 +825,7 @@ namespace API
         /// <summary>
         /// Flag to indicate if any data exists
         /// </summary>
-        public bool hasData { get; internal set; }
+        public bool hasData { get; set; }
 
         /// <summary>
         /// Size of the output in Bytes
@@ -808,7 +845,7 @@ namespace API
         /// <summary>
         /// Data output
         /// </summary>
-        public List<dynamic> data { get; internal set; }
+        public List<dynamic> data { get; set; }
 
         #endregion
 

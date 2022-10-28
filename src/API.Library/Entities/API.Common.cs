@@ -129,6 +129,7 @@ namespace API
                 // IIS Anonymous Authentication enabled
                 NetworkIdentity = null;
                 NetworkUsername = null;
+                Log.Instance.Info("User.Identity not authenticated");
             }
 
             Log.Instance.Info("Network Identity: " + NetworkIdentity);

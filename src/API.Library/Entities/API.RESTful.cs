@@ -71,7 +71,7 @@ namespace API
                     sessionCookie = context.Request.Cookies[SessionCookieName];
                 }
 
-                RESTful_Output result = null;
+                IResponseOutput result = null;
 
                 bool? isAuthenticated = Authenticate(ref context);
                 switch (isAuthenticated)
@@ -117,7 +117,7 @@ namespace API
 
                     if (!String.IsNullOrEmpty(result.fileName))
                     {
-                        context.Response.AppendHeader("Content-Disposition", new ContentDisposition { Inline = true, FileName = result.fileName }.ToString());
+                        context.Response.AppendHeader("Content-Disposition", new ContentDisposition { DispositionType = DispositionTypeNames.Attachment, Inline = true, FileName = result.fileName }.ToString());
                     }
 
                     if (result.response?.GetType() == typeof(byte[]))
@@ -332,6 +332,35 @@ namespace API
             return methodInfo.Invoke(null, new object[] { apiRequest });
         }
 
+
+        public static IResponseOutput FormatRestfulError(IResponseOutput response, string mimeType = null, HttpStatusCode statusCode4NoContent = HttpStatusCode.NoContent, HttpStatusCode statusCode4Error = HttpStatusCode.InternalServerError)
+        {
+            if (response == null)
+            {
+                return null;
+            }
+            else if (response.error != null)
+            {
+                return new RESTful_Output
+                {
+                    mimeType = null,
+                    statusCode = statusCode4Error,
+                    response = response.error
+                };
+            }
+            else if (response.data == null)
+            {
+                return new RESTful_Output
+                {
+                    mimeType = null,
+                    statusCode = statusCode4NoContent,
+                    response = response.data
+                };
+            }
+
+            return response;
+        }
+
         /// <summary>
         /// Handle reusable IHttpHandler instances 
         /// </summary>
@@ -347,7 +376,7 @@ namespace API
     /// <summary>
     /// Define the Output structure required by the exposed API
     /// </summary>
-    public class RESTful_Output
+    public class RESTful_Output : IResponseOutput
     {
         #region Properties
         /// <summary>
@@ -374,19 +403,21 @@ namespace API
         /// Session Cookie
         /// </summary>
         public HttpCookie sessionCookie { get; set; }
+        public dynamic data { get; set; }
+        public dynamic error { get; set; }
         #endregion
     }
 
     /// <summary>
     /// Define the API Class to pass to the exposed API 
     /// </summary>
-    public class RESTful_API
+    public class RESTful_API : IRequest
     {
         #region Properties
         /// <summary>
         /// API method
         /// </summary>
-        public string method { get; internal set; }
+        public string method { get; set; }
 
         /// <summary>
         /// API parameters
@@ -396,32 +427,32 @@ namespace API
         /// <summary>
         /// Active Directory userPrincipal
         /// </summary>
-        public dynamic userPrincipal { get; internal set; }
+        public dynamic userPrincipal { get; set; }
 
         /// <summary>
         /// Client IP address
         /// </summary>
-        public string ipAddress { get; internal set; }
+        public string ipAddress { get; set; }
 
         /// <summary>
         /// Client user agent
         /// </summary>
-        public string userAgent { get; internal set; }
+        public string userAgent { get; set; }
 
         /// <summary>
         /// GET request
         /// </summary>
-        public NameValueCollection httpGET { get; internal set; }
+        public NameValueCollection httpGET { get; set; }
 
         /// <summary>
         /// POST request
         /// </summary>
-        public string httpPOST { get; internal set; }
+        public string httpPOST { get; set; }
 
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; internal set; }
+        public HttpCookie sessionCookie { get; set; }
         #endregion
     }
 }
