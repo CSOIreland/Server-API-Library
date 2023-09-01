@@ -4,9 +4,7 @@ using System;
 
 namespace Sample
 {
-    /// <summary>
-    /// 
-    /// </summary>
+    [AllowAPICall]
     public class YourJSONRPC
     {
         #region Methods

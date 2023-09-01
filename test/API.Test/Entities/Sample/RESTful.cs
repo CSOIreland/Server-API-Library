@@ -8,6 +8,8 @@ namespace Sample
     /// <summary>
     /// 
     /// </summary>
+    [AllowAPICall]
+
     public class YourRESTful
     {
         #region Methods
