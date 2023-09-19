@@ -1,25 +1,18 @@
-﻿//using Ganss.XSS;
+﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Web;
-using System.Web.SessionState;
+using System.Collections.Specialized;
+using System.Dynamic;
 
 namespace API
 {
     /// <summary>
     /// JSON-RPC listener following specifications at http://www.jsonrpc.org/specification
     /// </summary>
-    public class JSONRPC : Common, IHttpHandler, IRequiresSessionState
+    public class JSONRPC : Common
     {
+
         #region Properties
         /// <summary>
         /// JSON RPC version in use
@@ -37,104 +30,141 @@ namespace API
         internal const string JSONRPC_MimeType = "application/json";
 
         /// <summary>
-        /// Mask parametrs 
+        ///  allowed http methods
         /// </summary>
-        private static List<string> API_JSONRPC_MASK_PARAMETERS = (ConfigurationManager.AppSettings["API_JSONRPC_MASK_PARAMETERS"]).Split(',').ToList<string>();
+        public string[] AllowedHTTPMethods = new string[] { "GET", "POST" };
+
+        public JSONRPC() : base()
+        {
+        }
+
 
         #endregion
-
         #region Methods
         /// <summary>
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
         /// <param name="context"></param>
-        public void ProcessRequest(HttpContext context)
+        //public async Task Invoke(HttpContext httpContext)
+        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED)
         {
-            // Initiate Stopwatch
-            Stopwatch sw = new Stopwatch();
-            // Start Stopwatch
-            sw.Start();
 
-            // Thread a PerfomanceCollector
-            PerfomanceCollector performanceCollector = new PerfomanceCollector();
-            Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
+            // Were we already canceled?
+            apiCancellationToken.Token.ThrowIfCancellationRequested();
 
             try
             {
-                Log.Instance.Info("API Interface Opened");
+                Log.Instance.Info("Starting JSONRPC processing");
 
                 // Set HTTP Requests
-                httpGET = GetHttpGET();
-                httpPOST = GetHttpPOST();
+                httpGET = GetHttpGET(httpContext);
+                httpPOST = await GetHttpPOST(httpContext);
 
                 // Set Mime-Type for the Content Type and override the Charset
-                context.Response.ContentType = JSONRPC_MimeType;
-                context.Response.Charset = null;
+                httpContext.Response.ContentType = JSONRPC_MimeType;
+                // httpContext.Response.Headers.ContentType.CharSet = "";
                 // Set CacheControl to no-cache
-                context.Response.CacheControl = "no-cache";
+                httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+                //set charset to null
+                httpContext.Response.Headers.Append("Charset", "");
 
                 // Deserialize and parse the JSON request into an Object dynamically
-                JSONRPC_Request JSONRPC_Request = ParseRequest(ref context);
+                JSONRPC_Request JSONRPC_Request = await ParseRequest(httpContext, apiCancellationToken);
 
                 // Check for the maintenance flag
-                if (Maintenance)
+                if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.MAINTENANCE))
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
-                    ParseError(ref context, JSONRPC_Request.id, error);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
                 }
 
+                string SessionCookieName = ApiServicesHelper.ApiConfiguration.Settings["API_SESSION_COOKIE"];
+
+                //add a cookie for testing
+                //httpContext.Request.Headers.Add("Cookie", "session=\"84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2\";");        
+
                 // Get Session Cookie
-                HttpCookie sessionCookie = null;
-                if (!String.IsNullOrEmpty(SessionCookieName))
+                Cookie sessionCookie = new Cookie();
+                if (!string.IsNullOrEmpty(SessionCookieName))
                 {
-                    sessionCookie = context.Request.Cookies[SessionCookieName]; //new HttpCookie("session", "84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2");// 
+                    //need to create a cookie using the value and  the SessionCookieName
+                    string testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
+
+                    if (!string.IsNullOrEmpty(testSessionCookieValue))
+                    {
+                        sessionCookie.Name = SessionCookieName;
+                        sessionCookie.Value = testSessionCookieValue;
+                    }
                 }
 
                 JSONRPC_Output result = null;
+  
+                bool? isAuthenticated =  Authenticate(ref httpContext);
 
-                bool? isAuthenticated = Authenticate(ref context);
-                switch (isAuthenticated)
+                try
                 {
-                    case null: //Anonymous authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context, JSONRPC_Request, sessionCookie);
-                        break;
-                    case true: //Windows Authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context, JSONRPC_Request, null);
-                        break;
-                    case false: //Error
-                        JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                        ParseError(ref context, JSONRPC_Request.id, error);
-                        break;
+                    switch (isAuthenticated)
+                    {
+                        case null: //Anonymous authentication
+                            if (API_PERFORMANCE_ENABLED)
+                            {
+                                performanceThread.Start();
+                            }
+                            result = GetResult(httpContext, JSONRPC_Request, sessionCookie);
+                            //result.sessionCookie always null unless set it to the sessionCookie from the request
+                            result.sessionCookie = sessionCookie;
+                            break;
+                        case true: //Windows Authentication
+                            if (API_PERFORMANCE_ENABLED)
+                            {
+                                performanceThread.Start();
+                            }
+                            result = GetResult(httpContext, JSONRPC_Request, null);
+                            break;
+                        case false: //Error
+                            JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
+                            await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                            break;
+                    }
                 }
+                catch (Exception e)
+                {
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                }
+              
 
                 if (result == null)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
-                    ParseError(ref context, JSONRPC_Request.id, error);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
                 }
                 else if (result.error != null)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32099, data = result.error };
-                    ParseError(ref context, JSONRPC_Request.id, error);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
                 }
                 else
                 {
                     // Set the Session Cookie if requested
-                    if (!String.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
+                    if (!string.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
                     {
                         // No expiry time allowed in the future
                         if (result.sessionCookie.Expires > DateTime.Now)
                         {
                             result.sessionCookie.Expires = default;
                         }
+                        var cookieOptions = new CookieOptions
+                        {
+                            Secure = true,
+                            HttpOnly = true,
+                            Domain = null,
+                            SameSite = SameSiteMode.Strict,
+                            Expires = result.sessionCookie.Expires
+                        };
 
-                        result.sessionCookie.Secure = true;
-                        result.sessionCookie.Domain = null;
-                        result.sessionCookie.HttpOnly = true;
-                        result.sessionCookie.SameSite = SameSiteMode.Strict;
-                        context.Response.Cookies.Add(result.sessionCookie);
+                        // Add the cookie to the response cookie collection
+                        httpContext.Response.Cookies.Append(SessionCookieName, result.sessionCookie.Value, cookieOptions);
                     }
 
                     // Check if the result.data is already a JSON type casted as: new JRaw(data); 
@@ -148,7 +178,7 @@ namespace API
                             id = JSONRPC_Request.id
                         };
                         // Output the JSON-RPC repsonse with JRaw data
-                        context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                        await returnResponseAsync(httpContext, Utility.JsonSerialize_IgnoreLoopingReference(output), apiCancellationToken, HttpStatusCode.OK);
                     }
                     else
                     {
@@ -160,13 +190,13 @@ namespace API
                         };
 
                         // Output the JSON-RPC repsonse
-                        //var cleanString = Utility.JsonSerialize_IgnoreLoopingReference(output);
-                        //var sanitizer = new HtmlSanitizer();
-                        //cleanString = sanitizer.Sanitize(cleanString);
-                        //context.Response.Write(cleanString);
-                        context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
+                        await returnResponseAsync(httpContext, Utility.JsonSerialize_IgnoreLoopingReference(output), apiCancellationToken, HttpStatusCode.OK);
                     }
                 }
+            }
+            catch (OperationCanceledException e)
+            {
+                //don't need to do anything here as operation has been cancelled
             }
             catch (ThreadAbortException e)
             {
@@ -176,18 +206,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                throw;
-            }
-            finally
-            {
-                // Terminate Perfomance collection
-                performanceThread.Abort();
-
-                // Stop Stopwatch
-                sw.Stop();
-
-                Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
-                Log.Instance.Info("API Interface Closed");
+                await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }
 
@@ -199,7 +218,7 @@ namespace API
         /// <param name="response"></param>
         /// <param name="id"></param>
         /// <param name="error"></param>
-        private void ParseError(ref HttpContext context, string id, JSONRPC_Error error)
+        private async Task ParseError(HttpContext context, string id, JSONRPC_Error error, CancellationTokenSource sourceToken)
         {
             if (error.message == null)
                 switch (error.code)
@@ -238,36 +257,32 @@ namespace API
                         break;
                 }
 
-            Log.Instance.Info("IP: " + Utility.GetIP() + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
-            object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
-            context.Response.Write(Utility.JsonSerialize_IgnoreLoopingReference(output));
 
-            try
-            {
-                context.Response.End();
-            }
-            catch (ThreadAbortException e)
-            {
-                // Thread intentially aborted, do nothing
-            }
+            Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Error Code: " + error.code.ToString() + ", Error Message: " + error.message.ToString() + ", Error Data: " + (error.data == null ? "" : error.data.ToString()));
+            object output = new JSONRPC_ResponseError { jsonrpc = JSONRPC_Version, error = error, id = id };
+
+
+            await returnResponseAsync(context, Utility.JsonSerialize_IgnoreLoopingReference(output), sourceToken, HttpStatusCode.OK);
         }
 
         /// <summary>
         /// Parse and validate the request
         /// </summary>
-        /// <param name="context"></param>
+        /// <param name="httpContext"></param>
         /// <returns></returns>
-        private JSONRPC_Request ParseRequest(ref HttpContext context)
+        private async Task<JSONRPC_Request> ParseRequest(HttpContext httpContext,CancellationTokenSource sourceToken)
         {
             // Initialise requests
             string request = null;
-
+          
             // Check the query input exists
-            if (string.IsNullOrWhiteSpace(httpGET[JSONRPC_GetParam])
-            && string.IsNullOrWhiteSpace(httpPOST))
+            if(httpGET != null)
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
-                ParseError(ref context, null, error);
+                if (string.IsNullOrWhiteSpace(httpGET[JSONRPC_GetParam]) && string.IsNullOrWhiteSpace(httpPOST))
+                {
+                    JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
+                    await ParseError(httpContext, null, error, sourceToken);
+                }
             }
 
             // POST request overrides GET one
@@ -281,22 +296,20 @@ namespace API
                 request = httpGET[JSONRPC_GetParam];
                 Log.Instance.Info("Request type: GET");
             }
-            //HtmlSanitizer sanitizer = new HtmlSanitizer();
-            //request=sanitizer.Sanitize(request);
+
 
             JSONRPC_Request JSONRPC_Request = new JSONRPC_Request();
 
             try
             {
-                // Deserialize JSON to an Object dynamically
-                JSONRPC_Request = Utility.JsonDeserialize_IgnoreLoopingReference<JSONRPC_Request>(request);
-            }
-            catch (Exception e)
-            {
+               // Deserialize JSON to an Object dynamically
+               JSONRPC_Request = Utility.JsonDeserialize_IgnoreLoopingReference<JSONRPC_Request>(request);
+            } catch (Exception e){
+                Log.Instance.Fatal(request);
                 Log.Instance.Fatal(e);
 
-                JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
-                ParseError(ref context, null, error);
+                var error = new JSONRPC_Error { code = -32700 };
+                await ParseError(httpContext, null, error, sourceToken);
             }
 
             // N.B. JSONRPC_Request.id is recommended but optional anyway 
@@ -306,28 +319,28 @@ namespace API
             || JSONRPC_Request.method == null)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32600 };
-                ParseError(ref context, JSONRPC_Request.id, error);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
             }
 
             // Verify the version is right 
             if (JSONRPC_Request.jsonrpc != JSONRPC_Version)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32000 };
-                ParseError(ref context, JSONRPC_Request.id, error);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
             }
 
             // Verify the method exists
             if (!ValidateMethod(JSONRPC_Request))
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32601 };
-                ParseError(ref context, JSONRPC_Request.id, error);
+                var error = new JSONRPC_Error { code = -32601 };
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
             }
 
             // Verify the params exist
             if (JSONRPC_Request.@params == null)
             {
-                JSONRPC_Error error = new JSONRPC_Error { code = -32602 };
-                ParseError(ref context, JSONRPC_Request.id, error);
+                var error = new JSONRPC_Error { code = -32602 };
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
             }
 
             return JSONRPC_Request;
@@ -370,23 +383,33 @@ namespace API
 
             // Never allow to call Public Methods in the API Namespace
             if (mapping[0].ToUpperInvariant() == "API")
-                return null;
+            return null;
+            
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
 
-            // Search in the entire Assemplies till finding the right one
-            foreach (Assembly currentassembly in AppDomain.CurrentDomain.GetAssemblies())
+            var calledClass= allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+
+            if (calledClass != null)
             {
-                Type StaticClass = currentassembly.GetType(methodPath, false, true);
-                if (StaticClass != null)
+                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
                 {
-                    if (StaticClass.CustomAttributes.Where(x => x.AttributeType.Name == "AllowAPICall").ToList().Count == 0) { break; }
 
-                    MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(JSONRPC_API) });
-                    if (methodInfo == null)
-                        return null;
-                    else
-                        return methodInfo;
+                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
+                    {
+
+                        MethodInfo methodInfo = calledClass.GetMethod(methodName, new Type[] { typeof(JSONRPC_API) });
+                        if (methodInfo == null)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return methodInfo;
+                        }
+                    }
                 }
             }
+
 
             return null;
         }
@@ -396,52 +419,36 @@ namespace API
         /// </summary>
         /// <param name="JSONRPC_Request"></param>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context, JSONRPC_Request JSONRPC_Request, HttpCookie sessionCookie = null)
+        private dynamic GetResult(HttpContext context, JSONRPC_Request JSONRPC_Request, Cookie sessionCookie = null)
         {
             // Set the API object
-            JSONRPC_API apiRequest = new JSONRPC_API();
-            apiRequest.method = JSONRPC_Request.method;
-            apiRequest.parameters = JSONRPC_Request.@params;
-            apiRequest.userPrincipal = UserPrincipal;
-            apiRequest.ipAddress = Utility.GetIP();
-            apiRequest.userAgent = Utility.GetUserAgent();
-            apiRequest.httpGET = httpGET;
-            apiRequest.httpPOST = httpPOST;
-            apiRequest.sessionCookie = sessionCookie;
+            JSONRPC_API apiRequest = new JSONRPC_API
+            {
+                method = JSONRPC_Request.method,
+                parameters = JSONRPC_Request.@params,
+                userPrincipal = UserPrincipal,
+                ipAddress = ApiServicesHelper.WebUtility.GetIP(),
+                userAgent = ApiServicesHelper.WebUtility.GetUserAgent(),
+                httpGET = httpGET,
+                httpPOST = httpPOST,
+                sessionCookie = sessionCookie,
+                requestType = context.Request.Method,
+                requestHeaders = context.Request.Headers,
+                scheme = context.Request.Scheme
+            };
+
+            dynamic logMessage = new ExpandoObject();
+            logMessage = apiRequest;
+            if(UserPrincipal != null) 
+                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
 
             // Hide password from logs
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(apiRequest)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(JSONRPC_Request);
-
             //Invoke the API Method
             return methodInfo.Invoke(null, new object[] { apiRequest });
-        }
-
-        /// <summary>
-        /// Mask an input password
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        public static string MaskParameters(string input)
-        {
-            if (String.IsNullOrEmpty(input))
-            {
-                return "";
-            }
-            // Init the output
-            string output = input;
-
-            // Loop trough the parameters to mask
-            foreach (var param in API_JSONRPC_MASK_PARAMETERS)
-            {
-                // https://stackoverflow.com/questions/171480/regex-grabbing-values-between-quotation-marks
-                Log.Instance.Info("Masked parameter: " + param);
-                output = Regex.Replace(output, "\"" + param + "\"\\s*:\\s*\"(.*?[^\\\\])\"", "\"" + param + "\": \"********\"", RegexOptions.IgnoreCase);
-            }
-
-            return output;
         }
 
         /// <summary>
@@ -452,8 +459,7 @@ namespace API
             // Set to false to ensure thread safe operations
             get { return true; }
         }
-
-        #endregion
+       #endregion
     }
 
     /// <summary>
@@ -503,7 +509,7 @@ namespace API
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; set; }
+        public Cookie sessionCookie { get; set; }
         public dynamic response { get; set; }
         public string mimeType { get; set; }
         public HttpStatusCode statusCode { get; set; }
@@ -579,7 +585,23 @@ namespace API
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; set; }
+        public Cookie sessionCookie { get; set; }
+
+        /// <summary>
+        /// Request Type
+        /// </summary>
+        public string requestType { get; set; }
+
+        /// <summary>
+        /// Request Headers
+        /// </summary>
+        public IHeaderDictionary requestHeaders { get; set; }
+
+
+        /// <summary>
+        /// Request Scheme
+        /// </summary>
+        public string scheme { get; set; }
         #endregion
     }
 
@@ -655,4 +677,5 @@ namespace API
 
         #endregion
     }
+
 }

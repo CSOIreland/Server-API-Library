@@ -1,0 +1,560 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>System.DirectoryServices.Protocols</name>
+    </assembly>
+    <members>
+        <member name="P:System.SR.NoNegativeTimeLimit">
+            <summary>A negative value is not permitted for the time limit.</summary>
+        </member>
+        <member name="P:System.SR.NoNegativeSizeLimit">
+            <summary>A negative value is not permitted for the size limit.</summary>
+        </member>
+        <member name="P:System.SR.InvalidDocument">
+            <summary>The DSML document could not be parsed.</summary>
+        </member>
+        <member name="P:System.SR.MissingResponse">
+            <summary>The server failed to return a DirectoryResponse.</summary>
+        </member>
+        <member name="P:System.SR.ErrorResponse">
+            <summary>An ErrorResponse DSML element was returned.</summary>
+        </member>
+        <member name="P:System.SR.NullDirectoryAttribute">
+            <summary>A null reference cannot be added to DirectoryAttribute or DirectoryAttributeModification objects.</summary>
+        </member>
+        <member name="P:System.SR.NullDirectoryAttributeCollection">
+            <summary>A null reference cannot be added to DirectoryAttributeCollection or DirectoryAttributeModificationCollection objects.</summary>
+        </member>
+        <member name="P:System.SR.WhiteSpaceServerName">
+            <summary>Server names cannot contain a space character.</summary>
+        </member>
+        <member name="P:System.SR.DirectoryAttributeConversion">
+            <summary>A DirectoryAttribute value can only be converted between byte array and string.</summary>
+        </member>
+        <member name="P:System.SR.WrongNumValuesCompare">
+            <summary>Only one value can be specified for the compare operation.</summary>
+        </member>
+        <member name="P:System.SR.WrongAssertionCompare">
+            <summary>The assertion is null and is invalid for the compare operation.</summary>
+        </member>
+        <member name="P:System.SR.DefaultOperationsError">
+            <summary>An unspecified operation error occurred.</summary>
+        </member>
+        <member name="P:System.SR.ReadOnlyProperty">
+            <summary>The property is read-only.</summary>
+        </member>
+        <member name="P:System.SR.InvalidClientCertificates">
+            <summary>ClientCertificates can contain only zero or one certificate.</summary>
+        </member>
+        <member name="P:System.SR.InvalidAuthCredential">
+            <summary>The user name and password must be null when the authentication type is anonymous.</summary>
+        </member>
+        <member name="P:System.SR.InvalidLdapSearchRequestFilter">
+            <summary>The LDAP connection only accepts SearchRequest objects that have string type filters.</summary>
+        </member>
+        <member name="P:System.SR.PartialResultsNotSupported">
+            <summary>Retrieval of partial results set is supported only by the SearchRequest object.</summary>
+        </member>
+        <member name="P:System.SR.BerConverterNotMatch">
+            <summary>The "format" string argument and the passed in "value" argument do not match.</summary>
+        </member>
+        <member name="P:System.SR.BerConverterUndefineChar">
+            <summary>The "format" string contains an invalid character.</summary>
+        </member>
+        <member name="P:System.SR.BerConversionError">
+            <summary>An error occurred during the BER conversion.</summary>
+        </member>
+        <member name="P:System.SR.TLSStopFailure">
+            <summary>The Stop TLS operation failed.</summary>
+        </member>
+        <member name="P:System.SR.NoPartialResults">
+            <summary>The LDAP connection cannot retrieve a partial result set.</summary>
+        </member>
+        <member name="P:System.SR.DefaultLdapError">
+            <summary>The LDAP server returned an unknown error: {0}</summary>
+        </member>
+        <member name="P:System.SR.LDAP_PARTIAL_RESULTS">
+            <summary>Only partial results and referrals were received.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_IS_LEAF">
+            <summary>The object is a leaf.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SORT_CONTROL_MISSING">
+            <summary>The search requires a SORT control.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_OFFSET_RANGE_ERROR">
+            <summary>The search results exceed the specified offset range.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_RESULTS_TOO_LARGE">
+            <summary>The returned results are too large.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SERVER_DOWN">
+            <summary>The LDAP server is unavailable.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_LOCAL_ERROR">
+            <summary>A local error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ENCODING_ERROR">
+            <summary>An encoding error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_DECODING_ERROR">
+            <summary>A decoding error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_TIMEOUT">
+            <summary>The operation was aborted because the client side timeout limit was exceeded.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_AUTH_UNKNOWN">
+            <summary>An unknown authentication error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_FILTER_ERROR">
+            <summary>The search filter is invalid.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_USER_CANCELLED">
+            <summary>The user cancelled the operation.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_PARAM_ERROR">
+            <summary>A bad parameter was passed to a routine.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NO_MEMORY">
+            <summary>There is not enough memory to perform the task.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_CONNECT_ERROR">
+            <summary>The connection cannot be established.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NOT_SUPPORTED">
+            <summary>The feature is not supported.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NO_RESULTS_RETURNED">
+            <summary>No results were returned.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_CONTROL_NOT_FOUND">
+            <summary>The specified control was not found.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_MORE_RESULTS_TO_RETURN">
+            <summary>More results will be returned.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_CLIENT_LOOP">
+            <summary>A client loop was detected.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_REFERRAL_LIMIT_EXCEEDED">
+            <summary>The referral limit has been exceeded.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INVALID_CREDENTIALS">
+            <summary>The supplied credential is invalid.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SUCCESS">
+            <summary>The call completed successfully.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_OPERATIONS_ERROR">
+            <summary>An operation error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_PROTOCOL_ERROR">
+            <summary>A protocol error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_TIMELIMIT_EXCEEDED">
+            <summary>The time limit set by the server-side time limit parameter was exceeded.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SIZELIMIT_EXCEEDED">
+            <summary>The size limit was exceeded</summary>
+        </member>
+        <member name="P:System.SR.LDAP_COMPARE_FALSE">
+            <summary>The attribute and known values do not match.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_COMPARE_TRUE">
+            <summary>The attribute and known values match.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_AUTH_METHOD_NOT_SUPPORTED">
+            <summary>The authentication method is not supported.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_STRONG_AUTH_REQUIRED">
+            <summary>Strong authentication is required for this operation.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_REFERRAL">
+            <summary>A referral was returned from the server.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ADMIN_LIMIT_EXCEEDED">
+            <summary>The administration limit on the server was exceeded.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_UNAVAILABLE_CRIT_EXTENSION">
+            <summary>The server does not support the control. The control is critical.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_CONFIDENTIALITY_REQUIRED">
+            <summary>Confidentiality is required for this operation.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SASL_BIND_IN_PROGRESS">
+            <summary>A SASL bind is in progress.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NO_SUCH_ATTRIBUTE">
+            <summary>The requested attribute does not exist.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_UNDEFINED_TYPE">
+            <summary>The type is not defined.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INAPPROPRIATE_MATCHING">
+            <summary>The matching rule does not apply to the specified attribute type.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_CONSTRAINT_VIOLATION">
+            <summary>A value in the request is invalid.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ATTRIBUTE_OR_VALUE_EXISTS">
+            <summary>The attribute exists or the value has been assigned.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INVALID_SYNTAX">
+            <summary>The syntax is invalid.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NO_SUCH_OBJECT">
+            <summary>The object does not exist.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ALIAS_PROBLEM">
+            <summary>The alias is invalid.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INVALID_DN_SYNTAX">
+            <summary>The distinguished name contains invalid syntax.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ALIAS_DEREF_PROBLEM">
+            <summary>An error occurred when dereferencing the alias.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INAPPROPRIATE_AUTH">
+            <summary>The authentication that was provided was not appropriate.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_INSUFFICIENT_RIGHTS">
+            <summary>The user has insufficient access rights.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_BUSY">
+            <summary>The server is busy.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_UNAVAILABLE">
+            <summary>The server is unavailable.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_UNWILLING_TO_PERFORM">
+            <summary>The server cannot handle directory requests.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_LOOP_DETECT">
+            <summary>The chain of referrals has looped back to a referring server.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NAMING_VIOLATION">
+            <summary>A naming violation occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_OBJECT_CLASS_VIOLATION">
+            <summary>An object class violation occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NOT_ALLOWED_ON_NONLEAF">
+            <summary>This operation is not allowed on a non-leaf object.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NOT_ALLOWED_ON_RDN">
+            <summary>This operation is not allowed on a relative distinguished name.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_ALREADY_EXISTS">
+            <summary>The object exists.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_NO_OBJECT_CLASS_MODS">
+            <summary>The request is attempting to modify an object class that cannot be modified.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_AFFECTS_MULTIPLE_DSAS">
+            <summary>Multiple directory service agents are affected.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_VIRTUAL_LIST_VIEW_ERROR">
+            <summary>An error occurred when attempting to perform a requested Virtual List View operation.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_OTHER">
+            <summary>An unknown error occurred.</summary>
+        </member>
+        <member name="P:System.SR.LDAP_SEND_TIMEOUT">
+            <summary>The operation was aborted because the send timeout limit was exceeded.</summary>
+        </member>
+        <member name="P:System.SR.InvalidAsyncResult">
+            <summary>The async result is invalid.</summary>
+        </member>
+        <member name="P:System.SR.ValidDirectoryAttributeType">
+            <summary>The "value" parameter must be a string or byte[] type.</summary>
+        </member>
+        <member name="P:System.SR.ValidFilterType">
+            <summary>The "filter" parameter must be a string or DsmlDocument type.</summary>
+        </member>
+        <member name="P:System.SR.ValidValuesType">
+            <summary>The "values" parameter must be a string[], byte[][], or Uri[] type.</summary>
+        </member>
+        <member name="P:System.SR.ValidValueType">
+            <summary>The value must be a string, byte[], or Uri type.</summary>
+        </member>
+        <member name="P:System.SR.InvalidValueType">
+            <summary>The specified parameter should be a "{0}" type.</summary>
+        </member>
+        <member name="P:System.SR.ValidValue">
+            <summary>The value must be greater than or equal to 0.</summary>
+        </member>
+        <member name="P:System.SR.ContainNullControl">
+            <summary>The collection cannot contain a null DirectoryControl object.</summary>
+        </member>
+        <member name="P:System.SR.NotReturnedAsyncResult">
+            <summary>The value "{0}" is not the return value from BeginSendRequest.</summary>
+        </member>
+        <member name="P:System.SR.DsmlAuthRequestNotSupported">
+            <summary>LdapConnection object does not support DsmlAuthRequest.</summary>
+        </member>
+        <member name="P:System.SR.CallBackIsNull">
+            <summary>Callback function can not be null when partial result processing is in ReturnPartialResultsAndNotifyCallback mode.</summary>
+        </member>
+        <member name="P:System.SR.NullValueArray">
+            <summary>The array should not contain null reference.</summary>
+        </member>
+        <member name="P:System.SR.TimespanExceedMax">
+            <summary>The value exceeds the maximum allowed.</summary>
+        </member>
+        <member name="P:System.SR.InvliadRequestType">
+            <summary>The specified request is not supported.</summary>
+        </member>
+        <member name="P:System.SR.DirectoryServicesProtocols_PlatformNotSupported">
+            <summary>System.DirectoryServices.Protocols is not supported on this platform.</summary>
+        </member>
+        <member name="P:System.SR.QuotaControlNotSupported">
+            <summary>System.DirectoryServices.Protocols.QuotaControl is not supported on this platform.</summary>
+        </member>
+        <member name="P:System.SR.ReferralChasingOptionsNotSupported">
+            <summary>Only ReferralChasingOptions.None and ReferralChasingOptions.All are supported on Linux.</summary>
+        </member>
+        <member name="T:System.Runtime.InteropServices.LibraryImportAttribute">
+            <summary>
+            Attribute used to indicate a source generator should create a function for marshalling
+            arguments instead of relying on the runtime to generate an equivalent marshalling function at run-time.
+            </summary>
+            <remarks>
+            This attribute is meaningless if the source generator associated with it is not enabled.
+            The current built-in source generator only supports C# and only supplies an implementation when
+            applied to static, partial, non-generic methods.
+            </remarks>
+        </member>
+        <member name="M:System.Runtime.InteropServices.LibraryImportAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.InteropServices.LibraryImportAttribute"/>.
+            </summary>
+            <param name="libraryName">Name of the library containing the import.</param>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.LibraryName">
+            <summary>
+            Gets the name of the library containing the import.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.EntryPoint">
+            <summary>
+            Gets or sets the name of the entry point to be called.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshalling">
+            <summary>
+            Gets or sets how to marshal string arguments to the method.
+            </summary>
+            <remarks>
+            If this field is set to a value other than <see cref="F:System.Runtime.InteropServices.StringMarshalling.Custom" />,
+            <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType" /> must not be specified.
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType">
+            <summary>
+            Gets or sets the <see cref="T:System.Type"/> used to control how string arguments to the method are marshalled.
+            </summary>
+            <remarks>
+            If this field is specified, <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshalling" /> must not be specified
+            or must be set to <see cref="F:System.Runtime.InteropServices.StringMarshalling.Custom" />.
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.SetLastError">
+            <summary>
+            Gets or sets whether the callee sets an error (SetLastError on Windows or errno
+            on other platforms) before returning from the attributed method.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.InteropServices.StringMarshalling">
+            <summary>
+            Specifies how strings should be marshalled for generated p/invokes
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Custom">
+            <summary>
+            Indicates the user is suppling a specific marshaller in <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType"/>.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Utf8">
+            <summary>
+            Use the platform-provided UTF-8 marshaller.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Utf16">
+            <summary>
+            Use the platform-provided UTF-16 marshaller.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.Versioning.OSPlatformAttribute">
+            <summary>
+            Base type for all platform-specific API attributes.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.Versioning.TargetPlatformAttribute">
+            <summary>
+            Records the platform that the project targeted.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.Versioning.SupportedOSPlatformAttribute">
+             <summary>
+             Records the operating system (and minimum version) that supports an API. Multiple attributes can be
+             applied to indicate support on multiple operating systems.
+             </summary>
+             <remarks>
+             Callers can apply a <see cref="T:System.Runtime.Versioning.SupportedOSPlatformAttribute" />
+             or use guards to prevent calls to APIs on unsupported operating systems.
+            
+             A given platform should only be specified once.
+             </remarks>
+        </member>
+        <member name="T:System.Runtime.Versioning.UnsupportedOSPlatformAttribute">
+            <summary>
+            Marks APIs that were removed in a given operating system version.
+            </summary>
+            <remarks>
+            Primarily used by OS bindings to indicate APIs that are only available in
+            earlier versions.
+            </remarks>
+        </member>
+        <member name="T:System.Runtime.Versioning.ObsoletedOSPlatformAttribute">
+            <summary>
+            Marks APIs that were obsoleted in a given operating system version.
+            </summary>
+            <remarks>
+            Primarily used by OS bindings to indicate APIs that should not be used anymore.
+            </remarks>
+        </member>
+        <member name="T:System.Runtime.Versioning.SupportedOSPlatformGuardAttribute">
+             <summary>
+             Annotates a custom guard field, property or method with a supported platform name and optional version.
+             Multiple attributes can be applied to indicate guard for multiple supported platforms.
+             </summary>
+             <remarks>
+             Callers can apply a <see cref="T:System.Runtime.Versioning.SupportedOSPlatformGuardAttribute" /> to a field, property or method
+             and use that field, property or method in a conditional or assert statements in order to safely call platform specific APIs.
+            
+             The type of the field or property should be boolean, the method return type should be boolean in order to be used as platform guard.
+             </remarks>
+        </member>
+        <member name="T:System.Runtime.Versioning.UnsupportedOSPlatformGuardAttribute">
+             <summary>
+             Annotates the custom guard field, property or method with an unsupported platform name and optional version.
+             Multiple attributes can be applied to indicate guard for multiple unsupported platforms.
+             </summary>
+             <remarks>
+             Callers can apply a <see cref="T:System.Runtime.Versioning.UnsupportedOSPlatformGuardAttribute" /> to a field, property or method
+             and use that  field, property or method in a conditional or assert statements as a guard to safely call APIs unsupported on those platforms.
+            
+             The type of the field or property should be boolean, the method return type should be boolean in order to be used as platform guard.
+             </remarks>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
+            <summary>Specifies that null is allowed as an input even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
+            <summary>Specifies that null is disallowed as an input even if the corresponding type allows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullAttribute">
+            <summary>Specifies that an output may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>Specifies that an output will not be null even if the corresponding type allows it. Specifies that an input argument was not null when the call returns.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter may be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
+            <summary>Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified return value condition.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>Specifies that the output will be non-null if the named parameter is non-null.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>Initializes the attribute with the associated parameter name.</summary>
+            <param name="parameterName">
+            The associated parameter name.  The output will be non-null if the argument to the parameter specified is non-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>Gets the associated parameter name.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>Applied to a method that will never return under any circumstance.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+            <summary>Specifies that the method will not return if the associated Boolean parameter is passed the specified value.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+            <summary>Initializes the attribute with the specified parameter value.</summary>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable by diagnostics if the argument to
+            the associated parameter matches this value.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+            <summary>Gets the condition parameter value.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute">
+            <summary>Specifies that the method or property will ensure that the listed field and property members have not-null values.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.#ctor(System.String)">
+            <summary>Initializes the attribute with a field or property member.</summary>
+            <param name="member">
+            The field or property member that is promised to be not-null.
+            </param>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.#ctor(System.String[])">
+            <summary>Initializes the attribute with the list of field and property members.</summary>
+            <param name="members">
+            The list of field and property members that are promised to be not-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.Members">
+            <summary>Gets field or property member names.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute">
+            <summary>Specifies that the method or property will ensure that the listed field and property members have not-null values when returning with the specified return value condition.</summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String)">
+            <summary>Initializes the attribute with the specified return value condition and a field or property member.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+            <param name="member">
+            The field or property member that is promised to be not-null.
+            </param>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String[])">
+            <summary>Initializes the attribute with the specified return value condition and list of field and property members.</summary>
+            <param name="returnValue">
+            The return value condition. If the method returns this value, the associated parameter will not be null.
+            </param>
+            <param name="members">
+            The list of field and property members that are promised to be not-null.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.Members">
+            <summary>Gets field or property member names.</summary>
+        </member>
+    </members>
+</doc>

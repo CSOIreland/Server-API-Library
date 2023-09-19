@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+  <metadata minClientVersion="2.12">
+    <id>Microsoft.SqlServer.Server</id>
+    <version>1.0.0</version>
+    <title>Microsoft.SqlServer.Server</title>
+    <authors>Microsoft</authors>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>dotnet.png</icon>
+    <projectUrl>https://aka.ms/sqlclientproject</projectUrl>
+    <description>This is a helper library for Microsoft.Data.SqlClient enabling cross framework support of UDT types.
+    
+Available Types:
+Microsoft.SqlServer.Server.IBinarySerializer
+Microsoft.SqlServer.Server.InvalidUdtException
+Microsoft.SqlServer.Server.SqlFacetAttribute
+Microsoft.SqlServer.Server.SqlFunctionAttribute
+Microsoft.SqlServer.Server.SqlMethodAttribute
+Microsoft.SqlServer.Server.SqlUserDefinedAggregateAttribute
+Microsoft.SqlServer.Server.SqlUserDefinedTypeAttribute
+Microsoft.SqlServer.Server.DataAccessKind
+Microsoft.SqlServer.Server.SystemDataAccessKind
+Microsoft.SqlServer.Server.Format</description>
+    <releaseNotes>https://go.microsoft.com/fwlink/?linkid=2185441</releaseNotes>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>sqlserver microsoft.sqlserver.server</tags>
+    <repository type="git" url="https://github.com/dotnet/sqlclient" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6" />
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>

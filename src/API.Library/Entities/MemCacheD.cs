@@ -1,55 +1,50 @@
-﻿using Enyim.Caching;
-using Enyim.Caching.Memcached;
+﻿using Enyim.Caching.Memcached;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
 using System.Dynamic;
+using System.Net;
 
 namespace API
 {
     /// <summary>
     /// Handling MemCacheD based on the Enyim client
     /// </summary>
-    public static class MemCacheD
+    public class MemCacheD : ICacheD
     {
         #region Properties
-        /// <summary>
-        /// Flag to indicate if MemCacheD is enabled 
-        /// </summary>
-        internal static bool API_MEMCACHED_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_MEMCACHED_ENABLED"]);
-
-        /// <summary>
-        /// Max size in MB before splitting a string record in sub-cache entries 
-        /// </summary>
-        internal static uint API_MEMCACHED_MAX_SIZE = Convert.ToUInt32(ConfigurationManager.AppSettings["API_MEMCACHED_MAX_SIZE"]);
-
-        /// <summary>
-        /// Maximum validity in number of seconds that MemCacheD can handle (30 days = 2592000)
-        /// </summary>
-        internal static uint API_MEMCACHED_MAX_VALIDITY = Convert.ToUInt32(ConfigurationManager.AppSettings["API_MEMCACHED_MAX_VALIDITY"]);
-
-        /// <summary>
-        /// Salsa code to isolate the cache records form other applications or environments
-        /// </summary>
-        internal static string API_MEMCACHED_SALSA = ConfigurationManager.AppSettings["API_MEMCACHED_SALSA"];
-
-        /// <summary>
-        /// Max TimeSpan
-        /// </summary>
-        internal static TimeSpan maxTimeSpan = new TimeSpan(API_MEMCACHED_MAX_VALIDITY * TimeSpan.TicksPerSecond);
-
-        /// <summary>
-        /// Initiate MemCacheD
-        /// </summary>
-        internal static MemcachedClient MemcachedClient = API_MEMCACHED_ENABLED ? new MemcachedClient() : null;
-
+  
         /// <summary>
         /// SubKey prefix
         /// </summary>
         internal static String SubKeyPrefix = "subKey_";
 
+        /// <summary>
+        /// Initiate MemCacheD
+        /// </summary>
+
         #endregion
+
+        public MemCacheD()
+        {
+            //test to see if memcache is working
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]))
+            {
+                var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
+                var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
+
+                ServerStats stats = ApiServicesHelper.MemcachedClient.Stats();
+
+                try
+                {
+                    var upTime = stats.GetUptime(new IPEndPoint(IPAddress.Parse(address), int.Parse(port)));
+                }
+                catch (Exception ex)
+                {
+                    Log.Instance.Fatal(ex);
+                    Log.Instance.Fatal("Memcache has not returned any stats data. Memcache may be unavailable");
+
+                }
+            }           
+        }
 
         #region Methods
         /// <summary>
@@ -58,9 +53,12 @@ namespace API
         /// <returns></returns>
         private static bool IsEnabled()
         {
-            Log.Instance.Info("MemCacheD Enabled: " + API_MEMCACHED_ENABLED);
+            /// <summary>
+            /// Flag to indicate if MemCacheD is enabled 
+            /// </summary>
+            Log.Instance.Info("MemCacheD Enabled: " + Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]));
 
-            if (API_MEMCACHED_ENABLED)
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]))
             {
                 return true;
             }
@@ -77,8 +75,13 @@ namespace API
         /// <param name="procedureName"></param>
         /// <param name="inputParams"></param>
         /// <returns></returns>
-        private static string GenerateKey_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
+        private string GenerateKey_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
             // Initiate
             string hashKey = "";
 
@@ -118,8 +121,14 @@ namespace API
         /// <param name="methodName"></param>
         /// <param name="inputDTO"></param>
         /// <returns></returns>
-        private static string GenerateKey_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
+        private string GenerateKey_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
+
             // Initiate
             string hashKey = "";
 
@@ -160,6 +169,12 @@ namespace API
         /// <returns></returns>
         private static string GetSubKey(string key)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
+
             return SubKeyPrefix + key;
         }
 
@@ -170,6 +185,11 @@ namespace API
         /// <returns></returns>
         private static bool IsSubKey(dynamic data, string key)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return false;
+            }
             // A key must be either a String or a JValue returned from deserialisation
             if (data.GetType() == typeof(String) || data.GetType() == typeof(JValue))
             {
@@ -187,13 +207,22 @@ namespace API
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        private static string GenerateHash(IDictionary<string, object> input)
+        private string GenerateHash(IDictionary<string, object> input)
         {
+             // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
             // Initiate
             string hashKey = "";
 
             try
             {
+                /// <summary>
+                /// Salsa code to isolate the cache records form other applications or environments
+                /// </summary>
+                string API_MEMCACHED_SALSA = ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_SALSA"];
                 // Append the SALSA code
                 input.Add("salsa", API_MEMCACHED_SALSA);
 
@@ -219,33 +248,43 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        private static bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, DateTime expiresAt, TimeSpan validFor, string repository)
+        private bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, DateTime expiresAt, TimeSpan validFor, string repository)
         {
-            // Check if it's enabled first
-            if (!IsEnabled())
+            try
             {
-                return false;
+                // Check if it's enabled first
+                if (!IsEnabled())
+                {
+                    return false;
+                }
+
+                // Validate Expiry parameters
+                if (!ValidateExpiry(ref expiresAt, ref validFor))
+                {
+                    return false;
+                }
+
+                // Get the Key
+                string key = GenerateKey_ADO(nameSpace, procedureName, inputParams);
+
+                // Get the Value
+                MemCachedD_Value value = SetValue(data, expiresAt, validFor);
+
+                // Store the Value by Key
+                if (Store(key, value, validFor, repository))
+                {
+                    return true;
+                }
+                else
+                {
+                    string paramsSerialized = Utility.JsonSerialize_IgnoreLoopingReference(inputParams);
+                    throw new Exception(String.Format($"Store_ADO: Cache store failed for namespace {0}, procedure {1}, parameters {2}", nameSpace, procedureName, paramsSerialized));
+
+                }
             }
-
-            // Validate Expiry parameters
-            if (!ValidateExpiry(ref expiresAt, ref validFor))
+            catch(Exception ex)
             {
-                return false;
-            }
-
-            // Get the Key
-            string key = GenerateKey_ADO(nameSpace, procedureName, inputParams);
-
-            // Get the Value
-            MemCachedD_Value value = SetValue(data, expiresAt, validFor);
-
-            // Store the Value by Key
-            if (Store(key, value, validFor, repository))
-            {
-                return true;
-            }
-            else
-            {
+                Log.Instance.Error(ex.Message);
                 return false;
             }
         }
@@ -261,7 +300,7 @@ namespace API
         /// <param name="expiresAt"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        public static bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, DateTime expiresAt, string repository = null)
+        public bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, DateTime expiresAt, string repository = null)
         {
             return Store_ADO<T>(nameSpace, procedureName, inputParams, data, expiresAt, new TimeSpan(0), repository);
         }
@@ -277,7 +316,7 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        public static bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, TimeSpan validFor, string repository = null)
+        public bool Store_ADO<T>(string nameSpace, string procedureName, List<ADO_inputParams> inputParams, dynamic data, TimeSpan validFor, string repository = null)
         {
             return Store_ADO<T>(nameSpace, procedureName, inputParams, data, new DateTime(0), validFor, repository);
         }
@@ -295,33 +334,43 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        private static bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, TimeSpan validFor, string repository)
+        private bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, TimeSpan validFor, string repository)
         {
-            // Check if it's enabled first
-            if (!IsEnabled())
+            try
             {
-                return false;
+                // Check if it's enabled first
+                if (!IsEnabled())
+                {
+                    return false;
+                }
+
+                // Validate Expiry parameters
+                if (!ValidateExpiry(ref expiresAt, ref validFor))
+                {
+                    return false;
+                }
+
+                // Get the Key
+                string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
+
+                // Get the Value
+                MemCachedD_Value value = SetValue(data, expiresAt, validFor);
+
+                // Store the Value by Key
+                if (Store(key, value, validFor, repository))
+                {
+                    return true;
+                }
+                else
+                {
+                    string dtoSerialized = Utility.JsonSerialize_IgnoreLoopingReference(inputDTO);
+                    throw new Exception(String.Format($"Memcache Store_ADO: Cache store failed for namespace {0}, className {1},methodName {2},dto {3}",nameSpace,className,methodName, dtoSerialized));
+
+                }
             }
-
-            // Validate Expiry parameters
-            if (!ValidateExpiry(ref expiresAt, ref validFor))
+            catch(Exception ex) 
             {
-                return false;
-            }
-
-            // Get the Key
-            string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
-
-            // Get the Value
-            MemCachedD_Value value = SetValue(data, expiresAt, validFor);
-
-            // Store the Value by Key
-            if (Store(key, value, validFor, repository))
-            {
-                return true;
-            }
-            else
-            {
+                Log.Instance.Error(ex.Message);
                 return false;
             }
         }
@@ -338,7 +387,7 @@ namespace API
         /// <param name="expiresAt"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        public static bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, string repository = null)
+        public bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, string repository = null)
         {
             return Store_BSO<T>(nameSpace, className, methodName, inputDTO, data, expiresAt, new TimeSpan(0), repository);
         }
@@ -355,7 +404,7 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        public static bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, TimeSpan validFor, string repository = null)
+        public bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, TimeSpan validFor, string repository = null)
         {
             return Store_BSO<T>(nameSpace, className, methodName, inputDTO, data, new DateTime(0), validFor, repository);
         }
@@ -368,27 +417,43 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        private static bool Store(string key, MemCachedD_Value value, TimeSpan validFor, string repository)
+        private bool Store(string key, MemCachedD_Value value, TimeSpan validFor, string repository)
         {
-            // Check if data is of type String or JValue 
-            if (value.data.GetType() == typeof(String) || value.data.GetType() == typeof(JValue))
+            // Check if it's enabled first
+            if (!IsEnabled())
             {
-                // Cast data to String and check if oversized
-                string sData = (String)value.data;
-                if (sData.Length * sizeof(Char) > API_MEMCACHED_MAX_SIZE * 1024 * 1024)
-                {
-                    // Get a subKey
-                    string subKey = GetSubKey(key);
+                return false;
+            }
 
-                    // SubStore the data by subKey
-                    if (SubStore(subKey, sData, validFor, repository))
+            if (value.data != null)
+            {
+                // Check if data is of type String or JValue 
+                if (value.data.GetType() == typeof(String) || value.data.GetType() == typeof(JValue))
+                {
+
+                    /// <summary>
+                    /// Max size in MB before splitting a string record in sub-cache entries 
+                    /// </summary>
+                    uint API_MEMCACHED_MAX_SIZE = Convert.ToUInt32(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_MAX_SIZE"]);
+
+
+                    // Cast data to String and check if oversized
+                    string sData = (String)value.data;
+                    if (sData.Length * sizeof(Char) > API_MEMCACHED_MAX_SIZE * 1024 * 1024)
                     {
-                        // Override data with the subKey to fish it out later
-                        value.data = subKey;
-                    }
-                    else
-                    {
-                        return false;
+                        // Get a subKey
+                        string subKey = GetSubKey(key);
+
+                        // SubStore the data by subKey
+                        if (SubStore(subKey, sData, validFor, repository))
+                        {
+                            // Override data with the subKey to fish it out later
+                            value.data = subKey;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                 }
             }
@@ -407,7 +472,7 @@ namespace API
 
                 // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
                 // validFor and expiresAt match each other
-                isStored = MemcachedClient.Store(StoreMode.Set, key, cacheCompressed, validFor);
+                isStored = ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, key, cacheCompressed, validFor);
 
                 // Store Value by Key
                 if (isStored)
@@ -443,8 +508,13 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        private static bool SubStore(string subKey, string data, TimeSpan validFor, string repository)
+        private bool SubStore(string subKey, string data, TimeSpan validFor, string repository)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return false;
+            }
             try
             {
                 // The data is a string, no need to serialize
@@ -458,7 +528,7 @@ namespace API
 
                 // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
                 // validFor and expiresAt match each other
-                isStored = MemcachedClient.Store(StoreMode.Set, subKey, subCacheCompressed, validFor);
+                isStored = ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, subKey, subCacheCompressed, validFor);
 
                 // Store Value by Key
                 if (isStored)
@@ -492,8 +562,14 @@ namespace API
         /// </summary>
         /// <param name="key"></param>
         /// <param name="repository"></param>
-        private static void CasRepositoryStore(string key, string repository)
+        private void CasRepositoryStore(string key, string repository)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return;
+            }
+
             if (String.IsNullOrEmpty(repository))
             {
                 return;
@@ -514,7 +590,7 @@ namespace API
                 do
                 {
                     // Get list of Keys by Cas per Repository
-                    CasResult<List<string>> casCache = MemcachedClient.GetWithCas<List<string>>(repository);
+                    CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
 
                     // Check if Cas record exists
                     if (casCache.Result != null && casCache.Result.Count > 0)
@@ -529,13 +605,13 @@ namespace API
                     if (casCache.Cas != 0)
                     {
                         // Try to "Compare And Swap" if the Cas identifier exists
-                        CasResult<bool> casStore = MemcachedClient.Cas(StoreMode.Set, repository, keys, casCache.Cas);
+                        CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, keys, casCache.Cas);
                         pending = !casStore.Result;
                     }
                     else
                     {
                         // Create a new Cas record
-                        CasResult<bool> casStore = MemcachedClient.Cas(StoreMode.Set, repository, keys);
+                        CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, keys);
                         pending = !casStore.Result;
                     }
                 } while (pending);
@@ -553,17 +629,18 @@ namespace API
         /// Remove all the cached records stored into a Cas Repository
         /// </summary>
         /// <param name="repository"></param>
-        public static void CasRepositoryFlush(string repository)
+        public bool CasRepositoryFlush(string repository)
         {
+            bool allOk = true;
             // Check if it's enabled first
             if (!IsEnabled())
             {
-                return;
+                return false;
             }
 
-            if (String.IsNullOrEmpty(repository))
+            if (string.IsNullOrEmpty(repository))
             {
-                return;
+                return false;
             }
             else
             {
@@ -581,7 +658,7 @@ namespace API
                 do
                 {
                     // Get list of Keys by Cas per Repository
-                    CasResult<List<string>> casCache = MemcachedClient.GetWithCas<List<string>>(repository);
+                    CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
 
                     // Check if Cas record exists
                     if (casCache.Result != null && casCache.Result.Count > 0)
@@ -590,16 +667,20 @@ namespace API
                         keys = casCache.Result;
                     }
 
-                    // Loop trough the Keys and remove the relative cache entries if any exist
+                    // Loop through the Keys and remove the relative cache entries if any exist
                     foreach (string key in keys)
                     {
-                        MemcachedClient.Remove(key);
+                        if (!ApiServicesHelper.MemcachedClient.Remove(key))
+                        {
+                            Log.Instance.Error("Failed to flush CAS entry. Key: " +  key);   
+                            allOk = false;
+                        }
                     }
 
                     if (casCache.Cas != 0)
                     {
                         // Try to "Compare And Swap" if the Cas identifier exists
-                        CasResult<bool> casStore = MemcachedClient.Cas(StoreMode.Set, repository, new List<string>(), casCache.Cas);
+                        CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, new List<string>(), casCache.Cas);
                         pending = !casStore.Result;
                     }
                     else
@@ -608,12 +689,26 @@ namespace API
                     }
                 } while (pending);
 
-                Log.Instance.Info("Cas Repository [" + repository + "] flushed");
+                // Get list of Keys by Cas per Repository
+                CasResult<List<string>> casCacheEnd = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+                // Check if Cas record still exists
+                if (casCacheEnd.Result != null && casCacheEnd.Result.Count > 0)
+                {
+                    // Get the list of Keys
+                    Log.Instance.Error("One or more items reamain in the cache " + repository + " : " + casCacheEnd.Result.Count + " items remaining");
+                    
+                }
+                else
+                {
+                    Log.Instance.Info("Cas Repository [" + repository + "] flushed");
+                    
+                }
+                return allOk;
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                return;
+                return false;
             }
         }
 
@@ -624,7 +719,7 @@ namespace API
         /// <param name="procedureName"></param>
         /// <param name="inputParams"></param>
         /// <returns></returns>
-        public static MemCachedD_Value Get_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
+        public MemCachedD_Value Get_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
         {
             // Get the Key
             string key = GenerateKey_ADO(nameSpace, procedureName, inputParams);
@@ -642,7 +737,7 @@ namespace API
         /// <param name="methodName"></param>
         /// <param name="inputDTO"></param>
         /// <returns></returns>
-        public static MemCachedD_Value Get_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
+        public MemCachedD_Value Get_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
         {
             // Get the Key
             string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
@@ -657,7 +752,7 @@ namespace API
         /// <typeparam name="MemCachedD_Value"></typeparam>
         /// <param name="key"></param>
         /// <returns></returns>
-        private static MemCachedD_Value Get(string key)
+        private MemCachedD_Value Get(string key)
         {
             MemCachedD_Value value = new MemCachedD_Value();
 
@@ -669,10 +764,11 @@ namespace API
 
             try
             {
-                // Get the compressed cache by Key
-                string cacheCompressed = MemcachedClient.Get<string>(key);
 
-                if (!String.IsNullOrEmpty(cacheCompressed))
+                // Get the compressed cache by Key
+                string cacheCompressed = ApiServicesHelper.MemcachedClient.Get<string>(key);
+
+                if (!string.IsNullOrEmpty(cacheCompressed))
                 {
                     Log.Instance.Info("Cache found: " + key);
                     Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
@@ -713,7 +809,7 @@ namespace API
                         if (isSubKey)
                         {
                             // Get subCacheCompressed from the subKey
-                            string subCacheCompressed = MemcachedClient.Get<string>(subKey);
+                            string subCacheCompressed = ApiServicesHelper.MemcachedClient.Get<string>(subKey);
 
                             if (!String.IsNullOrEmpty(subCacheCompressed))
                             {
@@ -762,7 +858,7 @@ namespace API
         /// <param name="procedureName"></param>
         /// <param name="inputParams"></param>
         /// <returns></returns>
-        public static bool Remove_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
+        public bool Remove_ADO(string nameSpace, string procedureName, List<ADO_inputParams> inputParams)
         {
             // Get the Key
             string key = GenerateKey_ADO(nameSpace, procedureName, inputParams);
@@ -779,7 +875,7 @@ namespace API
         /// <param name="methodName"></param>
         /// <param name="inputDTO"></param>
         /// <returns></returns>
-        public static bool Remove_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
+        public bool Remove_BSO<T>(string nameSpace, string className, string methodName, T inputDTO)
         {
             // Get the Key
             string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
@@ -792,7 +888,7 @@ namespace API
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        private static bool Remove(string key)
+        private bool Remove(string key)
         {
             // Chekc if it's enabled first
             if (!IsEnabled())
@@ -805,13 +901,13 @@ namespace API
                 string subKey = GetSubKey(key);
 
                 // Remove the (optional) subKey
-                if (MemcachedClient.Remove(subKey))
+                if (ApiServicesHelper.MemcachedClient.Remove(subKey))
                 {
                     Log.Instance.Info("SubRemoval succesfull: " + subKey);
                 }
 
                 // Remove the Key
-                if (MemcachedClient.Remove(key))
+                if (ApiServicesHelper.MemcachedClient.Remove(key))
                 {
                     Log.Instance.Info("Removal succesfull: " + key);
                     return true;
@@ -830,17 +926,17 @@ namespace API
         }
 
         /// <summary>
-        /// Remove all records
+        /// Flushing the cache will clear the cache for ALL applications that use the memcache instance
         /// </summary>
-        public static void FlushAll()
+        public void FlushAll()
         {
-            // Chekc if it's enabled first
+            // Check if it's enabled first
             if (IsEnabled())
             {
                 try
                 {
                     // Remove all records
-                    MemcachedClient.FlushAll();
+                    ApiServicesHelper.MemcachedClient.FlushAll();
 
                     Log.Instance.Info("Flush completed");
                 }
@@ -856,7 +952,7 @@ namespace API
         /// Get server stats
         /// </summary>
         /// <returns></returns>
-        public static ServerStats GetStats()
+        public ServerStats GetStats()
         {
             // Check if it's enabled first
             if (!IsEnabled())
@@ -866,7 +962,7 @@ namespace API
 
             try
             {
-                return MemcachedClient.Stats();
+                return ApiServicesHelper.MemcachedClient.Stats();
             }
             catch (Exception e)
             {
@@ -883,8 +979,14 @@ namespace API
         /// <param name="validFor"></param>
         /// <returns></returns>
         private static MemCachedD_Value SetValue(dynamic data, DateTime expiresAt, TimeSpan validFor)
-        {
+        {      
+
             MemCachedD_Value value = new MemCachedD_Value();
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return value;
+            }
 
             try
             {
@@ -910,6 +1012,22 @@ namespace API
         /// <param name="validFor"></param>
         private static bool ValidateExpiry(ref DateTime expiresAt, ref TimeSpan validFor)
         {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return false;
+            }
+
+            /// <summary>
+            /// Maximum validity in number of seconds that MemCacheD can handle (30 days = 2592000)
+            /// </summary>
+            uint API_MEMCACHED_MAX_VALIDITY = Convert.ToUInt32(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_MAX_VALIDITY"]);
+
+            /// <summary>
+            /// Max TimeSpan
+            /// </summary>
+            TimeSpan maxTimeSpan = new TimeSpan(API_MEMCACHED_MAX_VALIDITY * TimeSpan.TicksPerSecond);
+
             if (expiresAt == new DateTime(0))
             {
                 // Set Max if expiresAt is Default DateTime
@@ -958,6 +1076,7 @@ namespace API
             return true;
             #endregion
         }
+
     }
 
     /// <summary>

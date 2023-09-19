@@ -1,7 +1,6 @@
 ﻿using API;
-using System;
 
-namespace Sample
+namespace Test
 {
     /// <summary>
     /// 

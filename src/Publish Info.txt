@@ -1,0 +1,1 @@
+repo: https://nuget.pkg.github.com/CSOIreland/index.json

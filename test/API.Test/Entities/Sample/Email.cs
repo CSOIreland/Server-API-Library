@@ -1,10 +1,11 @@
 ﻿using API;
-using System;
-using System.Collections.Generic;
+using API.Test.Properties;
 using System.Net.Mail;
 
 namespace Sample
 {
+    [AllowAPICall]
+
     public class YourEmail
     {
         #region Methods
@@ -56,7 +57,7 @@ namespace Sample
                 listToParse.Add(new eMail_KeyValuePair() { key = "{website_url}", value = "https://domain.extension" });
                 listToParse.Add(new eMail_KeyValuePair() { key = "{body}", value = "Place here the body of your email" });
 
-                eMail.Body = eMail.ParseTemplate(Properties.Resources.eMail, listToParse);
+                eMail.Body = eMail.ParseTemplate(Resources.eMail, listToParse);
 
                 //Fire & Forget the email
                 if (eMail.Send())
@@ -64,7 +65,7 @@ namespace Sample
                     // Log a debug message to help yourself :-)
                     Log.Instance.Debug("Email fired");
                     // If all goes well, then return the agreed success message with the front-end developer
-                    output.data = JSONRPC.success;
+                    output.data = ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"];
                 }
                 else
                 {

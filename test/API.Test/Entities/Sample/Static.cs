@@ -5,6 +5,8 @@ using System.Net;
 
 namespace Sample
 {
+    [AllowAPICall]
+
     /// <summary>
     /// 
     /// </summary>
@@ -41,7 +43,7 @@ namespace Sample
                     output.statusCode = HttpStatusCode.OK;
 
                     // Test  as null
-                    output.response = RESTful.success;
+                    output.response = ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"]; ;
                     output.mimeType = "text/plain";
                     output.statusCode = HttpStatusCode.OK;
 

@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.Data.SqlClient;
 using System.Data;
-using System.Data.SqlClient;
 
 namespace API
 {
     internal static class Performance_ADO
     {
-        internal static void Create(ADO ado, List<PerformanceObj> performanceList)
+
+        internal static void Create(ADO ado, List<PerformanceObj> performanceList, bool api_performance_enabled)
         {
-            if (!Performance.API_PERFORMANCE_ENABLED)
+            if (!api_performance_enabled)
             {
                 return;
             }
@@ -26,7 +25,7 @@ namespace API
 
             foreach (var p in performanceList)
             {
-                performanceTable.Rows.Add(new Object[] { p.ProcessorPercentage, p.MemoryAvailableMBytes, p.RequestsQueued, p.RequestPerSec, p.DateTime, p.Server });
+                performanceTable.Rows.Add(new object[] { p.ProcessorPercentage, p.MemoryAvailableMBytes, p.RequestsQueued, p.RequestPerSec, p.DateTime, p.Server });
             }
 
             List<SqlBulkCopyColumnMapping> tableMap = new List<SqlBulkCopyColumnMapping>()
@@ -45,6 +44,4 @@ namespace API
             ado.Dispose();
         }
     }
-
-
 }

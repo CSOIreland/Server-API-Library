@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Web;
 
 namespace API
 {
@@ -8,7 +7,7 @@ namespace API
         dynamic data { get; set; }
         dynamic response { get; set; }
         dynamic error { get; set; }
-        HttpCookie sessionCookie { get; set; }
+        Cookie sessionCookie { get; set; }
         string mimeType { get; set; }
         HttpStatusCode statusCode { get; set; }
         string fileName { get; set; }

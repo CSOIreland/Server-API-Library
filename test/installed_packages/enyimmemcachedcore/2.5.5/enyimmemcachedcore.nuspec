@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>EnyimMemcachedCore</id>
+    <version>2.5.5</version>
+    <authors>cnblogs.com</authors>
+    <projectUrl>https://github.com/cnblogs/EnyimMemcachedCore</projectUrl>
+    <description>EnyimMemcachedCore is a Memcached client library for .NET Core. Usage: Add services.AddEnyimMemcached(...) and app.UseEnyimMemcached() in Startup. Add IMemcachedClient into constructor.</description>
+    <tags>memcached cache</tags>
+    <repository type="git" url="https://github.com/cnblogs/EnyimMemcachedCore" />
+    <dependencies>
+      <group targetFramework="net6.0">
+        <dependency id="Newtonsoft.Json.Bson" version="1.0.2" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Caching.Abstractions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Configuration.Abstractions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging.Abstractions" version="6.0.2" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Options" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Options.ConfigurationExtensions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json.Bson" version="1.0.2" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Caching.Abstractions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Configuration.Abstractions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging.Abstractions" version="6.0.2" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Options" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Options.ConfigurationExtensions" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json.Bson" version="1.0.2" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net6.0">
+        <frameworkReference name="Microsoft.AspNetCore.App" />
+      </group>
+      <group targetFramework=".NETStandard2.0" />
+      <group targetFramework=".NETStandard2.1" />
+    </frameworkReferences>
+  </metadata>
+</package>

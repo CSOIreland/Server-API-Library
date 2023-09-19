@@ -1,17 +1,12 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
+﻿using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 using System.Globalization;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Web;
+using System.Text.RegularExpressions;
 
 namespace API
 {
@@ -20,11 +15,12 @@ namespace API
     /// </summary>
     public static class Utility
     {
-        #region Properties
+      #region Properties
 
         #endregion
 
         #region Methods
+
 
         /// <summary>
         /// Generate the MD5 hash of the input parameter
@@ -33,8 +29,6 @@ namespace API
         /// <returns></returns>
         public static string GetMD5(string input)
         {
-            Log.Instance.Info("Generate MD5 hash");
-            Log.Instance.Info("Input string: " + input);
 
             using (var provider = MD5.Create())
             {
@@ -45,19 +39,8 @@ namespace API
 
                 string hashMD5 = builder.ToString();
 
-                Log.Instance.Info("Output hash: " + hashMD5);
                 return hashMD5;
             }
-        }
-
-        /// <summary>
-        /// Get a random MD5 hash code
-        /// </summary>
-        /// <param name="salsa"></param>
-        /// <returns></returns>
-        public static string GetRandomMD5(string salsa)
-        {
-            return GetMD5(new Random().Next().ToString() + salsa + DateTime.Now.Millisecond);
         }
 
         /// <summary>
@@ -67,9 +50,6 @@ namespace API
         /// <returns></returns>
         public static string GetSHA256(string input)
         {
-            Log.Instance.Info("Generate SHA256 hash");
-            Log.Instance.Info("Input string: " + input);
-
             // Create a SHA256   
             using (SHA256 sha256Hash = SHA256.Create())
             {
@@ -85,75 +65,8 @@ namespace API
 
                 string hashSHA256 = builder.ToString();
 
-                Log.Instance.Info("Output hash: " + hashSHA256);
                 return hashSHA256;
             }
-        }
-
-        /// <summary>
-        /// Get a random SHA256 hash code
-        /// </summary>
-        /// <param name="salsa"></param>
-        /// <returns></returns>
-        public static string GetRandomSHA256(string salsa)
-        {
-            return GetSHA256(new Random().Next().ToString() + salsa + DateTime.Now.Millisecond);
-        }
-
-        /// <summary>
-        /// Get the IP Address of the current request
-        /// </summary>
-        /// <returns></returns>
-        public static string GetIP()
-        {
-            // Initialise
-            string ipAddress = "";
-            IPAddress ip;
-
-            try
-            {
-                // check if this is a HTTP request
-                if (HttpContext.Current == null)
-                {
-                    // Look for the Network Host information
-                    IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-                    ipAddress = Convert.ToString(ipHostInfo.AddressList.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork));
-
-                    Log.Instance.Info("IP Address (IPHostEntry): " + ipAddress);
-                    return ipAddress;
-                }
-
-                // Look for the Server Variable HTTP_X_FORWARDED_FOR
-                ipAddress = HttpContext.Current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"];
-                if (IPAddress.TryParse(ipAddress, out ip))
-                {
-                    Log.Instance.Info("IP Address (HTTP_X_FORWARDED_FOR): " + ipAddress);
-                    return ipAddress;
-                }
-
-                // Look for the Server Variable REMOTE_ADDR
-                ipAddress = HttpContext.Current.Request.ServerVariables["REMOTE_ADDR"];
-                if (IPAddress.TryParse(ipAddress, out ip))
-                {
-                    Log.Instance.Info("IP Address (REMOTE_ADDR): " + ipAddress);
-                    return ipAddress;
-                }
-
-                throw new Exception("IP Address not found");
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Fatal(e);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Get the User Agent from the Current Context
-        /// </summary>
-        public static string GetUserAgent()
-        {
-            return HttpContext.Current.Request.UserAgent == null ? "" : HttpContext.Current.Request.UserAgent;
         }
 
         /// <summary>
@@ -187,33 +100,6 @@ namespace API
         }
 
         /// <summary>
-        /// Get the value from a custom config by sectionName and key
-        /// </summary>
-        /// <param name="sectionName"></param>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public static string GetCustomConfig(string sectionName, string key)
-        {
-            NameValueCollection customConfig = (NameValueCollection)ConfigurationManager.GetSection(sectionName);
-            if (!String.IsNullOrEmpty(customConfig[key].ToString()))
-            {
-                return customConfig[key].ToString();
-            }
-            else
-                return "";
-        }
-
-        /// <summary>
-        /// Get the value from a custom config by key
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public static string GetCustomConfig(string key)
-        {
-            return GetCustomConfig("appStatic", key);
-        }
-
-        /// <summary>
         /// Encode a byte array into a base64 string
         /// N.B. UFT8 in C# includes UTF16 too
         /// </summary>
@@ -234,7 +120,7 @@ namespace API
                 }
                 else
                 {
-                    return "data:" + mimeType + ";base64," + System.Convert.ToBase64String(byteArray);
+                    return "data:" + mimeType + ";base64," + Convert.ToBase64String(byteArray);
                 }
             }
             catch (Exception)
@@ -254,18 +140,18 @@ namespace API
         {
             try
             {
-                if (String.IsNullOrEmpty(data))
+                if (string.IsNullOrEmpty(data))
                 {
                     return null;
                 }
 
-                if (String.IsNullOrEmpty(mimeType))
+                if (string.IsNullOrEmpty(mimeType))
                 {
-                    return System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(data));
+                    return Convert.ToBase64String(Encoding.UTF8.GetBytes(data));
                 }
                 else
                 {
-                    return "data:" + mimeType + ";base64," + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(data));
+                    return "data:" + mimeType + ";base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(data));
                 }
             }
             catch (Exception)
@@ -284,7 +170,7 @@ namespace API
         {
             try
             {
-                if (String.IsNullOrEmpty(data))
+                if (string.IsNullOrEmpty(data))
                 {
                     return null;
                 }
@@ -314,7 +200,7 @@ namespace API
         {
             try
             {
-                if (String.IsNullOrEmpty(data))
+                if (string.IsNullOrEmpty(data))
                 {
                     return null;
                 }
@@ -341,7 +227,7 @@ namespace API
         /// <returns></returns>
         public static string GZipCompress(string inputUTF8)
         {
-            if (String.IsNullOrEmpty(inputUTF8))
+            if (string.IsNullOrEmpty(inputUTF8))
             {
                 return inputUTF8;
             }
@@ -367,7 +253,7 @@ namespace API
         /// <returns></returns>
         public static string GZipDecompress(string inputBase64)
         {
-            if (String.IsNullOrEmpty(inputBase64))
+            if (string.IsNullOrEmpty(inputBase64))
             {
                 return inputBase64;
             }
@@ -386,54 +272,64 @@ namespace API
             }
         }
 
+
         /// <summary>
-        /// Get the User's enviornment language from the http request Accept Languages
-        /// C# code reverse engineered from JS https://github.com/opentable/accept-language-parser/
+        /// check if file extension is allowed based on an array of passed in file extensions and the
+        /// file extension of the uploaded file
         /// </summary>
         /// <returns></returns>
-        public static string GetUserAcceptLanguage()
+        public static bool IsFileExtensionAllowed(string[] allowedExtension, string fileExtension)
         {
-            try
+            string doubleSlash = "\\";
+            string singSlash = "\"";
+            string dataFormat = fileExtension.Replace(doubleSlash, "").Replace(singSlash, "");
+            bool res = false;
+            for (var i = 0; i < allowedExtension.Length; i += 1)
             {
-                List<string> acceptLanguages = HttpContext.Current.Request.UserLanguages == null ? new List<string>() { CultureInfo.CurrentCulture.Name } : HttpContext.Current.Request.UserLanguages.ToList<string>();
-                List<dynamic> outLanguages = new List<dynamic>();
-
-                if (acceptLanguages.Count() == 0)
+                if (allowedExtension[i].Trim().Equals(dataFormat))
                 {
-                    return null;
+                    res = true;
+                    break;
                 }
-
-                foreach (string al in acceptLanguages)
-                {
-
-                    string[] bits = al.Split(';');
-                    string[] ietf = bits[0].Split('-');
-                    bool hasScript = ietf.Length == 3;
-                    string q = "1.0";
-
-                    if (bits.Count() > 1)
-                    {
-                        string[] innerBits = bits[1].Split('=');
-                        q = innerBits.Count() > 1 ? innerBits[1] : "1.0";
-                    }
-
-                    outLanguages.Add(new
-                    {
-                        code = ietf[0],
-                        script = hasScript && ietf.Count() > 1 ? ietf[1] : null,
-                        region = hasScript && ietf.Count() > 2 ? ietf[2] : (ietf.Count() > 1 ? ietf[1] : null),
-                        quality = Convert.ToDouble(q)
-                    });
-                }
-
-                return outLanguages.OrderByDescending(x => x.quality).FirstOrDefault().code;
             }
-            catch (Exception)
-            {
-                //Do not trow nor log. Instead, return null if language cannot be detected
-                return null;
-            }
+            return res;
         }
-        #endregion
+     
+
+        /// <summary>
+        /// Extension method to trim to whole minute
+        /// </summary>
+        /// <param name="date"></param>
+        /// <param name="ticks"></param>
+        /// <returns></returns>
+        public static DateTime TrimToMinute(this DateTime date, long ticks)
+        {
+            return new DateTime(date.Ticks - (date.Ticks % ticks));
+        }
+        public static bool TryCast<T>(this object obj, out T result)
+        {
+            if (obj is T)
+            {
+                result = (T)obj;
+                return true;
+            }
+
+            result = default(T);
+            return false;
+        }
+ 
+
+    public static bool TryParseJson<T>(this string @this, out T result)
+    {
+        bool success = true;
+        var settings = new JsonSerializerSettings
+        {
+            Error = (sender, args) => { success = false; args.ErrorContext.Handled = true; },
+            MissingMemberHandling = MissingMemberHandling.Error
+        };
+        result = JsonConvert.DeserializeObject<T>(@this, settings);
+        return success;
+    }
+    #endregion
     }
 }

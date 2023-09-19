@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 using System.Collections.Specialized;
-using System.Configuration;
 using System.DirectoryServices.AccountManagement;
-using System.IO;
-using System.Linq;
+using System.Dynamic;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace API
@@ -15,6 +15,11 @@ namespace API
     /// </summary>
     public class Common
     {
+        /// <summary>
+        /// the type of middlware that the request is.
+        /// </summary>
+        public string middlewareType = null;
+
         /// <summary>
         /// Windows Authentication constant
         /// </summary>
@@ -31,45 +36,9 @@ namespace API
         internal const string AUTHENTICATION_TYPE_ANY = "ANY";
 
         /// <summary>
-        /// Maintenance flag
-        /// </summary>
-        internal static bool Maintenance = Convert.ToBoolean(ConfigurationManager.AppSettings["API_MAINTENANCE"]);
-
-        /// <summary>
         /// Success response (case sensitive)
         /// </summary>
-        public static string success = ConfigurationManager.AppSettings["API_SUCCESS"];
-
-        /// <summary>
-        /// Authentication type
-        /// </summary>
-        internal static string API_AUTHENTICATION_TYPE = ConfigurationManager.AppSettings["API_AUTHENTICATION_TYPE"];
-
-        /// <summary>
-        /// Stateless flag
-        /// </summary>
-        internal static bool API_STATELESS = Convert.ToBoolean(ConfigurationManager.AppSettings["API_STATELESS"]);
-
-        /// <summary>
-        /// Active Directory Domain
-        /// </summary>
-        internal static string API_AD_DOMAIN = ConfigurationManager.AppSettings["API_AD_DOMAIN"];
-
-        /// <summary>
-        /// Active Directory Username for Quering 
-        /// </summary>
-        internal static string API_AD_USERNAME = ConfigurationManager.AppSettings["API_AD_USERNAME"];
-
-        /// <summary>
-        /// Active Directory Password for Querying 
-        /// </summary>
-        internal static string API_AD_PASSWORD = ConfigurationManager.AppSettings["API_AD_PASSWORD"];
-
-        /// <summary>
-        /// Firebase Authentication
-        /// </summary>
-        internal static bool FirebaseEnabled = Convert.ToBoolean(ConfigurationManager.AppSettings["API_FIREBASE_ENABLED"]);
-
+        // public static string success = ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"];
 
         /// <summary>
         /// Active Directory User Principal
@@ -91,21 +60,32 @@ namespace API
         /// </summary>
         internal string NetworkUsername = null;
 
+
+        /// <summary>
+        /// HTTP POST Request
+        /// </summary>
+        internal string httpPOST = null;
+
+
         /// <summary>
         /// HTTP GET Request
         /// </summary>
         internal NameValueCollection httpGET = null;
 
         /// <summary>
-        /// HTTP POST Request
+        /// last time a request was sent for possible performance monitoring
         /// </summary>
-        internal string httpPOST = null;
-        /// <summary>
-        /// Session cookie
-        /// </summary>
-        public static string SessionCookieName = ConfigurationManager.AppSettings["API_SESSION_COOKIE"];
+        internal static DateTime lastRequestTime;
 
-        public static string FirebaseId = null;
+
+        /// <summary>
+        /// number of requests
+        /// </summary>
+        internal static int requestCount = 0;
+
+        public Common()
+        {
+        }
 
         /// <summary>
         /// Authenticate the user in the context
@@ -115,7 +95,8 @@ namespace API
         {
 
             bool? isAuthenticated = null;
-            Log.Instance.Info("Stateless: " + API_STATELESS);
+
+            Log.Instance.Info("Stateless: " + ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]);
 
             // Get the username if any
             if (context.User.Identity.IsAuthenticated)
@@ -132,17 +113,17 @@ namespace API
                 Log.Instance.Info("User.Identity not authenticated");
             }
 
-            Log.Instance.Info("Network Identity: " + NetworkIdentity);
-            Log.Instance.Info("Network Username: " + NetworkUsername);
-            Log.Instance.Info("AD Domain: " + API_AD_DOMAIN);
-            Log.Instance.Info("AD Username: " + API_AD_USERNAME);
-            Log.Instance.Info("AD Password: ********"); // Hide API_AD_PASSWORD from logs
+            //Log.Instance.Info("Network Identity: " + NetworkIdentity);
+            //Log.Instance.Info("Network Username: " + NetworkUsername);
+            //Log.Instance.Info("AD Domain: " + ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]);
+            //Log.Instance.Info("AD Username: " + ApiServicesHelper.ApiConfiguration.Settings["API_AD_USERNAME"]);
+            //Log.Instance.Info("AD Password: ********"); // Hide API_AD_PASSWORD from logs
 
             // Check if the request is Stateless
-            if (API_STATELESS)
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]))
             {
                 // Check for the cached userPrincipal
-                MemCachedD_Value userPricipalCache = MemCacheD.Get_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity);
+                MemCachedD_Value userPricipalCache = ApiServicesHelper.CacheD.Get_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity);
                 if (userPricipalCache.hasData)
                 {
                     isAuthenticated = true;
@@ -158,7 +139,7 @@ namespace API
                     if (isAuthenticated != null)
                     {
                         // Set the cache to expire at midnight
-                        if (MemCacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
+                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
                         {
                             Log.Instance.Info("Authentication stored in Cache");
                         }
@@ -168,10 +149,10 @@ namespace API
             else
             {
                 // Check if a new Session has been instantiated
-                if (context.Session.IsNewSession)
+                if (context.Session.IsAvailable)
                 {
                     // Call the SessionID to initiate the Session
-                    Log.Instance.Info("Session ID: " + context.Session.SessionID);
+                    Log.Instance.Info("Session ID: " + context.Session.Id);
 
                     isAuthenticated = AuthenticateByType();
 
@@ -179,7 +160,7 @@ namespace API
                     if (isAuthenticated != null)
                     {
                         // Save the serialized userPrincipal in the Session
-                        context.Session[UserPrincipal_Container] = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
+                        //context.Session[UserPrincipal_Container] = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
                         Log.Instance.Info("Authentication stored in Session");
                     }
                 }
@@ -188,18 +169,19 @@ namespace API
                     isAuthenticated = true;
 
                     // Call the SessionID to initiate the Session
-                    Log.Instance.Info("Session ID: " + context.Session.SessionID);
+                    Log.Instance.Info("Session ID: " + context.Session.Id);
 
                     // Deserialise userPrincipal from Session
-                    UserPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference((string)(context.Session[UserPrincipal_Container]));
+                    //UserPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference((string)(context.Session[UserPrincipal_Container]));
                     Log.Instance.Info("Authentication retrieved from Session");
                 }
             }
 
             // Log userPrincipal
-            Log.Instance.Info("User Principal: " + Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal));
+            Log.Instance.Info("User Principal: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
             return isAuthenticated;
         }
+
 
         /// <summary>
         /// Authenticate the user by the relative Authentication Type
@@ -214,16 +196,16 @@ namespace API
             };
 
             Log.Instance.Info("Authentication Types Allowed: " + Utility.JsonSerialize_IgnoreLoopingReference(AuthenticationTypeAllowed));
-            Log.Instance.Info("Authentication Type Selected: " + API_AUTHENTICATION_TYPE);
+            Log.Instance.Info("Authentication Type Selected: " + ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]);
 
             // Validate the Authentication type
-            if (!AuthenticationTypeAllowed.Contains(API_AUTHENTICATION_TYPE))
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
             {
-                Log.Instance.Fatal("Invalid Authentication Type: " + API_AUTHENTICATION_TYPE);
+                Log.Instance.Fatal("Invalid Authentication Type: " + ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]);
                 return false;
             }
 
-            switch (API_AUTHENTICATION_TYPE)
+            switch (ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"])
             {
                 case AUTHENTICATION_TYPE_ANY:
                     // Process the Any Authentication
@@ -252,27 +234,16 @@ namespace API
                 return false;
             }
 
-            if (String.IsNullOrEmpty(API_AD_DOMAIN))
+            if (string.IsNullOrEmpty(ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]))
             {
                 Log.Instance.Fatal("Undefined AD Domain");
                 return false;
             }
 
-            // Query AD
-            PrincipalContext domainContext = null;
-
             try
             {
-                if (!String.IsNullOrEmpty(API_AD_USERNAME) && !String.IsNullOrEmpty(API_AD_PASSWORD))
-                {
-                    // Define the Domain against the Principal
-                    domainContext = new PrincipalContext(ContextType.Domain, API_AD_DOMAIN, API_AD_USERNAME, API_AD_PASSWORD);
-                }
-                else
-                {
-                    // Define the Domain against the Principal
-                    domainContext = new PrincipalContext(ContextType.Domain, API_AD_DOMAIN);
-                }
+                // Query AD
+                PrincipalContext domainContext = ApiServicesHelper.ActiveDirectory.adContext;
 
                 UserPrincipal = API_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, NetworkUsername);
                 if (UserPrincipal == null)
@@ -309,23 +280,14 @@ namespace API
             UserPrincipal = null;
 
             // Check the username exists agains the domain
-            if (!string.IsNullOrEmpty(NetworkUsername) && !String.IsNullOrEmpty(API_AD_DOMAIN))
+            if (!string.IsNullOrEmpty(NetworkUsername) && !string.IsNullOrEmpty(ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]))
             {
-                // Query AD
-                PrincipalContext domainContext = null;
+
 
                 try
                 {
-                    if (!String.IsNullOrEmpty(API_AD_USERNAME) && !String.IsNullOrEmpty(API_AD_PASSWORD))
-                    {
-                        // Define the Domain against the Principal
-                        domainContext = new PrincipalContext(ContextType.Domain, API_AD_DOMAIN, API_AD_USERNAME, API_AD_PASSWORD);
-                    }
-                    else
-                    {
-                        // Define the Domain against the Principal
-                        domainContext = new PrincipalContext(ContextType.Domain, API_AD_DOMAIN);
-                    }
+                    // Query AD
+                    PrincipalContext domainContext = ApiServicesHelper.ActiveDirectory.adContext;
 
                     // Query AD and get the logged username
                     UserPrincipal = API_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, NetworkUsername);
@@ -352,12 +314,12 @@ namespace API
         /// Get the HTTP request for the GET method
         /// </summary>
         /// <returns></returns>
-        internal static NameValueCollection GetHttpGET()
+        internal static NameValueCollection GetHttpGET(HttpContext httpContext)
         {
             try
             {
                 // Read the request from GET 
-                return HttpContext.Current.Request.QueryString;
+                return HttpUtility.ParseQueryString(httpContext.Request.QueryString.Value);
             }
             catch (Exception e)
             {
@@ -366,16 +328,27 @@ namespace API
             }
         }
 
+
         /// <summary>
         /// Get the HTTP request for the POST method
         /// </summary>
         /// <returns></returns>
-        internal static string GetHttpPOST()
+        internal async Task<string> GetHttpPOST(HttpContext httpContext)
         {
             try
             {
                 // Read the request from POST
-                return new StreamReader(HttpContext.Current.Request.InputStream).ReadToEnd();
+
+                //https://stackoverflow.com/questions/43403941/how-to-read-asp-net-core-response-body
+                string body;
+                using (var streamReader = new System.IO.StreamReader(
+                    httpContext.Request.Body, System.Text.Encoding.UTF8, leaveOpen: true))
+                    body = await streamReader.ReadToEndAsync();
+
+                httpContext.Request.Body.Position = 0;
+
+                return body;// httpContext.Request.Form.Keys.FirstOrDefault();
+                //new StreamReader(httpContext.Request.Body).ReadToEnd();
             }
             catch (Exception e)
             {
@@ -383,7 +356,86 @@ namespace API
                 return null;
             }
         }
-    }
+
+        public ExpandoObject UserPrincipalForLogging(dynamic up)
+        {
+            dynamic UserPrincipalLog = new ExpandoObject();
+            UserPrincipalLog.SamAccountName = up.SamAccountName;
+            return UserPrincipalLog;
+        }
+
+        /// <summary>
+        /// Mask an input password
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public string MaskParameters(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return "";
+            }
+            // Init the output
+            string output = input;
+
+            // Loop trough the parameters to mask API_MASK_PARAMETERS
+            foreach (var param in ApiServicesHelper.ApiConfiguration.Settings["API_MASK_PARAMETERS"].Split(','))
+            {
+                // https://stackoverflow.com/questions/171480/regex-grabbing-values-between-quotation-marks
+                Log.Instance.Info("Masked parameter: " + param);
+                output = Regex.Replace(output, "\"" + param + "\"\\s*:\\s*\"(.*?[^\\\\])\"", "\"" + param + "\": \"********\"", RegexOptions.IgnoreCase);
+            }
+
+            return output;
+        }
+
+        /// <summary>
+        /// manage responses to client
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="message"></param>
+        /// <param name="sourceToken"></param>     
+        /// <param name="statusCode"></param>
+        /// <param name="isFile"></param>
+        internal async Task returnResponseAsync(HttpContext context, string message, CancellationTokenSource sourceToken, HttpStatusCode statusCode, bool isFile = false)
+        {
+            Log.Instance.Info("Returning response");
+            //check if already cancelled
+            if (sourceToken.IsCancellationRequested)
+            {
+                throw new TaskCanceledException();
+            }
+
+            if (context.Response.HasStarted) {
+                sourceToken.Cancel(true);
+
+                if (sourceToken.IsCancellationRequested)
+                {
+                    throw new TaskCanceledException();
+                }
+            }
+            else
+            {
+                context.Response.StatusCode = (int)statusCode;
+                if (isFile)
+                {
+                    await context.Response.SendFileAsync(message);
+                }
+                else
+                {
+                    await context.Response.WriteAsync(message);
+                }
+                await context.Response.CompleteAsync();
+                sourceToken.Cancel(true);
+
+                if (sourceToken.IsCancellationRequested)
+                {
+                    throw new TaskCanceledException();
+                }
+            }
+        }
+
+   }
 
     /// <summary>
     /// Clone the UserPrincipal object structure for serialisation & deserialisation
@@ -407,5 +459,4 @@ namespace API
         [JsonConstructor]
         public API_UserPrincipal(PrincipalContext context, string samAccountName, string password, bool enabled) : base(context, samAccountName, password, enabled) { }
     }
-
 }

@@ -1,22 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
+using System.Dynamic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Web;
-using System.Web.SessionState;
 
 namespace API
 {
     /// <summary>
     /// RESTful implementation
     /// </summary>
-    public class RESTful : Common, IHttpHandler, IRequiresSessionState
+    public class RESTful : Common
     {
 
         #region Properties
@@ -26,114 +23,173 @@ namespace API
         private List<string> RequestParams = new List<string>();
         #endregion
 
+        /// <summary>
+        ///  allowed http methods
+        /// </summary>
+        public string[] AllowedHTTPMethods = new string[] { "GET", "POST","HEAD" };
+
+
+        public RESTful() : base()
+           {
+        }
+
+
+
         #region Methods
         /// <summary>
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
-        /// <param name="context"></param>
-        public void ProcessRequest(HttpContext context)
+        /// <param name="httpContext"></param>
+        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED)
         {
-            // Initiate Stopwatch
-            Stopwatch sw = new Stopwatch();
-            // Start Stopwatch
-            sw.Start();
-
-            // Thread a PerfomanceCollector
-            PerfomanceCollector performanceCollector = new PerfomanceCollector();
-            Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
+            // Were we already canceled?
+            apiCancellationToken.Token.ThrowIfCancellationRequested();
 
             try
             {
-                Log.Instance.Info("API Interface Opened");
+                Log.Instance.Info("Starting Restful processing");
 
-                // Set HTTP Requests
-                httpGET = GetHttpGET();
-                httpPOST = GetHttpPOST();
-
+                httpGET = GetHttpGET(httpContext);
+                httpPOST = await GetHttpPOST(httpContext);
+                
                 // Set Mime-Type for the Content Type and override the Charset
-                context.Response.Charset = null;
+                httpContext.Response.ContentType = $"charset=utf-8";
+
                 // Set CacheControl to no-cache
-                context.Response.CacheControl = "no-cache";
+                httpContext.Response.Headers.Append("Cache-Control", "no-cache");
 
                 // Extract the request parameters from the URL
-                ParseRequest(ref context);
+                await ParseRequest(httpContext, apiCancellationToken);
 
                 // Check for the maintenance flag
-                if (Maintenance)
+                if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.MAINTENANCE))
                 {
-                    ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
+                    await ParseError(httpContext, HttpStatusCode.ServiceUnavailable, apiCancellationToken, "System maintenance");
                 }
 
+                string SessionCookieName = ApiServicesHelper.ApiConfiguration.Settings["API_SESSION_COOKIE"];
                 // Get Session Cookie
-                HttpCookie sessionCookie = null;
-                if (!String.IsNullOrEmpty(SessionCookieName))
+                Cookie sessionCookie = new Cookie();
+                sessionCookie = null;
+
+                if (!string.IsNullOrEmpty(SessionCookieName))
                 {
-                    sessionCookie = context.Request.Cookies[SessionCookieName];
+                    //need to create a cookie using the value and  the SessionCookieName
+                    var testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
+                    if (!string.IsNullOrEmpty(testSessionCookieValue))
+                    {
+                        sessionCookie.Name = SessionCookieName;
+                        sessionCookie.Value = testSessionCookieValue;
+                    }
                 }
 
                 IResponseOutput result = null;
 
-                bool? isAuthenticated = Authenticate(ref context);
-                switch (isAuthenticated)
+                bool? isAuthenticated = Authenticate(ref httpContext);
+                try
                 {
-                    case null: //Anonymous authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context, sessionCookie);
-                        break;
-                    case true: //Windows Authentication
-                        performanceThread.Start();
-                        result = GetResult(ref context);
-                        break;
-                    case false: //Error
-                        ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
-                        break;
+                    switch (isAuthenticated)
+                    {
+                        case null: //Anonymous authentication
+                            if (API_PERFORMANCE_ENABLED)
+                            {
+                                performanceThread.Start();
+                            }
+                            result = GetResult(httpContext, sessionCookie);
+                            break;
+                        case true: //Windows Authentication
+                            if (API_PERFORMANCE_ENABLED)
+                            {
+                                performanceThread.Start();
+                            }
+                            result = GetResult(httpContext);
+                            break;
+                        case false: //Error
+                            await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                 }
 
                 if (result == null)
                 {
-                    ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
+                    await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                 }
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
-                    context.Response.StatusCode = (int)result.statusCode;
-                    context.Response.ContentType = result.mimeType;
-
-                    // Set the Session Cookie if requested
-                    if (!String.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
+                    if(httpContext.Request.Method == "HEAD")
                     {
-                        // No expiry time allowed in the future
-                        if (result.sessionCookie.Expires > DateTime.Now)
+                        // httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+
+                        if (!String.IsNullOrEmpty(result.mimeType))
                         {
-                            result.sessionCookie.Expires = default;
+                            httpContext.Response.Headers.Add("Content-Type", result.mimeType);
+
                         }
 
-                        result.sessionCookie.Secure = true;
-                        result.sessionCookie.Domain = null;
-                        result.sessionCookie.HttpOnly = true;
-                        result.sessionCookie.SameSite = SameSiteMode.Strict;
-                        context.Response.Cookies.Add(result.sessionCookie);
-                    }
+                        string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
+                        await returnResponseAsync(httpContext, response, apiCancellationToken, HttpStatusCode.OK);
 
-
-                    if (!String.IsNullOrEmpty(result.fileName))
-                    {
-                        context.Response.AppendHeader("Content-Disposition", new ContentDisposition { DispositionType = DispositionTypeNames.Attachment, Inline = true, FileName = result.fileName }.ToString());
-                    }
-
-                    if (result.response?.GetType() == typeof(byte[]))
-                    {
-                        context.Response.BinaryWrite(result.response);
                     }
                     else
                     {
-                        context.Response.Write(result.response);
+                       // httpContext.Response.StatusCode = (int)result.statusCode;
+                        httpContext.Response.ContentType = result.mimeType;                    
+
+                        // Set the Session Cookie if requested
+                        if (!string.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
+                        {
+                            // No expiry time allowed in the future
+                            if (result.sessionCookie.Expires > DateTime.Now)
+                            {
+                                result.sessionCookie.Expires = default;
+                            }
+                            var cookieOptions = new CookieOptions
+                            {
+                                Secure = true,
+                                HttpOnly = true,
+                                Domain = null,
+                                SameSite = SameSiteMode.Strict,
+                                Expires = result.sessionCookie.Expires
+                            };
+
+                            // Add the cookie to the response cookie collection
+                            httpContext.Response.Cookies.Append(SessionCookieName, result.sessionCookie.Value, cookieOptions);
+                        }
+
+
+                        if (!string.IsNullOrEmpty(result.fileName))
+                        {
+                            httpContext.Response.Headers.Add("Content-Disposition", new ContentDisposition { DispositionType = DispositionTypeNames.Attachment, Inline = true, FileName = result.fileName }.ToString());
+                        }
+
+                        if (result.response?.GetType() == typeof(byte[]))
+                        {
+                            Stream stream = new MemoryStream(result.response);
+                            var fullFileName = Path.GetTempFileName();
+                            File.WriteAllBytes(fullFileName, result.response);
+                            await returnResponseAsync(httpContext, fullFileName, apiCancellationToken, HttpStatusCode.OK,true);
+                       }
+                        else
+                        {
+                            string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
+                            await returnResponseAsync(httpContext, response, apiCancellationToken, result.statusCode);
+                        }
                     }
                 }
                 else
                 {
-                    ParseError(ref context, result.statusCode, result.response);
+                    await ParseError(httpContext, result.statusCode, result.response);
                 }
 
+            }
+            catch (OperationCanceledException e)
+            {
+                //don't need to do anything here as operation has been cancelled
             }
             catch (ThreadAbortException e)
             {
@@ -143,18 +199,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                throw;
-            }
-            finally
-            {
-                // Terminate Perfomance collection
-                performanceThread.Abort();
-
-                // Stop Stopwatch
-                sw.Stop();
-
-                Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
-                Log.Instance.Info("API Interface Closed");
+                await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }
 
@@ -164,22 +209,13 @@ namespace API
         /// <param name="context"></param>
         /// <param name="statusCode"></param>
         /// <param name="statusDescription"></param>
-        private void ParseError(ref HttpContext context, HttpStatusCode statusCode, string statusDescription = "")
+        /// 
+        private async Task ParseError(HttpContext context, HttpStatusCode statusCode, CancellationTokenSource sourceToken, string statusDescription = "")
         {
-            Log.Instance.Info("IP: " + Utility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
+            Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
-            context.Response.StatusCode = (int)statusCode;
             if (!string.IsNullOrEmpty(statusDescription))
-                context.Response.StatusDescription = statusDescription;
-
-            try
-            {
-                context.Response.End();
-            }
-            catch (ThreadAbortException e)
-            {
-                // Thread intentially aborted, do nothing
-            }
+                await returnResponseAsync(context, Utility.JsonSerialize_IgnoreLoopingReference(statusDescription), sourceToken, statusCode);
         }
 
         /// <summary>
@@ -187,7 +223,7 @@ namespace API
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        private void ParseRequest(ref HttpContext context)
+        private async Task ParseRequest(HttpContext context, CancellationTokenSource sourceToken)
         {
             try
             {
@@ -216,35 +252,45 @@ namespace API
                 /mysite/page.aspx?p1=1&p2=2
                 */
 
+                string requestType = context.Request.Method.ToLower();
+
+                if(requestType != "head")
+                {
+                    requestType = "RESTful";
+                }
                 // Read the URL parameters and split the URL Absolute Path
-                Log.Instance.Info("URL Absolute Path: " + context.Request.Url.AbsolutePath);
-                RequestParams = Regex.Split(context.Request.Url.AbsolutePath, "api.restful/", RegexOptions.IgnoreCase).ToList();
+                Log.Instance.Info("URL Absolute Path: " + context.Request.Path);
+
+                RequestParams = Regex.Split(context.Request.Path, "api.restful/", RegexOptions.IgnoreCase).ToList();
 
                 // Validate the Application path
                 if (RequestParams.Count() != 2)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid RESTful handler");
+                   await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid " + requestType+" handler");
                 }
+
                 // Get the RESTful parameters
                 RequestParams = RequestParams[1].Split('/').ToList();
+
                 Log.Instance.Info("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
 
                 // Validate the request
                 if (RequestParams.Count() == 0)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid RESTful parameters");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid " + requestType + "  parameters");
                 }
 
                 // Verify the method exists
                 if (!ValidateMethod(RequestParams))
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "RESTful method not found");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, requestType + " method not found");
                 }
             }
             catch (Exception e)
             {
+                Log.Instance.Fatal("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
                 Log.Instance.Fatal(e);
-                ParseError(ref context, HttpStatusCode.BadRequest, e.Message);
+                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, e.Message);
             }
         }
 
@@ -288,19 +334,32 @@ namespace API
                 return null;
 
             // Search in the entire Assemplies till finding the right one
-            foreach (Assembly currentassembly in AppDomain.CurrentDomain.GetAssemblies())
+
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            var calledClass = allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+
+            if (calledClass != null)
             {
-                Type StaticClass = currentassembly.GetType(methodPath, false, true);
-                if (StaticClass != null)
+                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
                 {
-                    if (StaticClass.CustomAttributes.Where(x => x.AttributeType.Name == "AllowAPICall").ToList().Count == 0) { break; }
-                    MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(RESTful_API) });
-                    if (methodInfo == null)
-                        return null;
-                    else
-                        return methodInfo;
+
+                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
+                    {
+
+                        MethodInfo methodInfo = calledClass.GetMethod(methodName, new Type[] { typeof(RESTful_API) });
+                        if (methodInfo == null)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return methodInfo;
+                        }
+                    }
                 }
             }
+
 
             return null;
         }
@@ -309,21 +368,28 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context, HttpCookie sessionCookie = null)
+        private dynamic GetResult(HttpContext context, Cookie sessionCookie = null)
         {
             // Set the API object
             RESTful_API apiRequest = new RESTful_API();
             apiRequest.method = RequestParams[0];
             apiRequest.parameters = RequestParams;
             apiRequest.userPrincipal = UserPrincipal;
-            apiRequest.ipAddress = Utility.GetIP();
-            apiRequest.userAgent = Utility.GetUserAgent();
+            apiRequest.ipAddress = ApiServicesHelper.WebUtility.GetIP();
+            apiRequest.userAgent = ApiServicesHelper.WebUtility.GetUserAgent();
+            apiRequest.requestType = context.Request.Method;
             apiRequest.httpGET = httpGET;
             apiRequest.httpPOST = httpPOST;
             apiRequest.sessionCookie = sessionCookie;
+            apiRequest.requestHeaders = context.Request.Headers;
+            apiRequest.scheme = context.Request.Scheme;
 
-            // Hide password from logs
-            Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
+            dynamic logMessage = new ExpandoObject();
+            logMessage = apiRequest;
+            if(UserPrincipal!=null)
+                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
+
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -402,7 +468,7 @@ namespace API
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; set; }
+        public Cookie sessionCookie { get; set; }
         public dynamic data { get; set; }
         public dynamic error { get; set; }
         #endregion
@@ -452,7 +518,22 @@ namespace API
         /// <summary>
         /// Session Cookie
         /// </summary>
-        public HttpCookie sessionCookie { get; set; }
+        public Cookie sessionCookie { get; set; }
         #endregion
+        /// <summary>
+        /// Request Type
+        /// </summary>
+        public string requestType { get; set; }
+
+
+        /// <summary>
+        /// Request Headers
+        /// </summary>
+        public IHeaderDictionary requestHeaders { get; set; }
+       
+        /// <summary>
+        /// Request scheme
+        /// </summary>
+        public string scheme { get; set; }
     }
 }

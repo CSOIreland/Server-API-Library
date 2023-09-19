@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>FirebaseAdmin</id>
+    <version>2.3.0</version>
+    <authors>Google Inc.</authors>
+    <owners>Google Inc.</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">Apache-2.0</license>
+    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>
+    <projectUrl>https://github.com/Firebase/firebase-admin-dotnet</projectUrl>
+    <description>Firebase Admin SDK enables server-side .NET developers to integrate Firebase into their
+      services and applications.</description>
+    <copyright>Copyright 2018 Google LLC</copyright>
+    <tags>firebase Google Cloud</tags>
+    <repository type="git" url="https://github.com/Firebase/firebase-admin-dotnet" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.1">
+        <dependency id="Google.Api.Gax.Rest" version="3.2.0" exclude="Build,Analyzers" />
+        <dependency id="Google.Apis.Auth" version="1.49.0" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="1.7.1" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Google.Api.Gax.Rest" version="3.2.0" exclude="Build,Analyzers" />
+        <dependency id="Google.Apis.Auth" version="1.49.0" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="1.7.1" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

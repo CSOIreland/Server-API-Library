@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Configuration;
+﻿using Microsoft.Identity.Client;
+using Newtonsoft.Json.Linq;
 using System.Net;
+using System.Security.Policy;
 
 namespace API
 {
@@ -15,18 +15,17 @@ namespace API
         /// <summary>
         /// Flag to indicate if ReCAPTCHA is enabled
         /// </summary>
-        private static readonly bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_RECAPTCHA_ENABLED"]);
+        //private static readonly bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_ENABLED"]);
 
         /// <summary>
         /// URL
         /// </summary>
-        private static readonly string API_RECAPTCHA_URL = ConfigurationManager.AppSettings["API_RECAPTCHA_URL"];
+       // private static readonly string API_RECAPTCHA_URL = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_URL"];
 
         /// <summary>
         /// private key
         /// </summary>
-        private static readonly string API_RECAPTCHA_PRIVATE_KEY = ConfigurationManager.AppSettings["API_RECAPTCHA_PRIVATE_KEY"];
-
+       // private static readonly string API_RECAPTCHA_PRIVATE_KEY = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_PRIVATE_KEY"];
         #endregion
 
         #region Methods
@@ -35,6 +34,21 @@ namespace API
         /// </summary>
         private static bool IsEnabled()
         {
+            /// <summary>
+            /// Flag to indicate if ReCAPTCHA is enabled
+            /// </summary>
+           bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_ENABLED"]);
+
+            /// <summary>
+            /// URL
+            /// </summary>
+            // private static readonly string API_RECAPTCHA_URL = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_URL"];
+
+            /// <summary>
+            /// private key
+            /// </summary>
+            // private static readonly string API_RECAPTCHA_PRIVATE_KEY = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_PRIVATE_KEY"];
+
             if (API_RECAPTCHA_ENABLED)
             {
                 return true;
@@ -52,6 +66,23 @@ namespace API
         /// <returns></returns>
         public static bool Validate(string encodedResponse)
         {
+            /// <summary>
+            /// Flag to indicate if ReCAPTCHA is enabled
+            /// </summary>
+            bool API_RECAPTCHA_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_ENABLED"]);
+
+            /// <summary>
+            /// URL
+            /// </summary>
+            string API_RECAPTCHA_URL = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_URL"];
+
+            /// <summary>
+            /// privates key
+            /// </summary>
+            string API_RECAPTCHA_PRIVATE_KEY = ApiServicesHelper.ApiConfiguration.Settings["API_RECAPTCHA_PRIVATE_KEY"];
+
+
+
             Log.Instance.Info("ReCAPTCHA Enabled: " + API_RECAPTCHA_ENABLED);
             Log.Instance.Info("ReCAPTCHA URL: " + API_RECAPTCHA_URL);
             Log.Instance.Info("ReCAPTCHA Private Key: ********"); // Hide API_RECAPTCHA_PRIVATE_KEY from logs
@@ -63,8 +94,21 @@ namespace API
             try
             {
                 // Validate the response against the server
-                var client = new WebClient();
-                var responseString = client.DownloadString(string.Format(API_RECAPTCHA_URL, API_RECAPTCHA_PRIVATE_KEY, encodedResponse));
+                var client = new HttpClient();
+
+                var requestString = string.Format(API_RECAPTCHA_URL, API_RECAPTCHA_PRIVATE_KEY, encodedResponse);
+                string responseString = "";
+                
+                using (HttpResponseMessage response = client.GetAsync(requestString).Result)
+                {
+                    using (HttpContent content = response.Content)
+                    {
+                        responseString = content.ReadAsStringAsync().Result;
+                    }
+                }
+
+
+
                 var responseObject = Utility.JsonDeserialize_IgnoreLoopingReference<JObject>(responseString);
                 var responseSuccess = (string)responseObject["success"];
 

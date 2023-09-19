@@ -1,0 +1,7 @@
+{
+  "appStatic": {
+    "APP_ERROR_CREATE": "No record created.",
+    "APP_ERROR_UPDATE": "No record created.",
+    "APP_ERROR_DELETE": "No record created."
+  }
+}

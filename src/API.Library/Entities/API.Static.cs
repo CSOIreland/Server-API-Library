@@ -1,22 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Azure;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
+using System.Dynamic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Web;
-using System.Web.SessionState;
 
 namespace API
 {
     /// <summary>
     /// Static implementation
     /// </summary>
-    public class Static : Common, IHttpHandler, IRequiresSessionState
+    public class Static : Common
     {
 
         #region Properties
@@ -24,91 +23,111 @@ namespace API
         ///  List of URL Request Parameters
         /// </summary>
         private List<string> RequestParams = new List<string>();
+
+        /// <summary>
+        ///  allowed http methods
+        /// </summary>
+        public string[] AllowedHTTPMethods = new string[] { "GET", "POST" };
         #endregion
+
+        public Static() : base()
+        {
+        }
 
         #region Methods
         /// <summary>
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
-        /// <param name="context"></param>
-        public void ProcessRequest(HttpContext context)
+        /// <param name="httpContext"></param>
+        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED)
         {
-            // Set Mime-Type for the Content Type and override the Charset
-            context.Response.Charset = null;
+            // Were we already canceled?
+            apiCancellationToken.Token.ThrowIfCancellationRequested();
 
-            // Set CacheControl to public 
-            context.Response.CacheControl = "public";
+            // Set Mime-Type for the Content Type and override the Charset
+            httpContext.Response.ContentType = null;
+
+             // Set CacheControl to public 
+            httpContext.Response.Headers.Append("Cache-Control", "public");
 
             // Check if the client has already a cached record
-            string rawIfModifiedSince = context.Request.Headers.Get("If-Modified-Since");
+            string rawIfModifiedSince = httpContext.Request.Headers["If-Modified-Since"];
             if (!string.IsNullOrEmpty(rawIfModifiedSince))
             {
-                context.Response.StatusCode = 304;
+                httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
                 // Do not process the request at all, stop here.
                 return;
             }
 
-            // Initiate Stopwatch
-            Stopwatch sw = new Stopwatch();
-            // Start Stopwatch
-            sw.Start();
-
-            // Thread a PerfomanceCollector
-            PerfomanceCollector performanceCollector = new PerfomanceCollector();
-            Thread performanceThread = new Thread(new ThreadStart(performanceCollector.CollectData));
-
             try
             {
-                Log.Instance.Info("API Interface Opened");
+                Log.Instance.Info("Starting Static Processing");
 
-                // Set HTTP Requests
-                httpGET = GetHttpGET();
-                httpPOST = GetHttpPOST();
+
+                httpGET = GetHttpGET(httpContext);
+                httpPOST = await GetHttpPOST(httpContext);
 
                 // Extract the request parameters from the URL
-                ParseRequest(ref context);
+                await ParseRequest(httpContext, apiCancellationToken);
 
                 // Check for the maintenance flag
-                if (Maintenance)
+                if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.MAINTENANCE))
                 {
-                    ParseError(ref context, HttpStatusCode.ServiceUnavailable, "System maintenance");
+                    await ParseError(httpContext, HttpStatusCode.ServiceUnavailable, apiCancellationToken,"System maintenance");
                 }
 
                 Static_Output result = null;
 
+
                 // Call the public method
-                performanceThread.Start();
-                result = GetResult(ref context);
+                if (API_PERFORMANCE_ENABLED)
+                {
+                    performanceThread.Start();
+                }
+                result = GetResult(ref httpContext);
+
                 if (result == null)
                 {
-                    ParseError(ref context, HttpStatusCode.InternalServerError, "Internal Error");
+                    await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                 }
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
-                    context.Response.StatusCode = (int)HttpStatusCode.OK;
-                    context.Response.ContentType = result.mimeType;
-                    context.Response.Cache.SetLastModified(DateTime.Now);
-                    context.Response.Cache.SetExpires(DateTime.Now.AddYears(1));
+                  // 
+                    httpContext.Response.ContentType = result.mimeType;
+                    httpContext.Response.Headers.Add("Expires", DateTime.Now.AddYears(1).ToString());
+                    httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString());
 
-                    if (!String.IsNullOrEmpty(result.fileName))
+                    //httpContext.Response.Cache.SetLastModified(DateTime.Now);
+                    //httpContext.Response.Cache.SetExpires(DateTime.Now.AddYears(1));
+
+                    if (!string.IsNullOrEmpty(result.fileName))
                     {
-                        context.Response.AppendHeader("Content-Disposition", new ContentDisposition { Inline = true, FileName = result.fileName }.ToString());
+                        httpContext.Response.Headers.Add("Content-Disposition", new ContentDisposition { Inline = true, FileName = result.fileName }.ToString());
                     }
 
                     if (result.response?.GetType() == typeof(byte[]))
                     {
-                        context.Response.BinaryWrite(result.response);
+                        httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                        Stream stream = new MemoryStream(result.response);
+                        var fullFileName = Path.GetTempFileName();
+                        File.WriteAllBytes(fullFileName, result.response);
+                        await returnResponseAsync(httpContext, fullFileName, apiCancellationToken, HttpStatusCode.OK,true);
                     }
                     else
                     {
-                        context.Response.Write(result.response);
+                        string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
+                        await returnResponseAsync(httpContext, response, apiCancellationToken, HttpStatusCode.OK);
                     }
                 }
                 else
                 {
-                    ParseError(ref context, result.statusCode, result.response);
+                    await ParseError(httpContext, result.statusCode, result.response);
                 }
 
+            }
+            catch (OperationCanceledException e)
+            {
+                //don't need to do anything here as operation has been cancelled
             }
             catch (ThreadAbortException e)
             {
@@ -117,19 +136,7 @@ namespace API
             }
             catch (Exception e)
             {
-                Log.Instance.Fatal(e);
-                throw;
-            }
-            finally
-            {
-                // Terminate Perfomance collection
-                performanceThread.Abort();
-
-                // Stop Stopwatch
-                sw.Stop();
-
-                Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
-                Log.Instance.Info("API Interface Closed");
+                await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }
 
@@ -139,22 +146,14 @@ namespace API
         /// <param name="context"></param>
         /// <param name="statusCode"></param>
         /// <param name="statusDescription"></param>
-        private void ParseError(ref HttpContext context, HttpStatusCode statusCode, string statusDescription = "")
+        private async Task ParseError(HttpContext context, HttpStatusCode statusCode,CancellationTokenSource sourceToken, string statusDescription = "")
         {
-            Log.Instance.Info("IP: " + Utility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
+            Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
-            context.Response.StatusCode = (int)statusCode;
             if (!string.IsNullOrEmpty(statusDescription))
-                context.Response.StatusDescription = statusDescription;
+                await returnResponseAsync(context, Utility.JsonSerialize_IgnoreLoopingReference(statusDescription), sourceToken, statusCode);
 
-            try
-            {
-                context.Response.End();
-            }
-            catch (ThreadAbortException e)
-            {
-                // Thread intentially aborted, do nothing
-            }
+       
         }
 
         /// <summary>
@@ -162,7 +161,7 @@ namespace API
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        private void ParseRequest(ref HttpContext context)
+        private async Task ParseRequest(HttpContext context, CancellationTokenSource sourceToken)
         {
             try
             {
@@ -192,13 +191,13 @@ namespace API
                 */
 
                 // Read the URL parameters and split the URL Absolute Path
-                Log.Instance.Info("URL Absolute Path: " + context.Request.Url.AbsolutePath);
-                RequestParams = Regex.Split(context.Request.Url.AbsolutePath, "api.static/", RegexOptions.IgnoreCase).ToList();
+                Log.Instance.Info("URL Absolute Path: " + context.Request.Path);
+                RequestParams = Regex.Split(context.Request.Path, "api.static/", RegexOptions.IgnoreCase).ToList();
 
                 // Validate the Application path
                 if (RequestParams.Count() != 2)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid Static handler");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid Static handler");
                 }
                 // Get the Static parameters
                 RequestParams = RequestParams[1].Split('/').ToList();
@@ -207,19 +206,20 @@ namespace API
                 // Validate the request
                 if (RequestParams.Count() == 0)
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Invalid Static parameters");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid Static parameters");
                 }
 
                 // Verify the method exists
                 if (!ValidateMethod(RequestParams))
                 {
-                    ParseError(ref context, HttpStatusCode.BadRequest, "Static method not found");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Static method not found");
                 }
             }
             catch (Exception e)
             {
+                Log.Instance.Fatal("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
                 Log.Instance.Fatal(e);
-                ParseError(ref context, HttpStatusCode.BadRequest, e.Message);
+                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, e.Message);
             }
         }
 
@@ -263,19 +263,32 @@ namespace API
                 return null;
 
             // Search in the entire Assemplies till finding the right one
-            foreach (Assembly currentassembly in AppDomain.CurrentDomain.GetAssemblies())
+
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            var calledClass = allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+
+            if (calledClass != null)
             {
-                Type StaticClass = currentassembly.GetType(methodPath, false, true);
-                if (StaticClass != null)
+                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
                 {
-                    if (StaticClass.CustomAttributes.Where(x => x.AttributeType.Name == "AllowAPICall").ToList().Count == 0) { break; }
-                    MethodInfo methodInfo = StaticClass.GetMethod(methodName, new Type[] { typeof(Static_API) });
-                    if (methodInfo == null)
-                        return null;
-                    else
-                        return methodInfo;
+
+                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
+                    {
+
+                        MethodInfo methodInfo = calledClass.GetMethod(methodName, new Type[] { typeof(Static_API) });
+                        if (methodInfo == null)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return methodInfo;
+                        }
+                    }
                 }
             }
+
 
             return null;
         }
@@ -284,19 +297,26 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context, HttpCookie sessionCookie = null)
+        private dynamic GetResult(ref HttpContext context, Cookie sessionCookie = null)
         {
             // Set the API object
             Static_API apiRequest = new Static_API();
             apiRequest.method = RequestParams[0];
             apiRequest.parameters = RequestParams;
-            apiRequest.ipAddress = Utility.GetIP();
-            apiRequest.userAgent = Utility.GetUserAgent();
+            apiRequest.ipAddress = ApiServicesHelper.WebUtility.GetIP();
+            apiRequest.userAgent = ApiServicesHelper.WebUtility.GetUserAgent();
+            //namevaluecollection not the same in .net6
             apiRequest.httpGET = httpGET;
             apiRequest.httpPOST = httpPOST;
+            apiRequest.requestType = context.Request.Method;
+            apiRequest.requestHeaders = context.Request.Headers;
 
-            // Hide password from logs
-            Log.Instance.Info("API Request: " + Utility.JsonSerialize_IgnoreLoopingReference(apiRequest));
+            dynamic logMessage = new ExpandoObject();
+            logMessage = apiRequest;
+            if(UserPrincipal!=null)
+                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
+
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -383,8 +403,20 @@ namespace API
 
         public dynamic userPrincipal { get { return null; } set { } }
 
-        public HttpCookie sessionCookie { get { return null; } set { } }
+        public Cookie sessionCookie { get { return null; } set { } }
+      
+        /// <summary>
+        /// Request Type
+        /// </summary>
+        public string requestType { get; set; }
         #endregion
+
+        /// <summary>
+        /// Request Headers
+        /// </summary>
+        public IHeaderDictionary requestHeaders { get; set; }
+
+        public string scheme { get; set; }
     }
 
 

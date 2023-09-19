@@ -1,10 +1,12 @@
 ﻿using API;
 using Newtonsoft.Json.Linq;
-using System;
 
 namespace Sample
 {
     [AllowAPICall]
+    /// <summary>
+    /// 
+    /// </summary>
     public class YourJSONRPC
     {
         #region Methods
@@ -33,7 +35,7 @@ namespace Sample
                     // Test  as null
                     output.data = null;
                     // Test  as success
-                    output.data = JSONRPC.success;
+                    output.data = ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"];
                     // Test data as string
                     output.data = "Place your data here, either as an Object, String, Int, JRaw... anything you need and the API will take care of converting and streaming anything";
                     // Test data as object

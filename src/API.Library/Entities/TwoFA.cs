@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 
 namespace API
@@ -45,7 +43,8 @@ namespace API
             }
             char[] chars = cList.ToArray();
             byte[] data = new byte[4 * size];
-            using (RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider())
+
+            using (RandomNumberGenerator crypto=RandomNumberGenerator.Create() )
             {
                 crypto.GetBytes(data);
             }

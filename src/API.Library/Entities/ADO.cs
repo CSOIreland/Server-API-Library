@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Data;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Linq;
+using System.Security.Principal;
 
 namespace API
 {
@@ -13,42 +11,30 @@ namespace API
     /// ADO to handle SQL Server
     /// https://docs.microsoft.com/en-us/visualstudio/code-quality/ca1063-implement-idisposable-correctly?view=vs-2017
     /// </summary>
-    ///
+    /// 
 
-    public interface IADO : IDisposable
-    {
-        void CloseConnection(bool onDispose = false);
-        void CommitTransaction();
-        void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0);
-        void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam);
-        void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam, ref ADO_outputParam outputParam);
-        ADO_readerOutput ExecuteReaderProcedure(string procedureName, List<ADO_inputParams> inputParams);
-        void OpenConnection(string connectionName);
-        void RollbackTransaction();
-        void StartTransaction(IsolationLevel transactionIsolation = IsolationLevel.ReadCommitted);
-    }
-    public class ADO : IDisposable, IADO
+    public class ADO : IADO, IDisposable
     {
         #region Properties
         /// <summary>
         /// Default DB connection name
         /// </summary>
-        internal static string API_ADO_DEFAULT_CONNECTION = ConfigurationManager.AppSettings["API_ADO_DEFAULT_CONNECTION"];
+        //internal static string API_ADO_DEFAULT_CONNECTION = ConfigurationManager.AppSettings["API_ADO_DEFAULT_CONNECTION"];
 
         /// <summary>
         /// Execution timeout
         /// </summary>
-        internal static int API_ADO_EXECUTION_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_EXECUTION_TIMEOUT"]);
+        //internal static int API_ADO_EXECUTION_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_EXECUTION_TIMEOUT"]);
 
         /// <summary>
         /// Bulkcopy timeout
         /// </summary>
-        internal static int API_ADO_BULKCOPY_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_TIMEOUT"]);
+        //internal static int API_ADO_BULKCOPY_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_TIMEOUT"]);
 
         /// <summary>
         /// Bulkcopy timeout
         /// </summary>
-        internal static int API_ADO_BULKCOPY_BATCHSIZE = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_BATCHSIZE"]);
+        //internal static int API_ADO_BULKCOPY_BATCHSIZE = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_BATCHSIZE"]);
 
         /// <summary>
         /// Initiate SQL Connection
@@ -59,26 +45,29 @@ namespace API
         /// Initiate SQL Transaction
         /// </summary>
         private SqlTransaction transaction = null;
+
         #endregion
 
         #region Methods
         /// <summary>
         /// SQL Connection
         /// </summary>
-        protected SqlConnection Connection { get { return connection; } }
+        // protected SqlConnection Connection { get { return connection; } }
 
         /// <summary>
         /// SQL Transaction
         /// </summary>
-        protected SqlTransaction Transaction { get { return transaction; } }
+        //protected SqlTransaction Transaction { get { return transaction; } }
 
         /// <summary>
         /// Default constructor to initiate an ADO - SQL Server Connection
-        /// connectionName is defaulted to the defaultConnection if nothing passed
+        /// connectionName is defaulted to the DefaultConnection if nothing passed
         /// </summary>
         /// <param name="connectionName"></param>
-        public ADO() : this(API_ADO_DEFAULT_CONNECTION)
+
+        public ADO() : this(ApiServicesHelper.ADOSettings.API_ADO_DEFAULT_CONNECTION)
         {
+
         }
 
         /// <summary>
@@ -123,12 +112,9 @@ namespace API
                     return;
                 }
 
-                //check what type of DB connection is to be made
-                string connectionType = ConfigurationManager.AppSettings["API_ADO_DB_CONNECTION_TYPE"];
 
                 // Get the Connection String form the associated Name
-                string connectionString = ConfigurationManager.ConnectionStrings[connectionName].ConnectionString;
-
+                string connectionString = ApiServicesHelper.Configuration.GetConnectionString(connectionName);
 
                 Log.Instance.Info("SQL Server Connection Name: " + connectionName);
                 Log.Instance.Info("SQL Server Connection String: ********"); // Hide connectionString from logs
@@ -139,42 +125,9 @@ namespace API
                     return;
                 }
 
-                if (connectionType.Equals("AD"))
-                {
-                    //need to impersonate as the AD user when creating the connection
-
-                    var execUsername = ConfigurationManager.AppSettings["API_ADO_DB_AD_CONNECTION_USERNAME"];
-                    var execPassword = ConfigurationManager.AppSettings["API_ADO_DB_AD_CONNECTION_PASSWORD"];
-                    var executeDomain = ConfigurationManager.AppSettings["API_ADO_DB_AD_DOMAIN"];
-
-
-                    if (Impersonization.impersonateValidUser(execUsername, executeDomain, execPassword))
-                    {
-                        connection = new SqlConnection(connectionString);
-                        connection.Open();
-                        Impersonization.undoImpersonation();
-                    }
-                    else
-                    {
-                        Log.Instance.Fatal("Error connection to database");
-                        throw new Exception("Error connection to database");
-                    }
-
-
-
-                }
-                else if (connectionType.Equals("SQL"))
-                {
-                    // Open a connection
-                    connection = new SqlConnection(connectionString);
-                    connection.Open();
-                }
-                else
-                {
-                    Log.Instance.Fatal("Database Connection Type not supported");
-                    throw new Exception("Database Connection Type not supported");
-                }
-
+                // Open a connection
+                connection = new SqlConnection(connectionString);
+                connection.Open();
             }
             catch (Exception e)
             {
@@ -338,13 +291,20 @@ namespace API
         public void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam, ref ADO_outputParam outputParam)
         {
             Log.Instance.Info("Non Query Procedure: " + procedureName);
-            Log.Instance.Info("Non Query Procedure Timeout (s): " + API_ADO_EXECUTION_TIMEOUT.ToString());
+            Log.Instance.Info("Non Query Procedure Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT.ToString());
 
             // Check the connection exists
             if (!CheckConnection())
             {
                 Log.Instance.Fatal("No SQL Server Connection avaialble");
                 return;
+            }
+
+            // Check that the transaction exists
+            if (!CheckTransaction())
+            {
+                Log.Instance.Fatal("No transaction found for ExecuteNonQueryProcedure");
+                throw new Exception("Unable to execute action");
             }
 
             // Initiate Stopwatch
@@ -358,7 +318,7 @@ namespace API
                 // Assign connection to command
                 command.Connection = connection;
                 // Assign timeout to execution
-                command.CommandTimeout = API_ADO_EXECUTION_TIMEOUT;
+                command.CommandTimeout = ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT;
                 // Assign transaction to command for a pending local transaction
                 command.Transaction = transaction;
                 // Set the command to execute a procedure
@@ -431,8 +391,8 @@ namespace API
         public void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0)
         {
             Log.Instance.Info("Bulk Copy to Table " + destinationTableName.ToUpper());
-            Log.Instance.Info("Bulk Copy Timeout (s): " + API_ADO_BULKCOPY_TIMEOUT.ToString());
-            Log.Instance.Info("Bulk Copy BatchSize: " + API_ADO_BULKCOPY_BATCHSIZE.ToString());
+            Log.Instance.Info("Bulk Copy Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT);
+            Log.Instance.Info("Bulk Copy BatchSize: " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE);
             Log.Instance.Info("Bulk Copy Use Current Transation: " + useCurrentTransaction.ToString());
             Log.Instance.Info("Bulk Copy Options: " + copyOptions.ToString());
 
@@ -441,6 +401,17 @@ namespace API
             {
                 Log.Instance.Fatal("No SQL Server Connection avaialble");
                 return;
+            }
+
+            if (useCurrentTransaction)
+            {
+                // Check that the transaction exists
+                if (!CheckTransaction())
+                {
+                    Log.Instance.Fatal("No transaction found for ExecuteBulkCopy");
+                    throw new Exception("Unable to execute action");
+                }
+
             }
 
             // Initiate Stopwatch
@@ -454,9 +425,9 @@ namespace API
                     // Set the target table
                     bulkCopy.DestinationTableName = destinationTableName;
                     // Set the timeout
-                    bulkCopy.BulkCopyTimeout = API_ADO_BULKCOPY_TIMEOUT;
+                    bulkCopy.BulkCopyTimeout = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT;
                     // Set the BatchSize
-                    bulkCopy.BatchSize = API_ADO_BULKCOPY_BATCHSIZE;
+                    bulkCopy.BatchSize = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE;
 
                     // Add the list of mapped columns
                     foreach (var mapping in mappings)
@@ -493,8 +464,8 @@ namespace API
         public void ExecuteBulkCopy(string destinationTableName, List<SqlBulkCopyColumnMapping> mappings, DataTable dt, bool useCurrentTransaction = false, SqlBulkCopyOptions copyOptions = SqlBulkCopyOptions.Default)
         {
             Log.Instance.Info("Bulk Copy to Table " + destinationTableName.ToUpper());
-            Log.Instance.Info("Bulk Copy Timeout (s): " + API_ADO_BULKCOPY_TIMEOUT.ToString());
-            Log.Instance.Info("Bulk Copy BatchSize: " + API_ADO_BULKCOPY_BATCHSIZE.ToString());
+            Log.Instance.Info("Bulk Copy Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT.ToString());
+            Log.Instance.Info("Bulk Copy BatchSize: " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE.ToString());
             Log.Instance.Info("Bulk Copy Use Current Transation: " + useCurrentTransaction.ToString());
             Log.Instance.Info("Bulk Copy Options: " + copyOptions.ToString());
 
@@ -516,9 +487,9 @@ namespace API
                     // Set the target table
                     bulkCopy.DestinationTableName = destinationTableName;
                     // Set the timeout
-                    bulkCopy.BulkCopyTimeout = API_ADO_BULKCOPY_TIMEOUT;
+                    bulkCopy.BulkCopyTimeout = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT;
                     // Set the BatchSize
-                    bulkCopy.BatchSize = API_ADO_BULKCOPY_BATCHSIZE;
+                    bulkCopy.BatchSize = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE;
 
                     // Add the list of mapped columns
                     foreach (var mapping in mappings)
@@ -554,7 +525,7 @@ namespace API
         public ADO_readerOutput ExecuteReaderProcedure(string procedureName, List<ADO_inputParams> inputParams)
         {
             Log.Instance.Info("Reader Procedure: " + procedureName);
-            Log.Instance.Info("Reader Procedure Timeout (s): " + API_ADO_EXECUTION_TIMEOUT.ToString());
+            Log.Instance.Info("Reader Procedure Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT.ToString());
 
             // Initiate the Reader output
             ADO_readerOutput readerOutput = new ADO_readerOutput();
@@ -577,7 +548,7 @@ namespace API
                 // Assign connection to command
                 command.Connection = connection;
                 // Assign timeout to execution
-                command.CommandTimeout = API_ADO_EXECUTION_TIMEOUT;
+                command.CommandTimeout = ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT;
                 // Assign transaction to command for a pending local transaction
                 command.Transaction = transaction;
                 // Set the command to execute a procedure

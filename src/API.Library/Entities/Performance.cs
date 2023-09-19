@@ -1,32 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
-using System.Threading;
 
 namespace API
 {
-    internal static class Performance
-    {
-        /// <summary>
-        /// Flag to indicate if Performance is enabled 
-        /// </summary>
-        internal static bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ConfigurationManager.AppSettings["API_PERFORMANCE_ENABLED"]);
-        internal static string API_PERFORMANCE_DATABASE = ConfigurationManager.AppSettings["API_PERFORMANCE_DATABASE"];
-
-        internal static PerformanceCounter ProcessorPercentage = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Processor", "% Processor Time", "_Total") : null;
-        internal static PerformanceCounter MemoryAvailableMBytes = API_PERFORMANCE_ENABLED ? new PerformanceCounter("Memory", "Available MBytes") : null;
-        internal static PerformanceCounter RequestPerSec = API_PERFORMANCE_ENABLED ? new PerformanceCounter("ASP.NET Applications", "Requests/Sec", "__Total__") : null;
-        internal static PerformanceCounter RequestsQueued = API_PERFORMANCE_ENABLED ? new PerformanceCounter("ASP.NET", "Requests Queued") : null;
-
-        // Extension method to trim to whole minute
-        internal static DateTime TrimToMinute(this DateTime date, long ticks)
-        {
-            return new DateTime(date.Ticks - (date.Ticks % ticks));
-        }
-    }
-
     internal class PerformanceObj
     {
         internal string Server = Dns.GetHostName();
@@ -36,30 +12,42 @@ namespace API
         internal int RequestPerSec { get; set; }
         internal int RequestsQueued { get; set; }
     }
-    internal class PerfomanceCollector : IDisposable
+
+    internal class PerformanceCollector : IDisposable
     {
+
         internal List<PerformanceObj> items = new List<PerformanceObj>();
 
-        internal void CollectData()
+        internal void CollectData(CancellationToken cancelToken)
         {
-            Log.Instance.Info("Performance Enabled: " + Performance.API_PERFORMANCE_ENABLED);
 
-            if (!Performance.API_PERFORMANCE_ENABLED)
+            /// <summary>
+            //    /// Flag to indicate if Performance is enabled 
+            //    /// </summary>
+            bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_PERFORMANCE_ENABLED"]);
+
+            Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
+
+            if (!API_PERFORMANCE_ENABLED)
             {
                 return;
             }
 
+            PerformanceCounter ProcessorPercentage = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            PerformanceCounter MemoryAvailableMBytes = new PerformanceCounter("Memory", "Available MBytes");
+            PerformanceCounter RequestPerSec = new PerformanceCounter("ASP.NET Applications", "Requests/Sec", "__Total__");
+            PerformanceCounter RequestsQueued = new PerformanceCounter("ASP.NET", "Requests Queued");
+
             try
             {
-                while (true)
+                while (!cancelToken.IsCancellationRequested)
                 {
                     PerformanceObj performanceObj = new PerformanceObj();
 
-                    float processorPercentage = Performance.ProcessorPercentage.NextValue();
-                    float memoryAvailableMBytes = Performance.MemoryAvailableMBytes.NextValue();
-                    float requestPerSec = Performance.RequestPerSec.NextValue();
-                    float requestsQueued = Performance.RequestsQueued.NextValue();
-
+                    float processorPercentage = ProcessorPercentage.NextValue();
+                    float memoryAvailableMBytes = MemoryAvailableMBytes.NextValue();
+                    float requestPerSec = RequestPerSec.NextValue();
+                    float requestsQueued = RequestsQueued.NextValue();
 
                     performanceObj.ProcessorPercentage = (int)Math.Round(processorPercentage);
                     performanceObj.MemoryAvailableMBytes = (int)Math.Round(memoryAvailableMBytes);
@@ -108,7 +96,7 @@ namespace API
             if (disposing)
             {
                 // Store data
-                Performance_ADO.Create(String.IsNullOrEmpty(Performance.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(Performance.API_PERFORMANCE_DATABASE), items);
+                Performance_ADO.Create(String.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE), items, Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_PERFORMANCE_ENABLED"]));
             }
         }
     }

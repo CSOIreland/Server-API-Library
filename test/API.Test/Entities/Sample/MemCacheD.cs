@@ -1,9 +1,10 @@
 ﻿using API;
 using Newtonsoft.Json;
-using System;
 
 namespace Sample
 {
+    [AllowAPICall]
+
     /// <summary>
     /// 
     /// </summary>
@@ -19,6 +20,7 @@ namespace Sample
         {
             // Initiate new object to handle the API Output
             JSONRPC_Output output = new JSONRPC_Output();
+            ICacheD _iCacheD = AppServicesHelper.ServiceProvider.GetService<ICacheD>();
 
             try
             {
@@ -31,7 +33,7 @@ namespace Sample
                 // Set the validity time of the cache (ie. 3600 seconds). If no TimeSpan is provided then the MAX validity is taken (ie. 30 dyas)
                 TimeSpan validFor = new TimeSpan(3600 * TimeSpan.TicksPerSecond);
                 // Store the data in the cache as you need
-                bool successStore = MemCacheD.Store_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO, data, validFor);
+                bool successStore = _iCacheD.Store_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO, data, validFor);
 
                 // Yuo can store as many cached entries into a Repository as well
                 /*
@@ -48,7 +50,7 @@ namespace Sample
                 {
                     // Get the data from the cache as you need
                     // Similar approach for MemCacheD.Get_ADO
-                    MemCachedD_Value valueCached = MemCacheD.Get_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO);
+                    MemCachedD_Value valueCached = _iCacheD.Get_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO);
 
                     output.data = valueCached;
                     Log.Instance.Debug("Value from cache: " + JsonConvert.SerializeObject(valueCached));
@@ -56,13 +58,13 @@ namespace Sample
 
                 // Remove an entry from the cache as you need
                 // Similar approach for MemCacheD.Remove_ADO
-                bool successRemove = MemCacheD.Remove_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO);
+                bool successRemove = _iCacheD.Remove_BSO<YourDTO>("Sample", "MemCacheD", "YourExposedMethod", inputDTO);
 
                 // Yuo can flush a full Repository as you need
                 //MemCacheD.CasRepositoryFlush("MyRepoSample");
 
                 // Flush all the cached records as you need... but be careful!
-                MemCacheD.FlushAll();
+                _iCacheD.FlushAll();
             }
             catch (Exception e)
             {

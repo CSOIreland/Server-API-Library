@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>System.Windows.Extensions</name>
+    </assembly>
+    <members>
+        <member name="P:System.SR.ConvertInvalidPrimitive">
+            <summary>{0} is not a valid value for {1}.</summary>
+        </member>
+        <member name="P:System.SR.Cryptography_InvalidHandle">
+            <summary>{0} is an invalid handle.</summary>
+        </member>
+        <member name="P:System.SR.Enum_InvalidValue">
+            <summary>Enumeration value '{0}' specified in condition mapping is not valid.</summary>
+        </member>
+        <member name="P:System.SR.PlatformNotSupported_System_Windows_Extensions">
+            <summary>System.Windows.Extensions types are not supported on this platform.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIBadSoundLocation">
+            <summary>Could not determine a universal resource identifier for the sound location.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIFileDoesNotExist">
+            <summary>Please be sure a sound file exists at the specified location.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIFormatNotSupported">
+            <summary>Sound API only supports playing PCM wave files.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIInvalidWaveFile">
+            <summary>The file located at {0} is not a valid wave file.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIInvalidWaveHeader">
+            <summary>The wave header is corrupt.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPILoadTimedOut">
+            <summary>The request to load the wave file in memory timed out.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPILoadTimeout">
+            <summary>The LoadTimeout property of a SoundPlayer cannot be negative.</summary>
+        </member>
+        <member name="P:System.SR.SoundAPIReadError">
+            <summary>=There was an error reading the file located at {0}. Please make sure that a valid wave file exists at the specified location.</summary>
+        </member>
+        <member name="P:System.SR.TextParseFailedFormat">
+            <summary>Text "{0}" cannot be parsed. The expected text format is "{1}".</summary>
+        </member>
+        <member name="P:System.SR.PropertyValueInvalidEntry">
+            <summary>IDictionary parameter contains at least one entry that is not valid. Ensure all values are consistent with the object's properties.</summary>
+        </member>
+        <member name="T:System.Runtime.InteropServices.LibraryImportAttribute">
+            <summary>
+            Attribute used to indicate a source generator should create a function for marshalling
+            arguments instead of relying on the runtime to generate an equivalent marshalling function at run-time.
+            </summary>
+            <remarks>
+            This attribute is meaningless if the source generator associated with it is not enabled.
+            The current built-in source generator only supports C# and only supplies an implementation when
+            applied to static, partial, non-generic methods.
+            </remarks>
+        </member>
+        <member name="M:System.Runtime.InteropServices.LibraryImportAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.InteropServices.LibraryImportAttribute"/>.
+            </summary>
+            <param name="libraryName">Name of the library containing the import.</param>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.LibraryName">
+            <summary>
+            Gets the name of the library containing the import.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.EntryPoint">
+            <summary>
+            Gets or sets the name of the entry point to be called.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshalling">
+            <summary>
+            Gets or sets how to marshal string arguments to the method.
+            </summary>
+            <remarks>
+            If this field is set to a value other than <see cref="F:System.Runtime.InteropServices.StringMarshalling.Custom" />,
+            <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType" /> must not be specified.
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType">
+            <summary>
+            Gets or sets the <see cref="T:System.Type"/> used to control how string arguments to the method are marshalled.
+            </summary>
+            <remarks>
+            If this field is specified, <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshalling" /> must not be specified
+            or must be set to <see cref="F:System.Runtime.InteropServices.StringMarshalling.Custom" />.
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.InteropServices.LibraryImportAttribute.SetLastError">
+            <summary>
+            Gets or sets whether the callee sets an error (SetLastError on Windows or errno
+            on other platforms) before returning from the attributed method.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.InteropServices.StringMarshalling">
+            <summary>
+            Specifies how strings should be marshalled for generated p/invokes
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Custom">
+            <summary>
+            Indicates the user is suppling a specific marshaller in <see cref="P:System.Runtime.InteropServices.LibraryImportAttribute.StringMarshallingCustomType"/>.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Utf8">
+            <summary>
+            Use the platform-provided UTF-8 marshaller.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.InteropServices.StringMarshalling.Utf16">
+            <summary>
+            Use the platform-provided UTF-16 marshaller.
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -1,9 +1,8 @@
 ﻿using API;
-using System;
-using System.Collections.Generic;
 
 namespace Sample
 {
+    [AllowAPICall]
     /// <summary>
     /// 
     /// </summary>

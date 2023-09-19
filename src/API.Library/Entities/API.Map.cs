@@ -1,4 +1,4 @@
-﻿using System;
+﻿using API;
 using System.Net;
 
 namespace API
@@ -31,7 +31,9 @@ namespace API
                 userAgent = RestfulApi.userAgent,
                 httpGET = RestfulApi.httpGET,
                 httpPOST = RestfulApi.httpPOST,
-                sessionCookie = RestfulApi.sessionCookie
+                sessionCookie = RestfulApi.sessionCookie,
+                requestHeaders = RestfulApi.requestHeaders,
+                scheme = RestfulApi.scheme
             };
         }
 
@@ -54,7 +56,9 @@ namespace API
                 userAgent = JsonRpcApi.userAgent,
                 httpGET = JsonRpcApi.httpGET,
                 httpPOST = JsonRpcApi.httpPOST,
-                sessionCookie = JsonRpcApi.sessionCookie
+                sessionCookie = JsonRpcApi.sessionCookie,
+                requestHeaders = JsonRpcApi.requestHeaders,
+                scheme = JsonRpcApi.scheme
             };
         }
 
