@@ -81,7 +81,8 @@ namespace API
             inputDTO.password = ApiServicesHelper.ApiConfiguration.Settings["API_AD_PASSWORD"];
             inputDTO.custom_properties = ApiServicesHelper.ApiConfiguration.Settings["API_AD_CUSTOM_PROPERTIES"];
             inputDTO.blacklist_ous = ApiServicesHelper.ApiConfiguration.Settings["API_AD_BLACKLIST_OUS"];
-          
+            inputDTO.type = typeof(T).FullName;
+
             MemCachedD_Value adCache = ApiServicesHelper.CacheD.Get_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", Utility.GetSHA256(Utility.JsonSerialize_IgnoreLoopingReference(inputDTO)));
             if (adCache.hasData)
                 return adCache.data.ToObject<Dictionary<string, dynamic>>();
