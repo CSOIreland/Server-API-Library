@@ -16,6 +16,13 @@ namespace API
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // Initiate the activity
+            var activity = Activity.Current;
+
+            log4net.LogicalThreadContext.Properties["rootID"] = activity.RootId;
+            
+
+
             if (!ApiServicesHelper.ApplicationLoaded)
             {
                 Log.Instance.Fatal("No API configuration loaded.");
@@ -24,10 +31,9 @@ namespace API
             }
             else
             {
-                // Initiate Stopwatch
-                Stopwatch sw = new Stopwatch();
-                // Start Stopwatch
-                sw.Start();
+   
+                // Start the activity Stopwatch
+                activity.Start();
 
                 Log.Instance.Info("API Interface Opened");
 
@@ -194,11 +200,13 @@ namespace API
                     // Terminate Perfomance collection
                     cancelPerformance.Cancel(true);//safely cancel thread    
                     cancelPerformance.Dispose();
-                    // Stop Stopwatch
-                    sw.Stop();
-
-                    Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3)).ToString());
+                    // Stop the activity
+                    activity.Stop();
+                    Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
                     Log.Instance.Info("API Interface Closed");
+           
+
+
                 }
             }
         }

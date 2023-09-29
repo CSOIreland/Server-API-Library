@@ -206,6 +206,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                Log.Instance.Fatal(e.StackTrace);
                 await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }

@@ -22,7 +22,7 @@
     "API_RECAPTCHA_PRIVATE_KEY": false,
     "API_RECAPTCHA_URL": "https://www.google.com/recaptcha/api/siteverify?secret=0&amp;response=1",
     "API_RECAPTCHA_ENABLED": false,
-    "API_AD_DOMAIN": "CSOCORK",
+    "API_AD_DOMAIN": "",
     "API_AD_PATH": "",
     "API_AD_USERNAME": "",
     "API_AD_PASSWORD": "",
