@@ -1,4 +1,5 @@
 ﻿using Enyim.Caching.Memcached;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using System.Net;
@@ -11,7 +12,7 @@ namespace API
     public class MemCacheD : ICacheD
     {
         #region Properties
-  
+
         /// <summary>
         /// SubKey prefix
         /// </summary>
@@ -43,7 +44,7 @@ namespace API
                     Log.Instance.Fatal("Memcache has not returned any stats data. Memcache may be unavailable");
 
                 }
-            }           
+            }
         }
 
         #region Methods
@@ -209,7 +210,7 @@ namespace API
         /// <returns></returns>
         private string GenerateHash(IDictionary<string, object> input)
         {
-             // Check if it's enabled first
+            // Check if it's enabled first
             if (!IsEnabled())
             {
                 return null;
@@ -282,7 +283,7 @@ namespace API
 
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log.Instance.Error(ex.Message);
                 return false;
@@ -364,11 +365,11 @@ namespace API
                 else
                 {
                     string dtoSerialized = Utility.JsonSerialize_IgnoreLoopingReference(inputDTO);
-                    throw new Exception(String.Format($"Memcache Store_ADO: Cache store failed for namespace {0}, className {1},methodName {2},dto {3}",nameSpace,className,methodName, dtoSerialized));
+                    throw new Exception(String.Format($"Memcache Store_ADO: Cache store failed for namespace {0}, className {1},methodName {2},dto {3}", nameSpace, className, methodName, dtoSerialized));
 
                 }
             }
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 Log.Instance.Error(ex.Message);
                 return false;
@@ -613,7 +614,10 @@ namespace API
                         // Create a new Cas record
                         CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, keys);
                         pending = !casStore.Result;
+
                     }
+
+
                 } while (pending);
 
                 Log.Instance.Info("Key [" + key + "] added to Repository [" + repository + "]");
@@ -638,6 +642,7 @@ namespace API
                 return false;
             }
 
+
             if (string.IsNullOrEmpty(repository))
             {
                 return false;
@@ -651,65 +656,34 @@ namespace API
             // Initiate Keys
             List<string> keys = new List<string>();
 
+            //Get list of Keys by Cas per Repository
+            CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+            // Check if Cas record exists
+            if (casCache.Result != null && casCache.Result.Count > 0)
+            {
+                // Get the list of Keys
+                keys = casCache.Result;
+            }
             try
             {
-                // Initiate loop
-                bool pending = true;
-                do
+                ApiServicesHelper.MemcachedClient.Remove(repository);
+
+                foreach (var key in keys)
                 {
-                    // Get list of Keys by Cas per Repository
-                    CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
-
-                    // Check if Cas record exists
-                    if (casCache.Result != null && casCache.Result.Count > 0)
-                    {
-                        // Get the list of Keys
-                        keys = casCache.Result;
-                    }
-
-                    // Loop through the Keys and remove the relative cache entries if any exist
-                    foreach (string key in keys)
-                    {
-                        if (!ApiServicesHelper.MemcachedClient.Remove(key))
-                        {
-                            Log.Instance.Error("Failed to flush CAS entry. Key: " +  key);   
-                            allOk = false;
-                        }
-                    }
-
-                    if (casCache.Cas != 0)
-                    {
-                        // Try to "Compare And Swap" if the Cas identifier exists
-                        CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, new List<string>(), casCache.Cas);
-                        pending = !casStore.Result;
-                    }
-                    else
-                    {
-                        pending = false;
-                    }
-                } while (pending);
-
-                // Get list of Keys by Cas per Repository
-                CasResult<List<string>> casCacheEnd = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
-                // Check if Cas record still exists
-                if (casCacheEnd.Result != null && casCacheEnd.Result.Count > 0)
-                {
-                    // Get the list of Keys
-                    Log.Instance.Error("One or more items reamain in the cache " + repository + " : " + casCacheEnd.Result.Count + " items remaining");
-                    
+                    ApiServicesHelper.MemcachedClient.Remove(key);
                 }
-                else
-                {
-                    Log.Instance.Info("Cas Repository [" + repository + "] flushed");
-                    
-                }
-                return allOk;
+
+                var check = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+
+                return check.Cas == 0;
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
                 return false;
             }
+
+
         }
 
         /// <summary>
@@ -979,7 +953,7 @@ namespace API
         /// <param name="validFor"></param>
         /// <returns></returns>
         private static MemCachedD_Value SetValue(dynamic data, DateTime expiresAt, TimeSpan validFor)
-        {      
+        {
 
             MemCachedD_Value value = new MemCachedD_Value();
             // Check if it's enabled first

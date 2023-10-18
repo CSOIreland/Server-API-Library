@@ -6,41 +6,54 @@
 		<Platforms>AnyCPU;x64</Platforms>
     <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <GenerateAssemblyInfo>True</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>True</GenerateAssemblyInfo> 
     <Configuration></Configuration>
     <Company>Central Statistics Office, Ireland</Company>
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.9</Version>
+    <Version>6.1.10</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [ENHANCEMENT] adding activity root id to log4net
-      - [ENHANCEMENT] changing api stopwatch to activity duration
-      - [ENHANCEMENT] including pdb on build
+      - [ENHANCEMENT] adding new ExecuteCustomReaderProcedureSetup ado function which returns an SLQ command object
+      - [BUG FIX] no longer serializing responses for static, restful and head requests
+      - [BUG FIX] memcache cas flush
+      - [ENHANCEMENT] updated firebaseadmin
+      - [ENHANCEMENT] updated Microsoft.Extensions.Logging.Log4Net.AspNetCore
+      - [ENHANCEMENT] added ConsoleConfiguration as a way to setup console apps easily
+      - [ENHANCEMENT] html sanitizer updated package as had vulnerability
+      - [ENHANCEMENT] html sanitizer keys removed from appsettings and added to apiconfig
     </PackageReleaseNotes>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
  </PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="bin\**" />
+	  <EmbeddedResource Remove="bin\**" />
+	  <None Remove="bin\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Entities\ADO.cs~RF5780ef96.TMP" />
 	  <None Remove="log4net.config" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="12.0.1" />
 		<PackageReference Include="EnyimMemcachedCore" Version="2.6.6" />
-		<PackageReference Include="FirebaseAdmin" Version="2.3.0" />
-		<PackageReference Include="HtmlSanitizer" Version="8.0.692" />
+		<PackageReference Include="FirebaseAdmin" Version="2.4.0" />
+		<PackageReference Include="HtmlSanitizer" Version="8.0.723" />
 		<PackageReference Include="log4net" Version="2.0.15" />
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="6.1.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="7.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="runtime.native.System.Net.Http" Version="4.3.1" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
-		<PackageReference Include="System.DirectoryServices.AccountManagement" Version="7.0.0" />
+		<PackageReference Include="System.DirectoryServices.AccountManagement" Version="7.0.1" />
 	</ItemGroup>
 
   
@@ -54,18 +67,13 @@
 	</ItemGroup>
 
    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <Optimize>True</Optimize>
+    <Optimize>False</Optimize>
     <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
-
-
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <None Include="bin\Debug\net6.0\*.pdb" Pack="true" PackagePath="lib\net6.0" />
-  </ItemGroup>
 
 
 

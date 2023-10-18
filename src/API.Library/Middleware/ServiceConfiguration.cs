@@ -37,7 +37,6 @@ namespace API
             service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));               
             service.Configure<APISettings>(builder.Configuration.GetSection("API_SETTINGS"));               
             service.Configure<BlockedRequests>(builder.Configuration.GetSection("Blocked_Requests"));               
-            service.Configure<HTMLsanitizerRules>(builder.Configuration.GetSection("HTMLsanitizerRules"));               
               
             service.AddEnyimMemcached();               
             service.AddSingleton<IApiConfiguration, ApiConfiguration>();               
@@ -59,7 +58,6 @@ namespace API
             var BlockedRequests = sp.GetService<IOptions<BlockedRequests>>();
             var APIConfig = sp.GetService<IOptions<APIConfig>>();
             var APPConfig = sp.GetService<IOptions<APPConfig>>();
-            var HTMLsanitizerRules = sp.GetService<IOptions<HTMLsanitizerRules>>();
 
             ApiServicesHelper.ServiceProvider = sp;
             ApiServicesHelper.Configuration = builder.Configuration;
@@ -68,7 +66,6 @@ namespace API
             ApiServicesHelper.BlockedRequests = BlockedRequests.Value;
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
-            ApiServicesHelper.HTMLsanitizerRules = HTMLsanitizerRules.Value;
 
             //we need to load API config here as needed for application to work.
             ApiServicesHelper.ApiConfiguration = sp.GetRequiredService<IApiConfiguration>();

@@ -1,5 +1,7 @@
 ﻿using AngleSharp.Css.Dom;
+using AngleSharp.Dom;
 using Ganss.Xss;
+using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -87,27 +89,27 @@ namespace API
                             //set up the sanitzier options object
                             HtmlSanitizerOptions sanitizerOptions = new HtmlSanitizerOptions();
 
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedTags != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_TAGS"].ToString().IsNullOrEmpty())
                             {
-                                AllowedTags.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedTags.items);
+                                AllowedTags.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_TAGS"].Split(",").ToList());
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedAttributes != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_ATTRIBUTES"].ToString().IsNullOrEmpty())
                             {
-                                AllowedAttributes.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedAttributes.items);
+                                AllowedAttributes.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_ATTRIBUTES"].Split(",").ToList());
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedCssClasses != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_CSSCLASSESS"].ToString().IsNullOrEmpty())
                             {
-                                AllowedCssClasses.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedCssClasses.items);
+                                AllowedCssClasses.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_CSSCLASSESS"].Split(",").ToList());
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedCssProperties != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_CSSPROPERTIES"].ToString().IsNullOrEmpty())
                             {
-                                AllowedCssProperties.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedCssProperties.items);
+                                AllowedCssProperties.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_CSSPROPERTIES"].Split(",").ToList());
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedAtRules != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_ATRULES"].ToString().IsNullOrEmpty())
                             {
                                 try
                                 {
-                                    IEnumerable<CssRuleType> cssRuleTypes = ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedAtRules.items
+                                    IEnumerable<CssRuleType> cssRuleTypes = ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_ATRULES"].Split(",").ToList()
                                                                       .Select(s => Enum.Parse(typeof(CssRuleType), s)).Cast<CssRuleType>();
                                     foreach (var ruleType in cssRuleTypes)
                                     {
@@ -118,13 +120,13 @@ namespace API
                                 }
                              
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedSchemes != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_SCHEMES"].ToString().IsNullOrEmpty())
                             {
-                                AllowedSchemes.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveAllowedSchemes.items);
+                                AllowedSchemes.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_ALLOWED_SCHEMES"].Split(",").ToList());
                             }
-                            if (ApiServicesHelper.HTMLsanitizerRules.RemoveUriAttributes != null)
+                            if (!ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_URI_ATTRIBUTES"].ToString().IsNullOrEmpty())
                             {
-                                UriAttributes.ExceptWith(ApiServicesHelper.HTMLsanitizerRules.RemoveUriAttributes.items);
+                                UriAttributes.ExceptWith(ApiServicesHelper.ApiConfiguration.Settings["SANITIZER_REMOVE_URI_ATTRIBUTES"].Split(",").ToList());
                             }
 
                             sanitizerOptions.AllowedTags = AllowedTags;

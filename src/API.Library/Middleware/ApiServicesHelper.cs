@@ -18,8 +18,6 @@ namespace API
 
         public static APISettings APISettings;
 
-        public static HTMLsanitizerRules HTMLsanitizerRules;
-
         public static BlockedRequests BlockedRequests;
 
         public static APIConfig APIConfig;

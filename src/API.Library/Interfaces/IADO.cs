@@ -34,6 +34,12 @@ namespace API
         void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam);
         void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam, ref ADO_outputParam outputParam);
         ADO_readerOutput ExecuteReaderProcedure(string procedureName, List<ADO_inputParams> inputParams);
+
+        ///<summary>
+        ///allows a command object to be returned for custom data reading
+        ///</summary>
+        SqlCommand ExecuteCustomReaderProcedureSetup(string procedureName, List<ADO_inputParams> inputParams);
+
         void OpenConnection(string connectionName);
         void RollbackTransaction();
         void StartTransaction(IsolationLevel transactionIsolation = IsolationLevel.ReadCommitted);

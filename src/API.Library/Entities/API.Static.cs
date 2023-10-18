@@ -115,8 +115,7 @@ namespace API
                     }
                     else
                     {
-                        string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
-                        await returnResponseAsync(httpContext, response, apiCancellationToken, HttpStatusCode.OK);
+                        await returnResponseAsync(httpContext, result.response, apiCancellationToken, HttpStatusCode.OK);
                     }
                 }
                 else

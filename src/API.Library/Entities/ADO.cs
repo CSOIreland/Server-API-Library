@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using AngleSharp.Dom;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Diagnostics;
@@ -507,6 +508,65 @@ namespace API
 
                     Log.Instance.Info("Bulk Copy Procedure completed (s): " + Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3).ToString());
                 }
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates a command object to allow for custom reading implementationltsets
+        /// </summary>
+        /// <param name="procedureName"></param>
+        /// <param name="inputParams"></param>
+        /// <returns></returns>
+        public SqlCommand ExecuteCustomReaderProcedureSetup(string procedureName, List<ADO_inputParams> inputParams)
+        {
+            Log.Instance.Info("Custom Reader Procedure Setup for : " + procedureName);
+            Log.Instance.Info("Custom Reader Procedure Setup  Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT.ToString());
+
+            // Check the connection exists
+            if (!CheckConnection())
+            {
+                Log.Instance.Fatal("No SQL Server Connection avaialble");
+                return null;
+            }
+
+            try
+            {
+                // Instantiate new Command within the local scope
+                SqlCommand command = connection.CreateCommand();
+
+                // Assign connection to command
+                command.Connection = connection;
+                // Assign timeout to execution
+                command.CommandTimeout = ApiServicesHelper.ADOSettings.API_ADO_EXECUTION_TIMEOUT;
+                // Assign transaction to command for a pending local transaction
+                command.Transaction = transaction;
+                // Set the command to execute a procedure
+                command.CommandType = CommandType.StoredProcedure;
+                // Set the name of the procedure to call
+                command.CommandText = procedureName;
+
+                // Add Input Parameters
+                if (inputParams != null && inputParams.Count() > 0)
+                {
+                    foreach (dynamic inputParam in inputParams)
+                    {
+                        Log.Instance.Info("Bind Input Parameter: Name[" + inputParam.name + "] Value[" + inputParam.value.ToString() + "]");
+                        SqlParameter param = command.Parameters.AddWithValue(inputParam.name, inputParam.value);
+                        param.Direction = ParameterDirection.Input;
+                        if (inputParam.typeName != null)
+                        {
+                            // Allow to pass a specific custom type (i.e. User Defined Data Types or User Defined Table Types)
+                            param.TypeName = inputParam.typeName;
+                        }
+                    }
+                }
+
+                return command;
             }
             catch (Exception e)
             {

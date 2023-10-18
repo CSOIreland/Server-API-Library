@@ -14,6 +14,6 @@ Set-Location $curDir\API.Library\bin\$ReleaseType
 $curDir1 = Get-Location
 
 
-dotnet nuget push $PackageName  --api-key $apiKey --source "github"
+dotnet nuget push $PackageName  --api-key $apiKey --source "https://nuget.pkg.github.com/CSOIreland/index.json"
 
 pause

@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Net;
-using System.Net.Http;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -131,8 +129,7 @@ namespace API
 
                         }
 
-                        string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
-                        await returnResponseAsync(httpContext, response, apiCancellationToken, HttpStatusCode.OK);
+                        await returnResponseAsync(httpContext, result.response, apiCancellationToken, HttpStatusCode.OK);
 
                     }
                     else
@@ -176,8 +173,7 @@ namespace API
                        }
                         else
                         {
-                            string response = Utility.JsonSerialize_IgnoreLoopingReference(result.response);
-                            await returnResponseAsync(httpContext, response, apiCancellationToken, result.statusCode);
+                            await returnResponseAsync(httpContext, result.response, apiCancellationToken, result.statusCode);
                         }
                     }
                 }

@@ -50,21 +50,4 @@
         public List<string> urls { get; set; }
     }
 
-    public class HTMLsanitizerRules
-    {
-        public RemoveItems RemoveAllowedTags { get; set; }
-        public RemoveItems RemoveAllowedAttributes { get; set; }
-        public RemoveItems RemoveAllowedCssClasses { get; set; }
-        public RemoveItems RemoveAllowedCssProperties { get; set; }
-        public RemoveItems RemoveAllowedAtRules { get; set; }
-        public RemoveItems RemoveAllowedSchemes { get; set; }
-        public RemoveItems RemoveUriAttributes { get; set; }
-
-    }
-
-    public class RemoveItems
-    {
-        public List<string> items { get; set; }
-    }
-
 }
