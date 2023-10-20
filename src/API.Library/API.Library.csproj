@@ -12,19 +12,13 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.10</Version>
+    <Version>6.1.11</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [ENHANCEMENT] adding new ExecuteCustomReaderProcedureSetup ado function which returns an SLQ command object
-      - [BUG FIX] no longer serializing responses for static, restful and head requests
-      - [BUG FIX] memcache cas flush
-      - [ENHANCEMENT] updated firebaseadmin
-      - [ENHANCEMENT] updated Microsoft.Extensions.Logging.Log4Net.AspNetCore
-      - [ENHANCEMENT] added ConsoleConfiguration as a way to setup console apps easily
-      - [ENHANCEMENT] html sanitizer updated package as had vulnerability
-      - [ENHANCEMENT] html sanitizer keys removed from appsettings and added to apiconfig
+      - [BUG FIX] static now returns 304 if not modified
+      - [BUG FIX] restful cookie bug
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>

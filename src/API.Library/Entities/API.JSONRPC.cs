@@ -77,25 +77,11 @@ namespace API
                     JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
                     await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
                 }
-
+                
                 string SessionCookieName = ApiServicesHelper.ApiConfiguration.Settings["API_SESSION_COOKIE"];
-
-                //add a cookie for testing
-                //httpContext.Request.Headers.Add("Cookie", "session=\"84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2\";");        
-
+               
                 // Get Session Cookie
-                Cookie sessionCookie = new Cookie();
-                if (!string.IsNullOrEmpty(SessionCookieName))
-                {
-                    //need to create a cookie using the value and  the SessionCookieName
-                    string testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
-
-                    if (!string.IsNullOrEmpty(testSessionCookieValue))
-                    {
-                        sessionCookie.Name = SessionCookieName;
-                        sessionCookie.Value = testSessionCookieValue;
-                    }
-                }
+                Cookie sessionCookie = CheckCookie(SessionCookieName,httpContext);
 
                 JSONRPC_Output result = null;
   

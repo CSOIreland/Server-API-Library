@@ -36,11 +36,6 @@ namespace API
         internal const string AUTHENTICATION_TYPE_ANY = "ANY";
 
         /// <summary>
-        /// Success response (case sensitive)
-        /// </summary>
-        // public static string success = ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"];
-
-        /// <summary>
         /// Active Directory User Principal
         /// </summary>
         internal dynamic UserPrincipal = null;
@@ -435,7 +430,31 @@ namespace API
             }
         }
 
-   }
+        /// <summary>
+        /// Determines if cookie is not empty and adds name and value
+        /// </summary>
+        /// <param name="httpContext"></param>
+        internal Cookie CheckCookie(string SessionCookieName, HttpContext httpContext)
+        {
+            //add a cookie for testing
+            //httpContext.Request.Headers.Add("Cookie", "session=\"84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2\";");        
+
+            Cookie sessionCookie = new Cookie();
+                
+            if (!string.IsNullOrEmpty(SessionCookieName))
+                {
+                    //need to create a cookie using the value and  the SessionCookieName
+                    string testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
+
+                    if (!string.IsNullOrEmpty(testSessionCookieValue))
+                    {
+                        sessionCookie.Name = SessionCookieName;
+                        sessionCookie.Value = testSessionCookieValue;
+                    }
+            }
+            return sessionCookie;
+        }
+    }
 
     /// <summary>
     /// Clone the UserPrincipal object structure for serialisation & deserialisation

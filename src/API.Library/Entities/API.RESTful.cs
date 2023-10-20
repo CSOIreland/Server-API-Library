@@ -67,19 +67,7 @@ namespace API
 
                 string SessionCookieName = ApiServicesHelper.ApiConfiguration.Settings["API_SESSION_COOKIE"];
                 // Get Session Cookie
-                Cookie sessionCookie = new Cookie();
-                sessionCookie = null;
-
-                if (!string.IsNullOrEmpty(SessionCookieName))
-                {
-                    //need to create a cookie using the value and  the SessionCookieName
-                    var testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
-                    if (!string.IsNullOrEmpty(testSessionCookieValue))
-                    {
-                        sessionCookie.Name = SessionCookieName;
-                        sessionCookie.Value = testSessionCookieValue;
-                    }
-                }
+                Cookie sessionCookie = CheckCookie(SessionCookieName, httpContext);
 
                 IResponseOutput result = null;
 
@@ -211,7 +199,7 @@ namespace API
             Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
             if (!string.IsNullOrEmpty(statusDescription))
-                await returnResponseAsync(context, Utility.JsonSerialize_IgnoreLoopingReference(statusDescription), sourceToken, statusCode);
+                await returnResponseAsync(context, statusDescription, sourceToken, statusCode);
         }
 
         /// <summary>

@@ -1,11 +1,7 @@
-﻿using Azure;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Net;
-using System.Net.Http;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -55,8 +51,9 @@ namespace API
             if (!string.IsNullOrEmpty(rawIfModifiedSince))
             {
                 httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
+
                 // Do not process the request at all, stop here.
-                return;
+                await returnResponseAsync(httpContext, "", apiCancellationToken,HttpStatusCode.NotModified , false);
             }
 
             try
@@ -92,13 +89,10 @@ namespace API
                 }
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
-                  // 
+                   
                     httpContext.Response.ContentType = result.mimeType;
                     httpContext.Response.Headers.Add("Expires", DateTime.Now.AddYears(1).ToString());
                     httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString());
-
-                    //httpContext.Response.Cache.SetLastModified(DateTime.Now);
-                    //httpContext.Response.Cache.SetExpires(DateTime.Now.AddYears(1));
 
                     if (!string.IsNullOrEmpty(result.fileName))
                     {
@@ -114,7 +108,7 @@ namespace API
                         await returnResponseAsync(httpContext, fullFileName, apiCancellationToken, HttpStatusCode.OK,true);
                     }
                     else
-                    {
+                    {                       
                         await returnResponseAsync(httpContext, result.response, apiCancellationToken, HttpStatusCode.OK);
                     }
                 }
@@ -150,7 +144,7 @@ namespace API
             Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
             if (!string.IsNullOrEmpty(statusDescription))
-                await returnResponseAsync(context, Utility.JsonSerialize_IgnoreLoopingReference(statusDescription), sourceToken, statusCode);
+                await returnResponseAsync(context, statusDescription, sourceToken, statusCode);
 
        
         }
