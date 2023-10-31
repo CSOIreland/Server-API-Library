@@ -46,7 +46,7 @@ namespace API
         /// </summary>
         /// <param name="context"></param>
         //public async Task Invoke(HttpContext httpContext)
-        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED)
+        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
         {
 
             // Were we already canceled?
@@ -96,7 +96,7 @@ namespace API
                             {
                                 performanceThread.Start();
                             }
-                            result = GetResult(httpContext, JSONRPC_Request, sessionCookie);
+                            result = GetResult(httpContext, JSONRPC_Request,trace, sessionCookie);
                             //result.sessionCookie always null unless set it to the sessionCookie from the request
                             result.sessionCookie = sessionCookie;
                             break;
@@ -105,7 +105,7 @@ namespace API
                             {
                                 performanceThread.Start();
                             }
-                            result = GetResult(httpContext, JSONRPC_Request, null);
+                            result = GetResult(httpContext, JSONRPC_Request, trace, null);
                             break;
                         case false: //Error
                             JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
@@ -118,7 +118,7 @@ namespace API
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
                     await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
                 }
-              
+             
 
                 if (result == null)
                 {
@@ -406,7 +406,7 @@ namespace API
         /// </summary>
         /// <param name="JSONRPC_Request"></param>
         /// <returns></returns>
-        private dynamic GetResult(HttpContext context, JSONRPC_Request JSONRPC_Request, Cookie sessionCookie = null)
+        private dynamic GetResult(HttpContext context, JSONRPC_Request JSONRPC_Request, Trace trace, Cookie sessionCookie = null)
         {
             // Set the API object
             JSONRPC_API apiRequest = new JSONRPC_API
@@ -423,6 +423,10 @@ namespace API
                 requestHeaders = context.Request.Headers,
                 scheme = context.Request.Scheme
             };
+
+            //gather trace information
+            GatherTraceInformation(apiRequest, trace);
+
 
             dynamic logMessage = new ExpandoObject();
             logMessage = apiRequest;

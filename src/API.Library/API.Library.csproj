@@ -12,13 +12,15 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.11</Version>
+    <Version>6.1.13</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [BUG FIX] static now returns 304 if not modified
-      - [BUG FIX] restful cookie bug
+      - [BUG FIX] head response can now return application defined response codes
+      - [ENHANCEMENT] added methodreader function to return value of custom attribute
+      - [ENHANCEMENT] Add expires and cache-control response headers for static
+      - [ENHANCEMENT] Check last-updated on middleware for static
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -56,6 +58,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Entities\Trace\" />
 	  <Folder Include="Properties\" />
   
 	</ItemGroup>

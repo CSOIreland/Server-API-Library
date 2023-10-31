@@ -11,6 +11,79 @@ namespace API
         /// </summary>
         public class MethodReader
         {
+
+        /// <summary>
+        /// This function checks an API method and returns its value
+        /// </summary>
+        /// <param name="method"></param>
+        /// <param name="attributeName"></param>
+        /// <returns></returns>
+        public static CustomAttributeData MethodAttributeValue(string method, string attributeName, Type[] parameters = null)
+        {
+            try
+            {
+                // The method contains the full path, e.g. "PxStat.Security.GroupAccount_API.Read"
+                // Create a List<string> of each individual element
+                List<string> mList = method.Split('.').ToList<string>();
+
+                //If this can't be parsed then just return 
+                if (mList.Count < 2)
+                    return null;
+
+                //Get the method name, i.e. everything after the last '.'
+                string methodName = mList.Last<string>();
+
+                //Remove the method name from the list
+                mList.RemoveAt(mList.Count - 1);
+
+                //Get the class, i.e. everything before the last '.' . This is done by expressing the list as a dot separated string
+                string className = string.Join(".", mList);
+
+                //Use some Reflection methods to get info about the class and method
+                //   Type type = Type.GetType(className);
+
+                var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                var type = allAssemblies.Select(y => y.GetType(className, false, true)).Where(p => p != null).FirstOrDefault();
+
+
+
+                int mcount = type.GetMethods().Where(x => x.Name == methodName).Count(); ;//.FirstOrDefault();
+
+
+                if (mcount == 0) return null;
+                MethodInfo methodInfo;
+                if (mcount > 1)
+                {
+                    //There is at least one overloaded method. If the calling method has supplied a list of parameters that specifies the overload, try to match it
+                    if (parameters != null)
+                    {
+                        methodInfo = type.GetMethod(methodName, parameters);
+                    }
+                    else // Otherwise apply the rule that if the attribute is applied to one overload, it applies to all
+                        methodInfo = type.GetMethods().Where(x => x.Name == methodName).FirstOrDefault();
+                }
+                else
+                {
+                    methodInfo = type.GetMethod(methodName);
+                }
+
+
+                //Get the required "attributeName" attribute if it exists
+                var searchedAttribute = methodInfo.CustomAttributes.Where(CustomAttributeData => CustomAttributeData.AttributeType.Name == attributeName).FirstOrDefault();
+
+                //Return true or false depending on whether the attribute was found
+                return searchedAttribute;
+            }
+            catch
+            {
+
+                //soft fail - continue the process.
+                return null;
+            }
+        }
+
+
         /// <summary>
         /// This function checks an API method and ascertains if the method has a specified associated attribute
         /// </summary>

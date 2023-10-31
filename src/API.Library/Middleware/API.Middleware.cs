@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AngleSharp.Dom;
+using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
 using System.Net;
 
@@ -16,7 +17,10 @@ namespace API
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Initiate the activity
+            Trace trace = new Trace();
+            trace.TrcStartTime = DateTime.Now;
+
+                 // Initiate the activity
             var activity = Activity.Current;
 
             log4net.LogicalThreadContext.Properties["rootID"] = activity.RootId;
@@ -90,11 +94,15 @@ namespace API
                             }
                         }
                     }
+                    //set the trace verb
+                    trace.TrcRequestVerb = requestMethod;
 
                     incomingUrl = incomingUrl.ToLower();
                     switch (true)
                     {
                         case bool b when incomingUrl.Contains("/api.jsonrpc", StringComparison.InvariantCultureIgnoreCase):
+                            trace.TrcRequestType = "jsonrpc";
+
                             //check that API type is allowed and that http method is allowed
                             if (ApiServicesHelper.APISettings.jsonrpc == null || !ApiServicesHelper.APISettings.jsonrpc.allowed || !ApiServicesHelper.APISettings.jsonrpc.verb.Contains(requestMethod))
                             {
@@ -114,11 +122,13 @@ namespace API
                                 }
                                 else
                                 {
-                                    await jsonrpc.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED);
+                                    await jsonrpc.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                 }
                             }
                             break;
                         case bool b when incomingUrl.Contains("/api.restful", StringComparison.InvariantCultureIgnoreCase):
+                            trace.TrcRequestType = "restful";
+                            
                             //check that API type is allowed and that http method is allowed
                             if (ApiServicesHelper.APISettings.restful == null || !ApiServicesHelper.APISettings.restful.allowed ||
                             !ApiServicesHelper.APISettings.restful.verb.Contains(requestMethod))
@@ -138,11 +148,12 @@ namespace API
                                 }
                                 else
                                 {
-                                    await restful.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED);
+                                    await restful.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                 }
                             }
                             break;
                         case bool b when incomingUrl.Contains("/api.static", StringComparison.InvariantCultureIgnoreCase):
+                            trace.TrcRequestType = "static";
                             //check that API type is allowed and that http method is allowed
                             if (ApiServicesHelper.APISettings.Static == null || !ApiServicesHelper.APISettings.Static.allowed ||
                             !ApiServicesHelper.APISettings.Static.verb.Contains(requestMethod))
@@ -162,7 +173,43 @@ namespace API
                                 }
                                 else
                                 {
-                                    await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED);
+                                    // Set Mime-Type for the Content Type and override the Charset
+                                    context.Response.ContentType = null;
+
+                                    // Set CacheControl to public 
+                                    context.Response.Headers.Append("Cache-Control", "public");
+
+                                    // Check if the client has already a cached record
+                                    string rawIfModifiedSince = context.Request.Headers["If-Modified-Since"];
+                                    Log.Instance.Info(" rawModifiedSince:" + rawIfModifiedSince);
+                                    if (!string.IsNullOrEmpty(rawIfModifiedSince))
+                                    {
+                                        if(DateTime.TryParse(rawIfModifiedSince, out  DateTime modifiedSince))
+                                        {
+                                            if (modifiedSince.AddYears(1)>DateTime.Now)
+                                            {
+                                                // Do not process the request at all, stop here.
+                                                context.Response.StatusCode = StatusCodes.Status304NotModified;
+                                                Log.Instance.Info("Response Status: " + context.Response.StatusCode);
+                                            }
+                                            else
+                                            {
+                                                Log.Instance.Info("Response Status: " + context.Response.StatusCode);
+                                                await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            Log.Instance.Info("Response Status: " + context.Response.StatusCode);
+                                            await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Log.Instance.Info("Response Status: " + context.Response.StatusCode);
+                                        await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                    }
                                 }
                             }
                             break;
@@ -187,12 +234,15 @@ namespace API
                 }
                 finally
                 {
-
-                    //IF NO RESPONSE SENT AT ALL SEND 204 STATUS CODE
-                    if (!context.Response.HasStarted)
+                    if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
                     {
-                        context.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                        await context.Response.WriteAsync("");
+
+                        //IF NO RESPONSE SENT AT ALL SEND 204 STATUS CODE
+                        if (!context.Response.HasStarted)
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                            await context.Response.WriteAsync("");
+                        }
                     }
 
                     apiCancellationToken.Cancel(true);
@@ -202,16 +252,33 @@ namespace API
                     cancelPerformance.Dispose();
                     // Stop the activity
                     activity.Stop();
+                    
                     Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
                     Log.Instance.Info("API Interface Closed");
-           
 
+                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_TRACE_ENABLED"]))
+                    {
+                       
+                            trace.TrcStatusCode = context.Response.StatusCode;
+                            trace.TrcDuration = ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3));
+                            trace.TrcMachineName = System.Environment.MachineName;
+                            trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
+                            trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
+                            //trace parameters
 
+                            if (ActiveDirectory.IsAuthenticated(UserPrincipal))
+                            {
+                                trace.TrcUsername = UserPrincipal.SamAccountName.ToString();
+                            }
+
+                            if (string.IsNullOrEmpty(trace.TrcMethod))
+                                trace.TrcErrorPath = MaskParameters(context.Request.Path.ToString());
+
+                            Trace_ADO.Create(trace);
+
+                    }
                 }
             }
         }
-
     }
 }
-
-

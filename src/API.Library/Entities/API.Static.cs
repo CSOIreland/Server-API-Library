@@ -35,26 +35,10 @@ namespace API
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
         /// <param name="httpContext"></param>
-        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED)
+        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
         {
             // Were we already canceled?
             apiCancellationToken.Token.ThrowIfCancellationRequested();
-
-            // Set Mime-Type for the Content Type and override the Charset
-            httpContext.Response.ContentType = null;
-
-             // Set CacheControl to public 
-            httpContext.Response.Headers.Append("Cache-Control", "public");
-
-            // Check if the client has already a cached record
-            string rawIfModifiedSince = httpContext.Request.Headers["If-Modified-Since"];
-            if (!string.IsNullOrEmpty(rawIfModifiedSince))
-            {
-                httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
-
-                // Do not process the request at all, stop here.
-                await returnResponseAsync(httpContext, "", apiCancellationToken,HttpStatusCode.NotModified , false);
-            }
 
             try
             {
@@ -81,7 +65,7 @@ namespace API
                 {
                     performanceThread.Start();
                 }
-                result = GetResult(ref httpContext);
+                result = GetResult(ref httpContext, trace);
 
                 if (result == null)
                 {
@@ -91,8 +75,9 @@ namespace API
                 {
                    
                     httpContext.Response.ContentType = result.mimeType;
-                    httpContext.Response.Headers.Add("Expires", DateTime.Now.AddYears(1).ToString());
+                    httpContext.Response.Headers["expires"]= DateTime.Now.AddYears(1).ToString();
                     httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString());
+                    httpContext.Response.Headers["Cache-Control"] = "31536000"; //one year
 
                     if (!string.IsNullOrEmpty(result.fileName))
                     {
@@ -290,7 +275,7 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context, Cookie sessionCookie = null)
+        private dynamic GetResult(ref HttpContext context,Trace trace, Cookie sessionCookie = null)
         {
             // Set the API object
             Static_API apiRequest = new Static_API();
@@ -303,6 +288,9 @@ namespace API
             apiRequest.httpPOST = httpPOST;
             apiRequest.requestType = context.Request.Method;
             apiRequest.requestHeaders = context.Request.Headers;
+
+            //gather trace information
+            GatherTraceInformation(apiRequest, trace);
 
             dynamic logMessage = new ExpandoObject();
             logMessage = apiRequest;

@@ -16,7 +16,7 @@ namespace API
     public class Common
     {
         /// <summary>
-        /// the type of middlware that the request is.
+        /// the type of middleware that the request is.
         /// </summary>
         public string middlewareType = null;
 
@@ -453,6 +453,20 @@ namespace API
                     }
             }
             return sessionCookie;
+        }
+
+        internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
+        {
+            //gather trace information
+            trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
+            trace.TrcIp = apiRequest.ipAddress;
+            trace.TrcUseragent = apiRequest.userAgent;
+            trace.TrcMethod = apiRequest.method;
+
+            if (ActiveDirectory.IsAuthenticated(apiRequest.userPrincipal))
+            {
+                trace.TrcUsername = apiRequest.userPrincipal.SamAccountName.ToString();
+            }
         }
     }
 
