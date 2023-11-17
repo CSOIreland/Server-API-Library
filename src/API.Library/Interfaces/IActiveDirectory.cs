@@ -1,4 +1,5 @@
 ﻿using System.DirectoryServices.AccountManagement;
+using System.Dynamic;
 
 namespace API
 {
@@ -10,5 +11,7 @@ namespace API
         dynamic Search(string username);
         bool IsPasswordValid(dynamic userPrincipal, string password);
         PrincipalContext adContext { get; }
+        public dynamic CreateAPIUserPrincipalObject(dynamic userPrincipal);
+
     }
 }

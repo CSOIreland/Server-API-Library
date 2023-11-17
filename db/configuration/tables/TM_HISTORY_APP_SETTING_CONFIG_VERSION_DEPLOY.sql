@@ -8,3 +8,44 @@
 );
 
 GO
+
+ EXEC sp_addextendedproperty @name=N'MS_Description', 
+@value=N'table that holds records each time the application loads a configuration recordset' , @level0type=N'SCHEMA',@level0name=N'dbo', 
+@level1type=N'TABLE',@level1name=N'TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY'
+GO
+
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'primary key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY',
+    @level2type = N'COLUMN',
+    @level2name = N'HCD_ID'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'when deployed',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY',
+    @level2type = N'COLUMN',
+    @level2name = N'HCD_DEPLOYED_TIME'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'TM_APP_SETTING_CONFIG_VERSION foreign key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY',
+    @level2type = N'COLUMN',
+    @level2name = N'HCD_ASV_ID'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'ip address of server that loaded config item',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY',
+    @level2type = N'COLUMN',
+    @level2name = N'HCD_IP_ADDRESS'

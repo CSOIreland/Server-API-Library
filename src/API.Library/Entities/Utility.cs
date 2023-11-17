@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
 using System.Net;
@@ -331,5 +332,11 @@ namespace API
         return success;
     }
     #endregion
+    
+    public static decimal StopWatchToSeconds(Stopwatch sw)
+    {
+            return decimal.Round((decimal)sw.Elapsed.TotalMilliseconds / 1000, 3);
     }
+
+  }
 }

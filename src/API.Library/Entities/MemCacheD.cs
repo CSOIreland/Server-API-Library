@@ -1,8 +1,11 @@
 ﻿using Enyim.Caching.Memcached;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Newtonsoft.Json.Linq;
+using System.Data;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Net;
+using System.Text.Json;
 
 namespace API
 {
@@ -426,6 +429,10 @@ namespace API
                 return false;
             }
 
+            Stopwatch sw = Stopwatch.StartNew();
+            int? cacheTraceCompressLength = null;
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
             if (value.data != null)
             {
                 // Check if data is of type String or JValue 
@@ -453,21 +460,21 @@ namespace API
                         }
                         else
                         {
+                            successTraceFlag = false;
                             return false;
                         }
                     }
                 }
             }
-
             try
             {
                 // The value must be serialised
                 string cacheSerialised = Utility.JsonSerialize_IgnoreLoopingReference(value);
                 Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
-
                 // The value must be compressed
                 string cacheCompressed = Utility.GZipCompress(cacheSerialised);
                 Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
+                cacheTraceCompressLength = cacheSerialised.Length * sizeof(Char);
 
                 bool isStored = false;
 
@@ -491,13 +498,32 @@ namespace API
                 else
                 {
                     Log.Instance.Fatal("Store failed: " + key);
+                    successTraceFlag = false;
                     return false;
                 }
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return false;
+            }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+
+                JObject obj = new JObject
+                {
+                   new JProperty("key",key),
+                   new JProperty("repository",repository)
+                };
+
+                //when cache object expires
+                DateTime expires = DateTime.Now + validFor;
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+                Log.Instance.Info("Memcache Store Execution Time (s): " + duration + " Object:" + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "Store", successTraceFlag, cacheTraceCompressLength, expires);
             }
         }
 
@@ -516,6 +542,11 @@ namespace API
             {
                 return false;
             }
+
+            Stopwatch sw = Stopwatch.StartNew();
+            int? cacheTraceCompressLength = null;
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
             try
             {
                 // The data is a string, no need to serialize
@@ -524,7 +555,7 @@ namespace API
                 // The data must be compressed
                 string subCacheCompressed = Utility.GZipCompress(data);
                 Log.Instance.Info("SubCache Size Compressed (Byte): " + subCacheCompressed.Length * sizeof(Char));
-
+                cacheTraceCompressLength = subCacheCompressed.Length * sizeof(Char);
                 bool isStored = false;
 
                 // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
@@ -547,13 +578,31 @@ namespace API
                 else
                 {
                     Log.Instance.Fatal("SubStore failed: " + subKey);
+                    successTraceFlag = false;
                     return false;
                 }
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return false;
+            }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+
+                JObject obj = new JObject
+                {
+                   new JProperty("subKey",subKey),
+                   new JProperty("repository",repository)
+                };
+
+
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+                Log.Instance.Info("Memcache SubStore Execution Time (s): " + duration + " Object:" + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, Utility.StopWatchToSeconds(sw), "SubStore", successTraceFlag, cacheTraceCompressLength, null);
             }
         }
 
@@ -580,6 +629,11 @@ namespace API
                 // Force to Case Insensitive
                 repository = repository.ToUpper();
             }
+
+            Stopwatch sw = Stopwatch.StartNew();
+            int? cacheTraceCompressLength = null;
+            bool successTraceFlag = true;
+            DateTime traceStart = DateTime.Now;
 
             // Initiate Keys
             List<string> keys = new List<string>();
@@ -625,7 +679,24 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return;
+            }
+            finally
+            {
+                sw.Stop();      
+                var duration = Utility.StopWatchToSeconds(sw);
+
+
+                JObject obj = new JObject
+                {
+                   new JProperty("key",key),
+                   new JProperty("repository",repository)
+                };
+
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+                Log.Instance.Info("Memcache CasRepositoryStore Execution Time (s): " + duration + " Cas Repository:" + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, Utility.StopWatchToSeconds(sw), "CasRepositoryStore",successTraceFlag,cacheTraceCompressLength,null);
             }
         }
 
@@ -642,7 +713,6 @@ namespace API
                 return false;
             }
 
-
             if (string.IsNullOrEmpty(repository))
             {
                 return false;
@@ -652,6 +722,10 @@ namespace API
                 // Force to Case Insensitive
                 repository = repository.ToUpper();
             }
+
+            Stopwatch sw = Stopwatch.StartNew();
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
 
             // Initiate Keys
             List<string> keys = new List<string>();
@@ -680,7 +754,24 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return false;
+            }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+
+                JObject obj = new JObject
+                {
+                   new JProperty("repository",repository)
+                };
+
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+
+
+                Log.Instance.Info("Memcache CasRepositoryFlush Execution Time (s): " + duration + " Repository:" + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "CasRepositoryFlush", successTraceFlag, null,null);
             }
 
 
@@ -736,6 +827,13 @@ namespace API
                 return value;
             }
 
+            //Tracing information
+            Stopwatch sw = Stopwatch.StartNew();
+            int? cacheTraceCompressLength = null;
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
+            DateTime? traceExpiresAt = null;
+
             try
             {
 
@@ -750,6 +848,7 @@ namespace API
                     // Decompress the cache
                     string cacheSerialised = Utility.GZipDecompress(cacheCompressed);
                     Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
+                    cacheTraceCompressLength = cacheSerialised.Length * sizeof(Char);
 
                     // The value must be deserialised
                     dynamic cache = Utility.JsonDeserialize_IgnoreLoopingReference(cacheSerialised);
@@ -757,6 +856,8 @@ namespace API
                     DateTime cacheDateTime = (DateTime)cache.datetime;
                     DateTime cacheExpiresAt = (DateTime)cache.expiresAt;
                     TimeSpan cacheValidFor = (TimeSpan)cache.validFor;
+
+                    traceExpiresAt = cacheExpiresAt;
 
                     Log.Instance.Info("Cache Date: " + cacheDateTime.ToString());
                     Log.Instance.Info("Cache Expires At: " + cacheExpiresAt.ToString());
@@ -793,15 +894,14 @@ namespace API
                                 // Decompress the cache
                                 string subCache = Utility.GZipDecompress(subCacheCompressed);
                                 Log.Instance.Info("SubCache Size Decompressed (Byte): " + subCache.Length * sizeof(Char));
-
                                 value.data = subCache;
                             }
                             else
                             {
+                                successTraceFlag = false;
                                 Log.Instance.Info("SubCache not found: " + key);
                             }
                         }
-
                         return value;
                     }
                     else
@@ -809,17 +909,33 @@ namespace API
                         Log.Instance.Info("Forced removal of expired cache");
                         // Remove the expired record
                         Remove(key);
-
+                        successTraceFlag = false;
                     }
                 }
                 else
                 {
+                    successTraceFlag = false;
                     Log.Instance.Info("Cache not found: " + key);
                 }
             }
             catch (Exception e)
             {
+                successTraceFlag = false;
                 Log.Instance.Fatal(e);
+            }
+            finally{
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+
+                JObject obj = new JObject
+                {
+                   new JProperty("key",key)
+                };
+
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+
+                Log.Instance.Info("Memcache get Execution Time (s): " + duration + " Key : " + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "GET",successTraceFlag, cacheTraceCompressLength, traceExpiresAt);
             }
 
             return value;
@@ -870,6 +986,10 @@ namespace API
                 return false;
             }
 
+            Stopwatch sw = Stopwatch.StartNew();
+            int? cacheTraceCompressLength = null;
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
             try
             {
                 string subKey = GetSubKey(key);
@@ -877,25 +997,43 @@ namespace API
                 // Remove the (optional) subKey
                 if (ApiServicesHelper.MemcachedClient.Remove(subKey))
                 {
-                    Log.Instance.Info("SubRemoval succesfull: " + subKey);
+                    Log.Instance.Info("SubRemoval successful: " + subKey);
                 }
 
                 // Remove the Key
                 if (ApiServicesHelper.MemcachedClient.Remove(key))
                 {
-                    Log.Instance.Info("Removal succesfull: " + key);
+                    Log.Instance.Info("Removal successful: " + key);
                     return true;
                 }
                 else
                 {
                     Log.Instance.Info("Removal failed: " + key);
+                    successTraceFlag = false;
                     return false;
                 }
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return false;
+            }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+
+                JObject obj = new JObject
+                {
+                   new JProperty("key",key),
+                };
+
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+
+
+                Log.Instance.Info("Memcache remove Execution Time (s): " + duration + " Key : " + serializedObj);
+                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "REMOVE", successTraceFlag, cacheTraceCompressLength,null);
             }
         }
 
@@ -907,6 +1045,10 @@ namespace API
             // Check if it's enabled first
             if (IsEnabled())
             {
+                Stopwatch sw = Stopwatch.StartNew();
+                int? cacheTraceCompressLength = null;
+                DateTime traceStart = DateTime.Now;
+                bool successTraceFlag = true;
                 try
                 {
                     // Remove all records
@@ -916,7 +1058,14 @@ namespace API
                 }
                 catch (Exception e)
                 {
+                    successTraceFlag = false;
                     Log.Instance.Fatal(e);
+                }finally
+                {
+                    sw.Stop();
+                    var duration = Utility.StopWatchToSeconds(sw);
+                    Log.Instance.Info("Memcache flush all Execution Time (s): " + duration);
+                    CacheTrace.PopulateCacheTrace(null,traceStart, duration, "FLUSH", successTraceFlag,cacheTraceCompressLength,null);
                 }
             }
 
@@ -933,6 +1082,9 @@ namespace API
             {
                 return null;
             }
+            Stopwatch sw = Stopwatch.StartNew();
+            bool successTraceFlag = true;
+            DateTime traceStart = DateTime.Now;
 
             try
             {
@@ -941,8 +1093,17 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 return null;
             }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+                Log.Instance.Info("Memcache get stats Execution Time (s): " + duration);
+                CacheTrace.PopulateCacheTrace(null,traceStart, duration, "GETSTATS", successTraceFlag,null,null);
+            }
+     
         }
 
         /// <summary>
@@ -956,12 +1117,13 @@ namespace API
         {
 
             MemCachedD_Value value = new MemCachedD_Value();
+
             // Check if it's enabled first
             if (!IsEnabled())
             {
                 return value;
             }
-
+         
             try
             {
                 value.datetime = DateTime.Now;

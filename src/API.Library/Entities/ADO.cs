@@ -1,10 +1,8 @@
-﻿using AngleSharp.Dom;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Security.Principal;
 
 namespace API
 {
@@ -18,26 +16,6 @@ namespace API
     {
         #region Properties
         /// <summary>
-        /// Default DB connection name
-        /// </summary>
-        //internal static string API_ADO_DEFAULT_CONNECTION = ConfigurationManager.AppSettings["API_ADO_DEFAULT_CONNECTION"];
-
-        /// <summary>
-        /// Execution timeout
-        /// </summary>
-        //internal static int API_ADO_EXECUTION_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_EXECUTION_TIMEOUT"]);
-
-        /// <summary>
-        /// Bulkcopy timeout
-        /// </summary>
-        //internal static int API_ADO_BULKCOPY_TIMEOUT = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_TIMEOUT"]);
-
-        /// <summary>
-        /// Bulkcopy timeout
-        /// </summary>
-        //internal static int API_ADO_BULKCOPY_BATCHSIZE = Convert.ToInt32(ConfigurationManager.AppSettings["API_ADO_BULKCOPY_BATCHSIZE"]);
-
-        /// <summary>
         /// Initiate SQL Connection
         /// </summary>
         private SqlConnection connection = null;
@@ -50,15 +28,6 @@ namespace API
         #endregion
 
         #region Methods
-        /// <summary>
-        /// SQL Connection
-        /// </summary>
-        // protected SqlConnection Connection { get { return connection; } }
-
-        /// <summary>
-        /// SQL Transaction
-        /// </summary>
-        //protected SqlTransaction Transaction { get { return transaction; } }
 
         /// <summary>
         /// Default constructor to initiate an ADO - SQL Server Connection
@@ -297,10 +266,9 @@ namespace API
             // Check the connection exists
             if (!CheckConnection())
             {
-                Log.Instance.Fatal("No SQL Server Connection avaialble");
+                Log.Instance.Fatal("No SQL Server Connection available");
                 return;
             }
-
             // Check that the transaction exists
             if (!CheckTransaction())
             {
@@ -310,7 +278,8 @@ namespace API
 
             // Initiate Stopwatch
             Stopwatch sw = new Stopwatch();
-
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
             try
             {
                 // Instantiate new Command within the local scope
@@ -377,7 +346,13 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 throw;
+            }
+            finally
+            {
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(inputParams);
+                DatabaseTrace.PopulateDatabaseTrace(procedureName, serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "ExecuteNonQueryProcedure", successTraceFlag);
             }
         }
 
@@ -417,7 +392,8 @@ namespace API
 
             // Initiate Stopwatch
             Stopwatch sw = new Stopwatch();
-
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
             try
             {
                 // Initiate a new Bulk Copy
@@ -450,74 +426,17 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Execute a Bulk Copy
-        /// </summary>
-        /// <param name="destinationTableName"></param>
-        /// <param name="mappings"></param>
-        /// <param name="dt"></param>
-        /// <param name="useCurrentTransaction"></param>
-        /// <param name="copyOptions"></param>
-        public void ExecuteBulkCopy(string destinationTableName, List<SqlBulkCopyColumnMapping> mappings, DataTable dt, bool useCurrentTransaction = false, SqlBulkCopyOptions copyOptions = SqlBulkCopyOptions.Default)
-        {
-            Log.Instance.Info("Bulk Copy to Table " + destinationTableName.ToUpper());
-            Log.Instance.Info("Bulk Copy Timeout (s): " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT.ToString());
-            Log.Instance.Info("Bulk Copy BatchSize: " + ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE.ToString());
-            Log.Instance.Info("Bulk Copy Use Current Transation: " + useCurrentTransaction.ToString());
-            Log.Instance.Info("Bulk Copy Options: " + copyOptions.ToString());
-
-            // Check the connection exists
-            if (!CheckConnection())
+            finally
             {
-                Log.Instance.Fatal("No SQL Server Connection avaialble");
-                return;
-            }
-
-            // Initiate Stopwatch
-            Stopwatch sw = new Stopwatch();
-
-            try
-            {
-                // Initiate a new Bulk Copy
-                using (var bulkCopy = useCurrentTransaction ? new SqlBulkCopy(connection, copyOptions, transaction) : new SqlBulkCopy(connection, copyOptions, null))
-                {
-                    // Set the target table
-                    bulkCopy.DestinationTableName = destinationTableName;
-                    // Set the timeout
-                    bulkCopy.BulkCopyTimeout = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_TIMEOUT;
-                    // Set the BatchSize
-                    bulkCopy.BatchSize = ApiServicesHelper.ADOSettings.API_ADO_BULKCOPY_BATCHSIZE;
-
-                    // Add the list of mapped columns
-                    foreach (var mapping in mappings)
-                    {
-                        bulkCopy.ColumnMappings.Add(mapping);
-                    }
-
-                    // Start the watch
-                    sw.Start();
-
-                    // Begin the copy
-                    bulkCopy.WriteToServer(dt);
-
-                    sw.Stop();
-
-                    Log.Instance.Info("Bulk Copy Procedure completed (s): " + Math.Round(sw.Elapsed.TotalMilliseconds / 1000, 3).ToString());
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Fatal(e);
-                throw;
+                DatabaseTrace.PopulateDatabaseTrace(destinationTableName, null, traceStart, Utility.StopWatchToSeconds(sw), "ExecuteBulkCopy", successTraceFlag);
             }
         }
-
+           
         /// <summary>
-        /// Creates a command object to allow for custom reading implementationltsets
+        /// Creates a command object to allow for custom reading implementation
         /// </summary>
         /// <param name="procedureName"></param>
         /// <param name="inputParams"></param>
@@ -599,6 +518,8 @@ namespace API
 
             // Initiate Stopwatch
             Stopwatch sw = new Stopwatch();
+            DateTime traceStart = DateTime.Now;
+            bool successTraceFlag = true;
 
             try
             {
@@ -731,7 +652,13 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                successTraceFlag = false;
                 throw;
+            }
+            finally
+            {
+                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(inputParams);
+                DatabaseTrace.PopulateDatabaseTrace(procedureName, serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "ExecuteReaderProcedure", successTraceFlag);
             }
         }
 

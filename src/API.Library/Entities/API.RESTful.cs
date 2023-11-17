@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
 using System.Dynamic;
+using System.Globalization;
 using System.Net;
 using System.Net.Mime;
 using System.Reflection;
@@ -109,6 +110,8 @@ namespace API
 
                     if (httpContext.Request.Method == "HEAD")
                     {
+                        httpContext.Response.Headers.Append("Cache-Control", "public");
+
                         if (!String.IsNullOrEmpty(result.mimeType))
                         {
                             httpContext.Response.ContentType = result.mimeType;
@@ -117,9 +120,10 @@ namespace API
                         if (result.statusCode == HttpStatusCode.OK)
                         {
                             httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                            httpContext.Response.Headers["expires"] = DateTime.Now.AddDays(1).ToString();
-                            httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString());
-                            httpContext.Response.Headers["Cache-Control"] = "86400"; //one day
+                            httpContext.Response.Headers["expires"] = DateTime.Now.AddDays(1).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+                            httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
+                         //   httpContext.Response.Headers["Cache-Control"] = "86400"; //one day
+                            httpContext.Response.ContentLength = 0;
                             await returnResponseAsync(httpContext, result.response, apiCancellationToken, result.statusCode);
                         }
                         else
@@ -379,18 +383,12 @@ namespace API
             apiRequest.sessionCookie = sessionCookie;
             apiRequest.requestHeaders = context.Request.Headers;
             apiRequest.scheme = context.Request.Scheme;
-
-            dynamic logMessage = new ExpandoObject();
-
+            apiRequest.correlationID = APIMiddleware.correlationID.Value;
 
             //gather trace information
             GatherTraceInformation(apiRequest, trace);
 
-            logMessage = apiRequest;
-            if(UserPrincipal!=null)
-                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
-
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -531,10 +529,17 @@ namespace API
         /// Request Headers
         /// </summary>
         public IHeaderDictionary requestHeaders { get; set; }
-       
+
+
         /// <summary>
-        /// Request scheme
+        /// Request Scheme
         /// </summary>
         public string scheme { get; set; }
+
+
+        /// <summary>
+        /// Request correlatationID
+        /// </summary>
+        public string correlationID { get; set; }
     }
 }

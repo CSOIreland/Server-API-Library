@@ -28,18 +28,12 @@ namespace API
                 performanceTable.Rows.Add(new object[] { p.ProcessorPercentage, p.MemoryAvailableMBytes, p.RequestsQueued, p.RequestPerSec, p.DateTime, p.Server });
             }
 
-            List<SqlBulkCopyColumnMapping> tableMap = new List<SqlBulkCopyColumnMapping>()
-                {
-                    new SqlBulkCopyColumnMapping("PRF_PROCESSOR_PERCENTAGE", "PRF_PROCESSOR_PERCENTAGE"),
-                    new SqlBulkCopyColumnMapping("PRF_MEMORY_AVAILABLE", "PRF_MEMORY_AVAILABLE"),
-                    new SqlBulkCopyColumnMapping("PRF_REQUEST_QUEUE", "PRF_REQUEST_QUEUE"),
-                    new SqlBulkCopyColumnMapping("PRF_REQUEST_PERSECOND", "PRF_REQUEST_PERSECOND"),
-                    new SqlBulkCopyColumnMapping("PRF_DATETIME", "PRF_DATETIME"),
-                    new SqlBulkCopyColumnMapping("PRF_SERVER", "PRF_SERVER")
-                };
-
-            // No transaction required
-            ado.ExecuteBulkCopy("TD_PERFORMANCE", tableMap, performanceTable);
+            var mapping = new List<KeyValuePair<string, string>>();
+            for (int i = 0; i < performanceTable.Columns.Count; i++)
+            {
+                mapping.Add(new KeyValuePair<string, string>(performanceTable.Columns[i].ColumnName, performanceTable.Columns[i].ColumnName));
+            }
+            ado.ExecuteBulkCopy("TD_PERFORMANCE", mapping, performanceTable);
 
             ado.Dispose();
         }

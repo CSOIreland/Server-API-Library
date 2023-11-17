@@ -1,5 +1,5 @@
-﻿using AngleSharp.Dom;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
+using System.Data;
 using System.Diagnostics;
 using System.Net;
 
@@ -9,6 +9,9 @@ namespace API
     {
 
         private readonly RequestDelegate _next;
+        public static AsyncLocal<DataTable> cacheTraceDataTable = new AsyncLocal<DataTable>();
+        public static AsyncLocal<DataTable> databaseTraceDataTable = new AsyncLocal<DataTable>();
+        public static AsyncLocal<string> correlationID = new AsyncLocal<string>();
 
         public APIMiddleware(RequestDelegate next) : base()
         {
@@ -20,12 +23,27 @@ namespace API
             Trace trace = new Trace();
             trace.TrcStartTime = DateTime.Now;
 
-                 // Initiate the activity
+            // Initiate the activity
             var activity = Activity.Current;
 
-            log4net.LogicalThreadContext.Properties["rootID"] = activity.RootId;
-            
+            log4net.LogicalThreadContext.Properties["correlationID"] = activity.RootId;
 
+            //set asynclocal value
+            correlationID.Value = activity.RootId.ToString();
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"])) { 
+                if (cacheTraceDataTable.Value == null) {
+
+                    cacheTraceDataTable.Value = CacheTrace.CreateCacheTraceDataTable();
+                }
+            }
+
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
+            {
+                if (databaseTraceDataTable.Value == null)
+                {
+                    databaseTraceDataTable.Value = DatabaseTrace.CreateDatabaseTraceDataTable();
+                }
+            }
 
             if (!ApiServicesHelper.ApplicationLoaded)
             {
@@ -247,7 +265,7 @@ namespace API
 
                     apiCancellationToken.Cancel(true);
                     apiCancellationToken.Dispose();
-                    // Terminate Perfomance collection
+                    // Terminate Performance collection
                     cancelPerformance.Cancel(true);//safely cancel thread    
                     cancelPerformance.Dispose();
                     // Stop the activity
@@ -255,6 +273,8 @@ namespace API
                     
                     Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
                     Log.Instance.Info("API Interface Closed");
+
+
 
                     if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_TRACE_ENABLED"]))
                     {
@@ -264,6 +284,7 @@ namespace API
                             trace.TrcMachineName = System.Environment.MachineName;
                             trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
                             trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
+                            trace.TrcCorrelationID = activity.RootId;
                             //trace parameters
 
                             if (ActiveDirectory.IsAuthenticated(UserPrincipal))
@@ -276,6 +297,22 @@ namespace API
 
                             Trace_ADO.Create(trace);
 
+                    }
+
+                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"]))
+                    {
+                        //store the cache trace info
+                        CacheTrace_ADO.Create(cacheTraceDataTable.Value);
+                        cacheTraceDataTable.Value.Dispose();
+                        cacheTraceDataTable.Value = null;
+                    }
+
+                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
+                    {
+                        //store the database trace info
+                        DatabaseTrace_ADO.Create(databaseTraceDataTable.Value);
+                        databaseTraceDataTable.Value.Dispose();
+                        databaseTraceDataTable.Value = null;
                     }
                 }
             }

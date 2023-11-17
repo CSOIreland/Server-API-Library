@@ -12,3 +12,64 @@
 
 
 GO
+
+EXEC sp_addextendedproperty @name=N'MS_Description', 
+@value=N'table that holds the historical information of configuration version' , @level0type=N'SCHEMA',@level0name=N'dbo', 
+@level1type=N'TABLE',@level1name=N'TM_HISTORY_APP_SETTING_CONFIG_VERSION'
+GO
+
+
+
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'primary key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_ID'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'TM_APP_SETTING_CONFIG_VERSION foreign key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_VERSION'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'ts_config_type foreign key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_CST_ID'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'when updated',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_UPDATED_AT'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'updated by',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_UPDATED_BY'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'TM_APP_SETTING_CONFIG_VERSION foreign key',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TM_HISTORY_APP_SETTING_CONFIG_VERSION',
+    @level2type = N'COLUMN',
+    @level2name = N'HSV_ASV_ID'

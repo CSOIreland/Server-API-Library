@@ -122,28 +122,9 @@ namespace API
                             else
                             {
                                     // Create a shallow copy of AD with the mandatory proprieties for caching/serialising it later on
-                                    var userPrincipal_ShallowCopy = new ExpandoObject() as IDictionary<string, object>;
-
-                                    userPrincipal_ShallowCopy.Add("SamAccountName", result.SamAccountName);
-                                    userPrincipal_ShallowCopy.Add("UserPrincipalName", result.UserPrincipalName);
-                                    userPrincipal_ShallowCopy.Add("DistinguishedName", result.DistinguishedName);
-                                    userPrincipal_ShallowCopy.Add("DisplayName", result.DisplayName);
-                                    userPrincipal_ShallowCopy.Add("Name", result.Name);
-                                    userPrincipal_ShallowCopy.Add("GivenName", result.GivenName);
-                                    userPrincipal_ShallowCopy.Add("MiddleName", result.MiddleName);
-                                    userPrincipal_ShallowCopy.Add("Surname", result.Surname);
-                                    userPrincipal_ShallowCopy.Add("EmailAddress", result.EmailAddress);
-                                    userPrincipal_ShallowCopy.Add("EmployeeId", result.EmployeeId);
-                                    userPrincipal_ShallowCopy.Add("VoiceTelephoneNumber", result.VoiceTelephoneNumber);
-                                    userPrincipal_ShallowCopy.Add("Description", result.Description);
-
-                                    // Add the cusotm properties to the shallow copy if any
-                                    foreach (string property in ApiServicesHelper.ApiConfiguration.Settings["API_AD_CUSTOM_PROPERTIES"].Split(','))
-                                    {
-                                        userPrincipal_ShallowCopy.Add(property, result.GetType().GetProperty(property)?.GetValue(result, null));
-                                    }
-
-                                    // Add user to the dictionary, serialise/deserialise to avoid looping references
+                             
+                                    var userPrincipal_ShallowCopy = CreateAPIUserPrincipalObject(result);
+                                // Add user to the dictionary, serialise/deserialise to avoid looping references
                                     adUsers_IDictionary.Add(result.SamAccountName, userPrincipal_ShallowCopy as ExpandoObject);
                                 }
                             }
@@ -162,6 +143,33 @@ namespace API
             return adUsers_IDictionary;
         }
 
+
+        public dynamic CreateAPIUserPrincipalObject(dynamic userPrincipal)
+        {
+
+            var userPrincipal_ShallowCopy = new ExpandoObject() as IDictionary<string, object>;
+            userPrincipal_ShallowCopy.Add("SamAccountName", userPrincipal.SamAccountName);
+            userPrincipal_ShallowCopy.Add("UserPrincipalName", userPrincipal.UserPrincipalName);
+            userPrincipal_ShallowCopy.Add("DistinguishedName", userPrincipal.DistinguishedName);
+            userPrincipal_ShallowCopy.Add("DisplayName", userPrincipal.DisplayName);
+            userPrincipal_ShallowCopy.Add("Name", userPrincipal.Name);
+            userPrincipal_ShallowCopy.Add("GivenName", userPrincipal.GivenName);
+            userPrincipal_ShallowCopy.Add("MiddleName", userPrincipal.MiddleName);
+            userPrincipal_ShallowCopy.Add("Surname", userPrincipal.Surname);
+            userPrincipal_ShallowCopy.Add("EmailAddress", userPrincipal.EmailAddress);
+            userPrincipal_ShallowCopy.Add("EmployeeId", userPrincipal.EmployeeId);
+            userPrincipal_ShallowCopy.Add("VoiceTelephoneNumber", userPrincipal.VoiceTelephoneNumber);
+            userPrincipal_ShallowCopy.Add("Description", userPrincipal.Description);
+
+            // Add the custom properties to the shallow copy if any
+            foreach (string property in ApiServicesHelper.ApiConfiguration.Settings["API_AD_CUSTOM_PROPERTIES"].Split(','))
+            {
+                userPrincipal_ShallowCopy.Add(property, userPrincipal.GetType().GetProperty(property)?.GetValue(userPrincipal, null));
+            }
+
+            return userPrincipal_ShallowCopy;
+
+        }
         /// <summary>
         /// This method list Active Directory for the configured Domain
         /// </summary>

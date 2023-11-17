@@ -30,7 +30,6 @@ namespace API
         void CloseConnection(bool onDispose = false);
         void CommitTransaction();
         void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0);
-        void ExecuteBulkCopy(string destinationTableName, List<SqlBulkCopyColumnMapping> mappings, DataTable dt, bool useCurrentTransaction = false, SqlBulkCopyOptions copyOptions = SqlBulkCopyOptions.Default);
         void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam);
         void ExecuteNonQueryProcedure(string procedureName, List<ADO_inputParams> inputParams, ref ADO_returnParam returnParam, ref ADO_outputParam outputParam);
         ADO_readerOutput ExecuteReaderProcedure(string procedureName, List<ADO_inputParams> inputParams);

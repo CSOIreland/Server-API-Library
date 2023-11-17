@@ -6,6 +6,8 @@ using System.Dynamic;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Web;
+using System.Text.Json;
+using System.Diagnostics;
 
 namespace API
 {
@@ -133,6 +135,9 @@ namespace API
                     // Store the cache only when authentication works.
                     if (isAuthenticated != null)
                     {
+                        //set userprincipal to be a smaller object
+                        UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
+
                         // Set the cache to expire at midnight
                         if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
                         {
@@ -246,7 +251,18 @@ namespace API
                     Log.Instance.Fatal("Undefined User Principal against AD");
                     return false;
                 }
-                return true;
+                else
+                {
+                    //if account is enabled
+                    if(UserPrincipal.Enabled) {
+                        return true;
+                    }
+                    else
+                    {
+                        Log.Instance.Info("User Principal account not enabled for : " + UserPrincipal.SamAccountName);
+                        return false;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -352,13 +368,6 @@ namespace API
             }
         }
 
-        public ExpandoObject UserPrincipalForLogging(dynamic up)
-        {
-            dynamic UserPrincipalLog = new ExpandoObject();
-            UserPrincipalLog.SamAccountName = up.SamAccountName;
-            return UserPrincipalLog;
-        }
-
         /// <summary>
         /// Mask an input password
         /// </summary>
@@ -457,17 +466,19 @@ namespace API
 
         internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
         {
-            //gather trace information
-            trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
-            trace.TrcIp = apiRequest.ipAddress;
-            trace.TrcUseragent = apiRequest.userAgent;
-            trace.TrcMethod = apiRequest.method;
+            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"])) { 
+                //gather trace information
+                trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
+                trace.TrcIp = apiRequest.ipAddress;
+                trace.TrcUseragent = apiRequest.userAgent;
+                trace.TrcMethod = apiRequest.method;
 
-            if (ActiveDirectory.IsAuthenticated(apiRequest.userPrincipal))
-            {
-                trace.TrcUsername = apiRequest.userPrincipal.SamAccountName.ToString();
+                if (apiRequest.userPrincipal != null)
+                {
+                    trace.TrcUsername = apiRequest.userPrincipal.SamAccountName.ToString();
+                }
             }
-        }
+        }    
     }
 
     /// <summary>

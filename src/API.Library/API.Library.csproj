@@ -12,15 +12,23 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.13</Version>
+    <Version>6.1.14</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [BUG FIX] head response can now return application defined response codes
-      - [ENHANCEMENT] added methodreader function to return value of custom attribute
-      - [ENHANCEMENT] Add expires and cache-control response headers for static
-      - [ENHANCEMENT] Check last-updated on middleware for static
+      - [ENHANCEMENT] added date formatting for headers
+      - [ENHANCEMENT] added cache control public, content length '0' for restful response
+      - [ENHANCEMENT] changing userprincipal cache object to only cache a subset of keys rather than whole object
+      - [ENHANCEMENT] add cache tracing
+      - [ENHANCEMENT] adding api tracing in trace directory
+      - [ENHANCEMENT] adding Ad enabled account check when authenticating user in API
+      - [ENHANCEMENT] adding database tracing
+      - [ENHANCEMENT] removing UserPrincipalForLogging as no longer needed
+      - [ENHANCEMENT] changed root id to correlation id
+      - [ENHANCEMENT] added correlationID as a parameter passed as part of apiRequest params
+      - [ENHANCEMENT] refactored how individual AD object being created
+      - [ENHANCEMENT] removed this function 'ExecuteBulkCopy' function with 'SqlBulkCopyColumnMapping' and refactored code as necessary
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -34,6 +42,7 @@
 
 	<ItemGroup>
 	  <None Remove="Entities\ADO.cs~RF5780ef96.TMP" />
+	  <None Remove="Entities\MemCacheD.cs~RFcba3198.TMP" />
 	  <None Remove="log4net.config" />
 	</ItemGroup>
 
@@ -58,7 +67,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Entities\Trace\" />
+	  <Folder Include="Entities\Tracing\Trace\" />
 	  <Folder Include="Properties\" />
   
 	</ItemGroup>

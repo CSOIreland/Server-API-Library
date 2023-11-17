@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
 using System.Dynamic;
+using System.Globalization;
 using System.Net;
 using System.Net.Mime;
 using System.Reflection;
@@ -75,8 +76,8 @@ namespace API
                 {
                    
                     httpContext.Response.ContentType = result.mimeType;
-                    httpContext.Response.Headers["expires"]= DateTime.Now.AddYears(1).ToString();
-                    httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString());
+                    httpContext.Response.Headers["expires"]= DateTime.Now.AddYears(1).ToString("dd/M/yyyy", CultureInfo.InvariantCulture);
+                    httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString("dd/M/yyyy", CultureInfo.InvariantCulture));
                     httpContext.Response.Headers["Cache-Control"] = "31536000"; //one year
 
                     if (!string.IsNullOrEmpty(result.fileName))
@@ -288,16 +289,12 @@ namespace API
             apiRequest.httpPOST = httpPOST;
             apiRequest.requestType = context.Request.Method;
             apiRequest.requestHeaders = context.Request.Headers;
+            apiRequest.correlationID = APIMiddleware.correlationID.Value;
 
             //gather trace information
             GatherTraceInformation(apiRequest, trace);
 
-            dynamic logMessage = new ExpandoObject();
-            logMessage = apiRequest;
-            if(UserPrincipal!=null)
-                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
-
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -397,7 +394,16 @@ namespace API
         /// </summary>
         public IHeaderDictionary requestHeaders { get; set; }
 
+        /// <summary>
+        /// Request Scheme
+        /// </summary>
         public string scheme { get; set; }
+
+
+        /// <summary>
+        /// Request correlatationID
+        /// </summary>
+        public string correlationID { get; set; }
     }
 
 

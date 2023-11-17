@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Collections.Specialized;
 using System.Dynamic;
 
+
 namespace API
 {
     /// <summary>
@@ -69,13 +70,13 @@ namespace API
                 httpContext.Response.Headers.Append("Charset", "");
 
                 // Deserialize and parse the JSON request into an Object dynamically
-                JSONRPC_Request JSONRPC_Request = await ParseRequest(httpContext, apiCancellationToken);
+                JSONRPC_Request JSONRPC_Request = await ParseRequest(httpContext, apiCancellationToken,trace);
 
                 // Check for the maintenance flag
                 if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.MAINTENANCE))
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32001, data = "The system is currently under maintenance." };
-                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken,trace);
                 }
                 
                 string SessionCookieName = ApiServicesHelper.ApiConfiguration.Settings["API_SESSION_COOKIE"];
@@ -105,30 +106,32 @@ namespace API
                             {
                                 performanceThread.Start();
                             }
+
                             result = GetResult(httpContext, JSONRPC_Request, trace, null);
+                          
                             break;
                         case false: //Error
                             JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                            await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                            await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken,trace);
                             break;
                     }
                 }
                 catch (Exception e)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
-                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken, trace);
                 }
              
 
                 if (result == null)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
-                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken,trace);
                 }
                 else if (result.error != null)
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32099, data = result.error };
-                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken);
+                    await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken, trace);
                 }
                 else
                 {
@@ -205,9 +208,10 @@ namespace API
         /// <param name="response"></param>
         /// <param name="id"></param>
         /// <param name="error"></param>
-        private async Task ParseError(HttpContext context, string id, JSONRPC_Error error, CancellationTokenSource sourceToken)
+        private async Task ParseError(HttpContext context, string id, JSONRPC_Error error, CancellationTokenSource sourceToken, Trace trace)
         {
             if (error.message == null)
+                trace.TrcJsonRpcErrorCode = error.code;
                 switch (error.code)
                 {
                     // Custom codes and messages
@@ -241,6 +245,7 @@ namespace API
                     default:
                         error.code = -32603;
                         error.message = "Internal error";
+                        trace.TrcJsonRpcErrorCode = -32603;
                         break;
                 }
 
@@ -257,7 +262,7 @@ namespace API
         /// </summary>
         /// <param name="httpContext"></param>
         /// <returns></returns>
-        private async Task<JSONRPC_Request> ParseRequest(HttpContext httpContext,CancellationTokenSource sourceToken)
+        private async Task<JSONRPC_Request> ParseRequest(HttpContext httpContext,CancellationTokenSource sourceToken, Trace trace)
         {
             // Initialise requests
             string request = null;
@@ -268,7 +273,7 @@ namespace API
                 if (string.IsNullOrWhiteSpace(httpGET[JSONRPC_GetParam]) && string.IsNullOrWhiteSpace(httpPOST))
                 {
                     JSONRPC_Error error = new JSONRPC_Error { code = -32700 };
-                    await ParseError(httpContext, null, error, sourceToken);
+                    await ParseError(httpContext, null, error, sourceToken,trace);
                 }
             }
 
@@ -296,7 +301,7 @@ namespace API
                 Log.Instance.Fatal(e);
 
                 var error = new JSONRPC_Error { code = -32700 };
-                await ParseError(httpContext, null, error, sourceToken);
+                await ParseError(httpContext, null, error, sourceToken,trace);
             }
 
             // N.B. JSONRPC_Request.id is recommended but optional anyway 
@@ -306,28 +311,28 @@ namespace API
             || JSONRPC_Request.method == null)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32600 };
-                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken,trace);
             }
 
             // Verify the version is right 
             if (JSONRPC_Request.jsonrpc != JSONRPC_Version)
             {
                 JSONRPC_Error error = new JSONRPC_Error { code = -32000 };
-                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken,trace);
             }
 
             // Verify the method exists
             if (!ValidateMethod(JSONRPC_Request))
             {
                 var error = new JSONRPC_Error { code = -32601 };
-                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken,trace);
             }
 
             // Verify the params exist
             if (JSONRPC_Request.@params == null)
             {
                 var error = new JSONRPC_Error { code = -32602 };
-                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken);
+                await ParseError(httpContext, JSONRPC_Request.id, error, sourceToken,trace);
             }
 
             return JSONRPC_Request;
@@ -421,20 +426,15 @@ namespace API
                 sessionCookie = sessionCookie,
                 requestType = context.Request.Method,
                 requestHeaders = context.Request.Headers,
-                scheme = context.Request.Scheme
+                scheme = context.Request.Scheme,
+                correlationID = APIMiddleware.correlationID.Value
             };
 
             //gather trace information
             GatherTraceInformation(apiRequest, trace);
 
-
-            dynamic logMessage = new ExpandoObject();
-            logMessage = apiRequest;
-            if(UserPrincipal != null) 
-                logMessage.userPrincipal = UserPrincipalForLogging(UserPrincipal);
-
             // Hide password from logs
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(logMessage)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(JSONRPC_Request);
@@ -593,6 +593,13 @@ namespace API
         /// Request Scheme
         /// </summary>
         public string scheme { get; set; }
+
+
+        /// <summary>
+        /// Request correlatationID
+        /// </summary>
+        public string correlationID { get; set; }
+
         #endregion
     }
 
