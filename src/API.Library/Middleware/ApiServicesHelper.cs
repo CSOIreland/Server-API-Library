@@ -6,7 +6,7 @@ using System.Diagnostics;
 namespace API
 {
     public class ApiServicesHelper
-    { 
+    {
         /// <summary>
         /// indicator to indicate if the api config has loaded successfully
         /// </summary>
@@ -23,6 +23,10 @@ namespace API
         public static APIConfig APIConfig;
 
         public static APPConfig APPConfig;
+
+        public static CacheSettings CacheSettings;
+
+        public static ICacheConfig CacheConfig;
 
         public static IApiConfiguration ApiConfiguration;
 
@@ -41,6 +45,10 @@ namespace API
         public static ISanitizer Sanitizer;
 
         public static ICleanser Cleanser;
+
+        public static IAPIPerformanceConfiguration APIPerformanceSettings;
+
+        public static IDatabaseTracingConfiguration DatabaseTracingConfiguration;
 
     }
 }

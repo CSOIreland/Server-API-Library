@@ -9,17 +9,14 @@ Inserts a record for each time that a configuration is read from the database in
 REVISION HISTORY 
 ---------------- 
 CHANGE NO.    DATE          CHANGED BY          REASON 
-1			23/03/2023	Stephen Lane			adding auto_version param so that latest version can always be retrieved instead of specific version
-
+1			23/03/2023	Stephen Lane		adding auto_version param so that latest version can always be retrieved instead of specific version
+2			21/11/2023	Stephen Lane		changing foreign key relationship
 PEER REVIEW HISTORY 
 ------------------- 
 REVIEW NO.    DATE          REVIEWED BY         COMMENTS 
 
 *************************************************************************************/
-CREATE
-	OR
-
-ALTER PROCEDURE "dbo"."App_Setting_Deploy_Update" @app_settings_version DECIMAL(10, 2)
+CREATE or alter PROCEDURE "dbo"."App_Setting_Deploy_Update" @app_settings_version DECIMAL(10, 2)
 	,@config_setting_type VARCHAR(10), @auto_version bit = null
 AS
 BEGIN
@@ -85,12 +82,18 @@ BEGIN
 
 	SELECT @machineIP = CONVERT(VARCHAR(100), CONNECTIONPROPERTY('client_net_address'))
 
+	declare @historyID int;
+
+	select @historyID = max(HSV_ID) from TM_HISTORY_APP_SETTING_CONFIG_VERSION
+	where HSV_ASV_ID = @version_id;
+
+
 	INSERT INTO [TM_HISTORY_APP_SETTING_CONFIG_VERSION_DEPLOY] (
-		[HCD_ASV_ID]
+		[HCD_HSV_ID]
 		,[HCD_IP_ADDRESS]
 		)
 	VALUES (
-		@version_id
+		@historyID
 		,@machineIP
 		)
 END

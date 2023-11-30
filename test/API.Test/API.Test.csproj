@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="API.Library" Version="6.1.14" />
+    <PackageReference Include="API.Library" Version="6.1.15" />
   </ItemGroup>
 
   <ItemGroup>

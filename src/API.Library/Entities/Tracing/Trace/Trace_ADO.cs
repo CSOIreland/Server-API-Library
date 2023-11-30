@@ -14,7 +14,7 @@
         /// <returns></returns>
         internal static void Create(Trace trace)
         {
-            if (!Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_TRACE_ENABLED"]))
+            if (!ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
             {
                 return;
             }
@@ -47,9 +47,8 @@
             if (!string.IsNullOrEmpty(trace.TrcParams))
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcParams", value = trace.TrcParams });
 
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_TRACE_RECORD_IP"]))
+            if (ApiServicesHelper.ApiConfiguration.API_TRACE_RECORD_IP)
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcIp", value = trace.TrcIp });
-
 
             if (!string.IsNullOrEmpty(trace.TrcUsername))
                 inputParamList.Add(new ADO_inputParams() { name = "@Username", value = trace.TrcUsername });

@@ -1,4 +1,4 @@
-﻿using MessagePack;
+﻿
 using Microsoft.Extensions.Options;
 
 namespace API
@@ -10,41 +10,57 @@ namespace API
         /// <summary>
         /// Initiate APPSettings 
         /// </summary>
-        static IDictionary<string, string> appCongfiguration;
+        static IDictionary<string, string> appConfiguration;
 
-        static decimal version = 0;
-
+        static decimal? inMemoryVersion = null;
         public APPConfiguration(IOptionsMonitor<APPConfig> ApplicationSettingsDelegate)
         {
-            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
-            {
-                Log.Instance.Info("Load app settings");
-                _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
-                distributedConfigCheck();
 
-                if (appCongfiguration == null)
+            _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
+
+            if (distributed_config == false && version == null)
+            {
+                Log.Instance.Fatal("APP : Distributed config must be true if version is null");
+                throw new Exception("APP : Distributed config must be true if version is null");
+            }
+            else if (distributed_config == true && version != null)
+            {
+                Log.Instance.Fatal("APP : Distributed config must be false if version is not null");
+                throw new Exception("APP : Distributed config must be false if version is not null");
+            }
+            else
+            {
+                Log.Instance.Info("load APP settings");
+                if (appConfiguration == null)
                 {
-                  ReadAppSettings();
+                    inMemoryVersion = version;
+                    ReadAppSettings();
                 }
                 else
                 {
-                    appCongfiguration = CheckSettingsAreCurrent(appCongfiguration);
+                    appConfiguration = CheckSettingsAreCurrent(appConfiguration);
                 }
             }
         }
 
         /// <summary>
-        /// Gets the auto_version flag from
+        /// Gets the latest APP settings from the database using the key from the 
         /// appsettings.json 
         /// </summary>
         /// <returns></returns>
-        public bool auto_version
+        public IDictionary<string, string> Settings
         {
             get
             {
-                Log.Instance.Info("get app settings");
-                return _ApplicationSettingsDelegate.CurrentValue.auto_version;
+                return appConfiguration;
             }
+        }
+
+        public void Refresh()
+        {
+            Log.Instance.Info("refresh app settings");
+            //refresh appConfiguration if necessary
+            CheckSettingsAreCurrent(appConfiguration);
         }
 
         /// <summary>
@@ -60,18 +76,16 @@ namespace API
             }
         }
 
-
-
         /// <summary>
-        /// Gets the latest APP settings from the database using the key from the 
+        /// Gets the version from
         /// appsettings.json 
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, string> Settings
+        public decimal? version
         {
             get
             {
-                return CheckSettingsAreCurrent(appCongfiguration);
+                return _ApplicationSettingsDelegate.CurrentValue.version;
             }
         }
 
@@ -82,21 +96,33 @@ namespace API
         /// <returns></returns>
         private IDictionary<string, string> CheckSettingsAreCurrent(IDictionary<string, string> appSettings)
         {
-            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
+
+            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "APP", ApiServicesHelper.ApiConfiguration.Settings, appSettings))
             {
-                if(!distributedConfigCheck())
+                //we have valid config
+                if (appSettings == null)
                 {
-                    decimal TempVersion = _ApplicationSettingsDelegate.CurrentValue.version;
-                    if (TempVersion != version || appSettings == null || auto_version == true)
-                    {
-                        version = TempVersion;
-                        ReadAppSettings();
-                    }
+                    ReadAppSettings();
+                }
+            }
+            else
+            {
+
+                if (distributed_config == false && version == null)
+                {
+                    Log.Instance.Fatal("APP : Distributed config must be true if version is null");
+                    throw new Exception("APP : Distributed config must be true if version is null");
+                }
+                else if (distributed_config == true && version != null)
+                {
+                    Log.Instance.Fatal("APP : Distributed config must be false if version is not null");
+                    throw new Exception("APP : Distributed config must be false if version is not null");
                 }
                 else
                 {
-                    if(appSettings == null)
+                    if (version != inMemoryVersion || appSettings == null)
                     {
+                        inMemoryVersion = version;
                         ReadAppSettings();
                     }
                 }
@@ -104,82 +130,36 @@ namespace API
             return appSettings;
         }
 
-        private void ReadAppSettings() 
+        private void ReadAppSettings()
         {
-            version = _ApplicationSettingsDelegate.CurrentValue.version;
-
             if (ApiServicesHelper.APPConfig.Settings_Type == "JSONFile")
             {
-                appCongfiguration = ReadJSONAppSettings();
+                appConfiguration = CommonConfig.ReadJSONSettings(inMemoryVersion, "appConfig");
             }
             else if (ApiServicesHelper.APPConfig.Settings_Type == "DB")
             {
-                appCongfiguration = ReadDBAppSettings(new ADO());
+                appConfiguration = ReadDBAppSettings(new ADO());
+
+                if (distributed_config == true)
+                {
+                    //update memcache
+                    CommonConfig.memcacheSave(inMemoryVersion, "APP", distributed_config, appConfiguration);
+                }
             }
             else
             {
-                Log.Instance.Fatal("Unsupported configuration location for APP Config");
+                Log.Instance.Fatal("Unsupported APP configuration location");
             }
         }
 
-        private bool distributedConfigCheck()
-        {
-            if (distributed_config == false)
-            {
-                return false;
-            }
-            else if (distributed_config == true && auto_version == true)
-            {
-                if (!Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]))
-                {
-                    Log.Instance.Error("Configuration Error: Memcache is disabled but distributed flag is true.");
-                    ApiServicesHelper.ApplicationLoaded = false;
-                    return false;
-                }
 
-                MemCachedD_Value version_data = ApiServicesHelper.CacheD.Get_BSO<dynamic>("App", "Configuration", "Version", "app_config_version");
-
-                //if record exists in cache
-                if (version_data.hasData)
-                {
-                    decimal cacheVersion;
-                    if (!decimal.TryParse(version_data.data.Value.ToString(), out cacheVersion) ){
-                        Log.Instance.Fatal("Unable to parse app config verison");
-                        return false;
-                    }
-
-                    if (cacheVersion == version && appCongfiguration != null)
-                    {
-                        //dictionary is already populated with a version so dont need to go to the database
-                        return true;
-                    }
-                    else if (cacheVersion == version && appCongfiguration == null)
-                    {
-                        version = (decimal)version_data.data.Value;
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            } else if (distributed_config == true && auto_version == false)
-            {
-                Log.Instance.Fatal("Distributed config and auto version must be both true");
-                return false;
-            }
-            return false;
-        }
         private IDictionary<string, string> ReadDBAppSettings(IADO ado)
         {
-
             var output = new ADO_readerOutput();
             var paramList = new List<ADO_inputParams>
             {
-                new ADO_inputParams() { name = "@app_settings_version", value = version },
-                new ADO_inputParams() { name = "@auto_version", value = auto_version }
+                new ADO_inputParams() { name = "@app_settings_version", value = inMemoryVersion ?? (object)System.DBNull.Value },
             };
-
             try
             {
                 // No transaction required
@@ -209,78 +189,12 @@ namespace API
                 }
             }
 
-            var inputParamList = new List<ADO_inputParams>()
-            {
-                new ADO_inputParams() {name= "@app_settings_version", value = version},
-                new ADO_inputParams() {name= "@config_setting_type", value = "APP"},
-                new ADO_inputParams() { name = "@auto_version", value = auto_version }
-            };
+            var tVersion = output.data[1];
+            inMemoryVersion = tVersion[0].max_version_number;
 
-            var retParam = new ADO_returnParam();
-            retParam.name = "return";
-            retParam.value = 0;
-
-            try
-            {
-                ado.StartTransaction();
-                ado.ExecuteNonQueryProcedure("App_Setting_Deploy_Update", inputParamList, ref retParam);
-                ado.CommitTransaction();
-            }
-            catch (Exception ex)
-            {
-                ado.RollbackTransaction();
-                //log the audit insert failed but no need to raise error.
-                Log.Instance.Fatal("failed to insert into App_Setting_Deploy_Update : version - " + version + " , config_setting_type - APP," + " auto_version  " + auto_version); 
-                Log.Instance.Fatal(ex.ToString());
-            }
-            finally
-            {
-                //now close the connection
-                ado.CloseConnection(true);
-            }
-
-            var  tVersion = output.data[1];
-
-            if(distributed_config == true)
-            {
-                //update memcache
-                ApiServicesHelper.CacheD.Store_BSO<dynamic>("App", "Configuration", "Version", "app_config_version", tVersion[0].max_version_number, DateTime.Today.AddDays(30));
-                version = tVersion[0].max_version_number;
-            }
+            CommonConfig.deployUpdate(ado, inMemoryVersion, "APP");
 
             return dictionary;
         }
-
-        private static IDictionary<string, string> ReadJSONAppSettings()
-        {
-           var dictionary = new Dictionary<string, string>();
-            string[] configElements = { "appConfig"};
-            for (var i =0; i < configElements.Length; i++)
-            {
-                var data = ApiServicesHelper.Configuration.GetSection(configElements[i]).GetChildren();
-                foreach (var val in data)
-                {
-                    if(val.Key == "CONFIG_VERSION")
-                    {
-                        if(version != Convert.ToDecimal(val.Value))
-                        {
-                            Log.Instance.Fatal("APP Configration version not found for version " + version);
-                        }
-                    }
-                    if (dictionary.ContainsKey(val.Key))
-                    {
-                        Log.Instance.Fatal("Duplicate APP Config Key detected : " + val.Key);
-                    }
-                    else
-                    {
-                        dictionary.Add(val.Key, val.Value);
-                    }
-                }
-            }
-            Log.Instance.Info("Json app configuration loaded");
-
-            return dictionary;
-        }
-
     }
 }

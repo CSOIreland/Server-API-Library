@@ -6,8 +6,6 @@ using System.Dynamic;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Web;
-using System.Text.Json;
-using System.Diagnostics;
 
 namespace API
 {
@@ -124,8 +122,8 @@ namespace API
                 if (userPricipalCache.hasData)
                 {
                     isAuthenticated = true;
-
-                    UserPrincipal = userPricipalCache.data == null ? null : userPricipalCache.data;
+                    var userPricipalCacheDeserialized  = Utility.JsonDeserialize_IgnoreLoopingReference<ExpandoObject>(userPricipalCache.data.ToString());
+                    UserPrincipal = userPricipalCacheDeserialized == null ? null : userPricipalCacheDeserialized;
                     Log.Instance.Info("Authentication retrieved from Cache");
                 }
                 else
@@ -139,7 +137,7 @@ namespace API
                         UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
 
                         // Set the cache to expire at midnight
-                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, UserPrincipal, DateTime.Today.AddDays(1)))
+                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity,Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal), DateTime.Today.AddDays(1)))
                         {
                             Log.Instance.Info("Authentication stored in Cache");
                         }
@@ -466,7 +464,7 @@ namespace API
 
         internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
         {
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"])) { 
+            if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED) { 
                 //gather trace information
                 trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
                 trace.TrcIp = apiRequest.ipAddress;

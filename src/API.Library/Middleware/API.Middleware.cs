@@ -20,9 +20,6 @@ namespace API
 
         public async Task InvokeAsync(HttpContext context)
         {
-            Trace trace = new Trace();
-            trace.TrcStartTime = DateTime.Now;
-
             // Initiate the activity
             var activity = Activity.Current;
 
@@ -30,20 +27,6 @@ namespace API
 
             //set asynclocal value
             correlationID.Value = activity.RootId.ToString();
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"])) { 
-                if (cacheTraceDataTable.Value == null) {
-
-                    cacheTraceDataTable.Value = CacheTrace.CreateCacheTraceDataTable();
-                }
-            }
-
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
-            {
-                if (databaseTraceDataTable.Value == null)
-                {
-                    databaseTraceDataTable.Value = DatabaseTrace.CreateDatabaseTraceDataTable();
-                }
-            }
 
             if (!ApiServicesHelper.ApplicationLoaded)
             {
@@ -53,10 +36,13 @@ namespace API
             }
             else
             {
-   
+                Trace trace = new Trace();
+                trace.TrcStartTime = DateTime.Now;
+
                 // Start the activity Stopwatch
                 activity.Start();
 
+               
                 Log.Instance.Info("API Interface Opened");
 
                 // Thread a PerfomanceCollector
@@ -64,7 +50,7 @@ namespace API
                 /// <summary>
                 //    /// Flag to indicate if Performance is enabled 
                 //    /// </summary>
-                bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_PERFORMANCE_ENABLED"]);
+                bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
                 Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
 
@@ -92,6 +78,32 @@ namespace API
 
                 try
                 {
+                    if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
+                    {
+                        if (cacheTraceDataTable.Value == null)
+                        {
+                            cacheTraceDataTable.Value = CacheTrace.CreateCacheTraceDataTable();
+                        }
+                    }
+
+                    if (ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
+                    {
+                        if (databaseTraceDataTable.Value == null)
+                        {
+                            databaseTraceDataTable.Value = DatabaseTrace.CreateDatabaseTraceDataTable();
+                        }
+                    }
+
+                    if (!ApiServicesHelper.ApplicationLoaded)
+                    {
+                        ApiServicesHelper.ApiConfiguration.Refresh();
+
+                        if (ApiServicesHelper.APPConfig.enabled)
+                        {
+                            ApiServicesHelper.AppConfiguration.Refresh();
+                        }
+                    }
+
                     //https://devblogs.microsoft.com/dotnet/re-reading-asp-net-core-request-bodies-with-enablebuffering/
                     context.Request.EnableBuffering();
                     string incomingUrl = context.Request.Path.ToString();
@@ -276,7 +288,7 @@ namespace API
 
 
 
-                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_TRACE_ENABLED"]))
+                    if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
                     {
                        
                             trace.TrcStatusCode = context.Response.StatusCode;
@@ -299,7 +311,7 @@ namespace API
 
                     }
 
-                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"]))
+                    if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
                     {
                         //store the cache trace info
                         CacheTrace_ADO.Create(cacheTraceDataTable.Value);
@@ -307,7 +319,7 @@ namespace API
                         cacheTraceDataTable.Value = null;
                     }
 
-                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
+                    if (ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
                     {
                         //store the database trace info
                         DatabaseTrace_ADO.Create(databaseTraceDataTable.Value);

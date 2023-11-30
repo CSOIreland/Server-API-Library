@@ -24,7 +24,7 @@ namespace API
             /// <summary>
             //    /// Flag to indicate if Performance is enabled 
             //    /// </summary>
-            bool API_PERFORMANCE_ENABLED = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_PERFORMANCE_ENABLED"]);
+            bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
             Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
 
@@ -96,7 +96,7 @@ namespace API
             if (disposing)
             {
                 // Store data
-                Performance_ADO.Create(String.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE), items, Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_PERFORMANCE_ENABLED"]));
+                Performance_ADO.Create(String.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE), items, ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED);
             }
         }
     }

@@ -29,7 +29,8 @@ namespace API
                }).ConfigureServices(ser =>
                {
                    ser.AddEnyimMemcached();
-                   ser.AddSingleton<IApiConfiguration, ApiConfiguration>();
+                   ser.AddSingleton<ICacheConfig, CacheConfig>();
+
                    ser.AddSingleton<IApiConfiguration, ApiConfiguration>();
                    ser.AddSingleton<IAppConfiguration, APPConfiguration>();
                    ser.AddSingleton<IWebUtility, WebUtility>();
@@ -37,6 +38,8 @@ namespace API
                    ser.AddSingleton<ICacheD, MemCacheD>();
                    ser.AddSingleton<IActiveDirectory, ActiveDirectory>();
                    ser.AddSingleton<IFirebase, Firebase>();
+                   ser.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
+                   ser.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
                    ser.AddScoped<IADO, ADO>();
 
@@ -51,11 +54,13 @@ namespace API
                        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                    });
                    ser.AddHttpContextAccessor();
+                   ser.Configure<CacheSettings>(configuration.GetSection("CacheSettings"));
                    ser.Configure<ADOSettings>(configuration.GetSection("ADOSettings"));
                    ser.Configure<APIConfig>(configuration.GetSection("API_Config"));
                    ser.Configure<APPConfig>(configuration.GetSection("APP_Config"));
                    ser.Configure<APISettings>(configuration.GetSection("API_SETTINGS"));
                    ser.Configure<BlockedRequests>(configuration.GetSection("Blocked_Requests"));
+                   ser.Configure<APIPerformanceSettings>(configuration.GetSection("APIPerformanceSettings"));
                }
             ).Build();
 
@@ -70,6 +75,8 @@ namespace API
             var BlockedRequests = builder.Services.GetService<IOptions<BlockedRequests>>();
             var APIConfig = builder.Services.GetService<IOptions<APIConfig>>();
             var APPConfig = builder.Services.GetService<IOptions<APPConfig>>();
+            var CacheSettings = builder.Services.GetService<IOptions<CacheSettings>>();
+
 
             ApiServicesHelper.ServiceProvider = (ServiceProvider)builder.Services;
             ApiServicesHelper.Configuration = configuration;
@@ -78,6 +85,16 @@ namespace API
             ApiServicesHelper.BlockedRequests = BlockedRequests.Value;
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
+            ApiServicesHelper.CacheSettings = CacheSettings.Value;
+
+            ApiServicesHelper.APIPerformanceSettings = builder.Services.GetRequiredService<IAPIPerformanceConfiguration>();
+            ApiServicesHelper.DatabaseTracingConfiguration = builder.Services.GetRequiredService<IDatabaseTracingConfiguration>();
+
+            //setup memcache here
+            ApiServicesHelper.CacheConfig = builder.Services.GetRequiredService<ICacheConfig>();
+            ApiServicesHelper.MemcachedClient = builder.Services.GetRequiredService<IMemcachedClient>();
+            ApiServicesHelper.CacheD = builder.Services.GetRequiredService<ICacheD>();
+
 
             //we need to load API config here as needed for application to work.
             ApiServicesHelper.ApiConfiguration = builder.Services.GetService<IApiConfiguration>();
@@ -86,11 +103,9 @@ namespace API
                 ApiServicesHelper.ApplicationLoaded = false;
             }
 
-            ApiServicesHelper.WebUtility = builder.Services.GetService<IWebUtility > ();
+            ApiServicesHelper.WebUtility = builder.Services.GetService<IWebUtility> ();
             ApiServicesHelper.ActiveDirectory = builder.Services.GetService<IActiveDirectory>();
 
-            ApiServicesHelper.MemcachedClient = builder.Services.GetService<IMemcachedClient>();
-            ApiServicesHelper.CacheD = builder.Services.GetService<ICacheD>();
             ApiServicesHelper.Firebase = builder.Services.GetService<IFirebase>();
             ApiServicesHelper.Sanitizer = builder.Services.GetService<ISanitizer>();
             ApiServicesHelper.Cleanser = builder.Services.GetService<ICleanser>();

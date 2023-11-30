@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
 
-
 namespace API
 {
     public class ApiConfiguration : IApiConfiguration
@@ -10,22 +9,36 @@ namespace API
         /// <summary>
         /// Initiate APPSettings 
         /// </summary>
-        static IDictionary<string, string> apiCongfiguration;
+        static IDictionary<string, string> apiConfiguration;
 
-        static decimal version = 0;
+        static decimal? inMemoryVersion = null;
         public ApiConfiguration(IOptionsMonitor<APIConfig> ApplicationSettingsDelegate)
         {
+
             _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
 
-            Log.Instance.Info("load api settings");
-            if (apiCongfiguration == null)
+            if (distributed_config == false && version == null)
             {
-                    version = _ApplicationSettingsDelegate.CurrentValue.version;
-                    ReadAppSettings();
+                Log.Instance.Fatal("API : Distributed config must be true if version is null");
+                throw new Exception("API : Distributed config must be true if version is null");
+            }
+            else if (distributed_config == true && version != null)
+            {
+                Log.Instance.Fatal("API : Distributed config must be false if version is not null");
+                throw new Exception("API : Distributed config must be false if version is not null");
             }
             else
             {
-                apiCongfiguration = CheckSettingsAreCurrent(apiCongfiguration);
+                Log.Instance.Info("load api settings");
+                if (apiConfiguration == null)
+                {
+                    inMemoryVersion = version;
+                    ReadAppSettings();
+                }
+                else
+                {
+                    apiConfiguration = CheckSettingsAreCurrent(apiConfiguration);
+                }
             }
         }
 
@@ -52,10 +65,69 @@ namespace API
         {
             get
             {
-                Log.Instance.Info("get api settings");
-                return CheckSettingsAreCurrent(apiCongfiguration);
+                return apiConfiguration;
             }
         }
+
+        public void Refresh()
+        {
+            Log.Instance.Info("refresh app settings");
+            //refresh apiConfiguration if necessary
+            CheckSettingsAreCurrent(apiConfiguration);
+        }
+
+        /// <summary>
+        /// Gets the distribtued flag from
+        /// appsettings.json 
+        /// </summary>
+        /// <returns></returns>
+        public bool distributed_config
+        {
+            get
+            {
+                return _ApplicationSettingsDelegate.CurrentValue.distributed_config;
+            }
+        }
+
+        /// <summary>
+        /// Gets the version from
+        /// appsettings.json 
+        /// </summary>
+        /// <returns></returns>
+        public decimal? version
+        {
+            get
+            {
+                return _ApplicationSettingsDelegate.CurrentValue.version;
+            }
+        }
+
+        /// <summary>
+        /// Gets the API_TRACE_RECORD_IP from
+        /// appsettings.json 
+        /// </summary>
+        /// <returns></returns>
+        public bool API_TRACE_RECORD_IP
+        {
+            get
+            {
+                return _ApplicationSettingsDelegate.CurrentValue.API_TRACE_RECORD_IP;
+            }
+        }
+
+        /// <summary>
+        /// Gets the API_TRACE_ENABLED from
+        /// appsettings.json 
+        /// </summary>
+        /// <returns></returns>
+        public bool API_TRACE_ENABLED
+        {
+            get
+            {
+                return _ApplicationSettingsDelegate.CurrentValue.API_TRACE_ENABLED;
+            }
+        }
+
 
         /// <summary>
         /// Checks using the version in the appsettings.json file if there has been a change.
@@ -64,11 +136,36 @@ namespace API
         /// <returns></returns>
         private IDictionary<string, string> CheckSettingsAreCurrent(IDictionary<string, string> appSettings)
         {
-            decimal TempVersion = _ApplicationSettingsDelegate.CurrentValue.version;
-            if (TempVersion != version || appSettings == null)
+
+            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "API", appSettings,null))
             {
-                version = _ApplicationSettingsDelegate.CurrentValue.version;
-                ReadAppSettings();
+                //we have valid config
+                if (appSettings == null)
+                {
+                    ReadAppSettings();
+                }
+            }
+            else
+            {
+
+                if (distributed_config == false && version == null)
+                {
+                    Log.Instance.Fatal("API : Distributed config must be true if version is null");
+                    throw new Exception("API : Distributed config must be true if version is null");
+                }
+                else if (distributed_config == true && version != null)
+                {
+                    Log.Instance.Fatal("API : Distributed config must be false if version is not null");
+                    throw new Exception("API : Distributed config must be false if version is not null");
+                }
+                else
+                {
+                    if (version != inMemoryVersion || appSettings == null)
+                    {
+                        inMemoryVersion = version;
+                       ReadAppSettings();
+                    }
+                }
             }
             return appSettings;
         }
@@ -77,11 +174,17 @@ namespace API
         {
             if (ApiServicesHelper.APIConfig.Settings_Type == "JSONFile")
             {
-                apiCongfiguration = ReadJSONAppSettings();
+                apiConfiguration = CommonConfig.ReadJSONSettings(inMemoryVersion, "apiConfig");
             }
             else if (ApiServicesHelper.APIConfig.Settings_Type == "DB")
             {
-                apiCongfiguration = ReadDBAppSettings(new ADO());
+                apiConfiguration = ReadDBAppSettings(new ADO());
+
+                if (distributed_config == true)
+                {
+                    //update memcache
+                    CommonConfig.memcacheSave( inMemoryVersion, "API",distributed_config, apiConfiguration);
+                }
             }
             else
             {
@@ -95,7 +198,7 @@ namespace API
             var output = new ADO_readerOutput();
             var paramList = new List<ADO_inputParams>
             {
-                new ADO_inputParams() { name = "@app_settings_version", value = version },
+                new ADO_inputParams() { name = "@app_settings_version", value = inMemoryVersion ?? (object)System.DBNull.Value },
             };
             try
             {
@@ -114,7 +217,7 @@ namespace API
             var dictionary = new Dictionary<string, string>();
 
 
-            foreach (var c in output.data)
+            foreach (var c in output.data[0])
             {
                 if (dictionary.ContainsKey(c.API_KEY))
                 {
@@ -126,68 +229,12 @@ namespace API
                 }               
             }
 
-            var inputParamList = new List<ADO_inputParams>()
-            {
-                new ADO_inputParams() {name= "@app_settings_version", value = version},
-                new ADO_inputParams() {name= "@config_setting_type", value = "API"},
-            };
+            var tVersion = output.data[1];
+            inMemoryVersion = tVersion[0].max_version_number;
 
-            var retParam = new ADO_returnParam();
-            retParam.name = "return";
-            retParam.value = 0;
-
-
-            try
-            {
-                ado.StartTransaction();
-                ado.ExecuteNonQueryProcedure("App_Setting_Deploy_Update", inputParamList, ref retParam);
-                ado.CommitTransaction();
-            }
-            catch (Exception ex)
-            {
-                ado.RollbackTransaction();
-                //log the audit insert failed but no need to raise error.
-                Log.Instance.Fatal("failed to insert into App_Setting_Deploy_Update : version - " + version + " , config_setting_type - API");
-                Log.Instance.Fatal(ex.ToString());
-            }
-            finally{
-                //now close the connection
-                ado.CloseConnection(true);
-            }
+            CommonConfig.deployUpdate(ado, inMemoryVersion, "API");
 
             return dictionary;
         }
-
-        private static IDictionary<string, string> ReadJSONAppSettings()
-        {
-           var dictionary = new Dictionary<string, string>();
-            string[] configElements = { "apiConfig" };
-            for (var i =0; i < configElements.Length; i++)
-            {
-                var data = ApiServicesHelper.Configuration.GetSection(configElements[i]).GetChildren();
-                foreach (var val in data)
-                {
-                    if(val.Key == "CONFIG_VERSION")
-                    {
-                        if(version != Convert.ToDecimal(val.Value))
-                        {
-                            Log.Instance.Fatal("API Configration version not found for version " + version);
-                        }
-                    }
-
-                    if (dictionary.ContainsKey(val.Key)){
-                        Log.Instance.Fatal("Duplicate API Config Key detected : " + val.Key);
-                    }
-                    else
-                    {
-                        dictionary.Add(val.Key, val.Value);
-                    }
-                   
-                }
-            }
-            Log.Instance.Info("Json api configuration loaded");
-            return dictionary;
-        }
-
     }
 }

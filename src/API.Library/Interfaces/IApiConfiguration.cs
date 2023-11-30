@@ -6,5 +6,15 @@ namespace API
     {
         IDictionary<string, string> Settings { get; }
         bool MAINTENANCE { get; }
+
+        decimal? version { get; }
+
+        bool distributed_config { get; }
+
+        void Refresh();
+
+        bool API_TRACE_RECORD_IP { get; }
+
+        bool API_TRACE_ENABLED { get; }
     }
 }

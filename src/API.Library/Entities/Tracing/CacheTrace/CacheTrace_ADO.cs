@@ -17,9 +17,9 @@ namespace API
         /// <returns></returns>
         internal static void Create(DataTable cacheTable)
         {
-            if (!Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"]))
+            if (!ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
             {
-                return;
+             return;
             }
 
             ADO ado = string.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_TRACE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_TRACE_DATABASE);

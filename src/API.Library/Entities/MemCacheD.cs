@@ -30,7 +30,7 @@ namespace API
         public MemCacheD()
         {
             //test to see if memcache is working
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]))
+            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED)
             {
                 var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
                 var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
@@ -60,9 +60,9 @@ namespace API
             /// <summary>
             /// Flag to indicate if MemCacheD is enabled 
             /// </summary>
-            Log.Instance.Info("MemCacheD Enabled: " + Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]));
+            Log.Instance.Info("MemCacheD Enabled: " + ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED);
 
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_ENABLED"]))
+            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED)
             {
                 return true;
             }
@@ -226,7 +226,7 @@ namespace API
                 /// <summary>
                 /// Salsa code to isolate the cache records form other applications or environments
                 /// </summary>
-                string API_MEMCACHED_SALSA = ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_SALSA"];
+                string API_MEMCACHED_SALSA = ApiServicesHelper.CacheConfig.API_MEMCACHED_SALSA;
                 // Append the SALSA code
                 input.Add("salsa", API_MEMCACHED_SALSA);
 
@@ -442,7 +442,7 @@ namespace API
                     /// <summary>
                     /// Max size in MB before splitting a string record in sub-cache entries 
                     /// </summary>
-                    uint API_MEMCACHED_MAX_SIZE = Convert.ToUInt32(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_MAX_SIZE"]);
+                    uint API_MEMCACHED_MAX_SIZE = ApiServicesHelper.CacheConfig.API_MEMCACHED_MAX_SIZE;
 
 
                     // Cast data to String and check if oversized
@@ -1157,7 +1157,7 @@ namespace API
             /// <summary>
             /// Maximum validity in number of seconds that MemCacheD can handle (30 days = 2592000)
             /// </summary>
-            uint API_MEMCACHED_MAX_VALIDITY = Convert.ToUInt32(ApiServicesHelper.ApiConfiguration.Settings["API_MEMCACHED_MAX_VALIDITY"]);
+            uint API_MEMCACHED_MAX_VALIDITY = ApiServicesHelper.CacheConfig.API_MEMCACHED_MAX_VALIDITY;
 
             /// <summary>
             /// Max TimeSpan

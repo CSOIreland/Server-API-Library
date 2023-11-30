@@ -27,11 +27,11 @@ namespace API
         internal static  void PopulateDatabaseTrace(string procedure, string procedureParams, DateTime startTime, decimal duration, string action, bool success)
         {
             //dont record tracing unless apiconfiguration has been loaded and their is a correlation id
-            if (ApiServicesHelper.ApplicationLoaded && ApiServicesHelper.ApiConfiguration !=null && APIMiddleware.correlationID.Value != null)
+            if (ApiServicesHelper.ApplicationLoaded && ApiServicesHelper.ApiConfiguration != null && APIMiddleware.correlationID.Value != null && APIMiddleware.databaseTraceDataTable.Value != null)
             {
                 try
                 {
-                    if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
+                    if (ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
                     {
                         Common common = new Common();
                         procedureParams = common.MaskParameters(procedureParams);

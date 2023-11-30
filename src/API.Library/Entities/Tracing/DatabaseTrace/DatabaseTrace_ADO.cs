@@ -18,7 +18,7 @@ namespace API
         /// <returns></returns>
         internal static void Create(DataTable databaseTraceTable)
         {
-            if (!Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_DATABASE_TRACE_ENABLED"]))
+            if (!ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
             {
                 return;
             }

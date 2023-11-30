@@ -1,4 +1,5 @@
 ﻿using Enyim.Caching;
+using Enyim.Caching.Configuration;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -31,14 +32,17 @@ namespace API
             });
                
             builder.Services.AddHttpContextAccessor();
-               
+
+            service.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
             service.Configure<ADOSettings>(builder.Configuration.GetSection("ADOSettings"));               
             service.Configure<APIConfig>(builder.Configuration.GetSection("API_Config"));               
             service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));               
             service.Configure<APISettings>(builder.Configuration.GetSection("API_SETTINGS"));               
-            service.Configure<BlockedRequests>(builder.Configuration.GetSection("Blocked_Requests"));               
-              
-            service.AddEnyimMemcached();               
+            service.Configure<BlockedRequests>(builder.Configuration.GetSection("Blocked_Requests"));
+            service.Configure<APIPerformanceSettings>(builder.Configuration.GetSection("APIPerformanceSettings"));
+
+            service.AddEnyimMemcached();
+            service.AddSingleton<ICacheConfig, CacheConfig>();
             service.AddSingleton<IApiConfiguration, ApiConfiguration>();               
             service.AddSingleton<IAppConfiguration, APPConfiguration>();               
             service.AddSingleton<IWebUtility, WebUtility>();                          
@@ -46,6 +50,8 @@ namespace API
             service.AddSingleton<ICacheD, MemCacheD>();
             service.AddSingleton<IActiveDirectory, ActiveDirectory>();
             service.AddSingleton<IFirebase, Firebase>();
+            service.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
+            service.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
             service.AddScoped<IADO, ADO>();
 
@@ -58,6 +64,7 @@ namespace API
             var BlockedRequests = sp.GetService<IOptions<BlockedRequests>>();
             var APIConfig = sp.GetService<IOptions<APIConfig>>();
             var APPConfig = sp.GetService<IOptions<APPConfig>>();
+            var CacheSettings = sp.GetService<IOptions<CacheSettings>>();
 
             ApiServicesHelper.ServiceProvider = sp;
             ApiServicesHelper.Configuration = builder.Configuration;
@@ -66,6 +73,15 @@ namespace API
             ApiServicesHelper.BlockedRequests = BlockedRequests.Value;
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
+            ApiServicesHelper.CacheSettings = CacheSettings.Value;
+
+            ApiServicesHelper.APIPerformanceSettings = sp.GetRequiredService<IAPIPerformanceConfiguration>();
+            ApiServicesHelper.DatabaseTracingConfiguration = sp.GetRequiredService<IDatabaseTracingConfiguration>();
+
+            //setup memcache here
+            ApiServicesHelper.CacheConfig = sp.GetRequiredService<ICacheConfig>();
+            ApiServicesHelper.MemcachedClient = sp.GetRequiredService<IMemcachedClient>();
+            ApiServicesHelper.CacheD = sp.GetRequiredService<ICacheD>();
 
             //we need to load API config here as needed for application to work.
             ApiServicesHelper.ApiConfiguration = sp.GetRequiredService<IApiConfiguration>();
@@ -73,15 +89,15 @@ namespace API
             {
                 ApiServicesHelper.ApplicationLoaded = false;
             }
+
             ApiServicesHelper.WebUtility = sp.GetRequiredService<IWebUtility>();
             ApiServicesHelper.ActiveDirectory = sp.GetRequiredService<IActiveDirectory>();
 
-            ApiServicesHelper.MemcachedClient = sp.GetRequiredService<IMemcachedClient>();
-            ApiServicesHelper.CacheD = sp.GetRequiredService<ICacheD>();
             ApiServicesHelper.Firebase = sp.GetRequiredService<IFirebase>();
             ApiServicesHelper.Sanitizer = sp.GetRequiredService<ISanitizer>();
             ApiServicesHelper.Cleanser = sp.GetRequiredService<ICleanser>();
 
+       
             if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded) 
             {
                 //load APP config here as if can't load application wont work

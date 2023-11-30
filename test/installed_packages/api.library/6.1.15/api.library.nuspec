@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>API.Library</id>
+    <version>6.1.15</version>
+    <authors>Central Statistics Office, Ireland</authors>
+    <description>Package Description</description>
+    <releaseNotes>- [ENHANCEMENT] removed auto version for APP Config and replaced it with version being set as null
+      - [ENHANCEMENT] add distributed configuration for API config with version allowed to be null to get latest DB version
+      - [ENHANCEMENT] moved all cache settings to appsettings.json abd are hot reloadable
+      - [ENHANCEMENT] add version, distributed_config,API_TRACE_ENABLED,API_TRACE_RECORD_IP  and refresh to IApiConfiguration interface
+      - [ENHANCEMENT] added refresh and version, and removed auto_version from IAppConfiguration interface
+      - [ENHANCEMENT] refactored appliction dictionary configuration code
+      - [ENHANCEMENT] moved API tracing keys to appsettings.json and are hot reloadable
+      - [ENHANCEMENT] moved pefromance enabled flag to appsettings.json and is hot reloadable
+      - [ENHANCEMENT] moved datatbase tracing flag to appsettings.json and is hot reloadable
+      - [ENHANCEMENT] check if application and api settings needs to be updated once per API request rather than per key request
+      - [ENHANCEMENT] updated consoleconfiguration.cs
+      - [ENHANCEMENT] updated serviceconfiguration.cs
+      - [BUG FIX] bug fix for serializing and deserializing userpincipal object</releaseNotes>
+    <copyright>Central Statistics Office, Ireland</copyright>
+    <repository type="git" url="https://github.com/CSOIreland/Server-API-Library" />
+    <dependencies>
+      <group targetFramework="net6.0">
+        <dependency id="AutoMapper" version="12.0.1" exclude="Build,Analyzers" />
+        <dependency id="EnyimMemcachedCore" version="2.6.6" exclude="Build,Analyzers" />
+        <dependency id="FirebaseAdmin" version="2.4.0" exclude="Build,Analyzers" />
+        <dependency id="HtmlSanitizer" version="8.0.723" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Data.SqlClient" version="5.1.1" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.DependencyInjection" version="7.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging" version="7.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging.Log4Net.AspNetCore" version="7.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="13.0.3" exclude="Build,Analyzers" />
+        <dependency id="System.Diagnostics.PerformanceCounter" version="7.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices.AccountManagement" version="7.0.1" exclude="Build,Analyzers" />
+        <dependency id="log4net" version="2.0.15" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net6.0">
+        <frameworkReference name="Microsoft.AspNetCore.App" />
+      </group>
+    </frameworkReferences>
+  </metadata>
+</package>

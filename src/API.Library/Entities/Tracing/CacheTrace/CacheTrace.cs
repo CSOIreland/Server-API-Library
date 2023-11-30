@@ -26,10 +26,14 @@ namespace API
         //adds rows to cacheTraceDataTable asynclocal variable
         internal static void PopulateCacheTrace(string cacheObject, DateTime startTime, decimal duration, string action, bool success, int? compressed_size, DateTime? expiresAt)
         {
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_CACHE_TRACE_ENABLED"]))
+            if (ApiServicesHelper.ApiConfiguration != null && APIMiddleware.correlationID.Value != null)
             {
-                APIMiddleware.cacheTraceDataTable.Value.Rows.Add(APIMiddleware.correlationID.Value, cacheObject, startTime, duration, action, success, compressed_size, expiresAt);
+                if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED )
+                {
+                    APIMiddleware.cacheTraceDataTable.Value.Rows.Add(APIMiddleware.correlationID.Value, cacheObject, startTime, duration, action, success, compressed_size, expiresAt);
+                }
             }
+           
         }
     }
 }
