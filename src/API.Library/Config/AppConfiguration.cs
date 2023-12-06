@@ -97,7 +97,7 @@ namespace API
         private IDictionary<string, string> CheckSettingsAreCurrent(IDictionary<string, string> appSettings)
         {
 
-            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "APP", ApiServicesHelper.ApiConfiguration.Settings, appSettings))
+            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "APP", "app_config_version", ApiServicesHelper.ApiConfiguration.Settings, appSettings))
             {
                 //we have valid config
                 if (appSettings == null)
@@ -143,7 +143,7 @@ namespace API
                 if (distributed_config == true)
                 {
                     //update memcache
-                    CommonConfig.memcacheSave(inMemoryVersion, "APP", distributed_config, appConfiguration);
+                    CommonConfig.memcacheSave(inMemoryVersion, "APP", "app_config_version", distributed_config, appConfiguration);
                 }
             }
             else

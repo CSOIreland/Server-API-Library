@@ -5,7 +5,7 @@ namespace API
     public static class CommonConfig 
     {
 
-        public static bool distributedConfigCheck(decimal? appSettingsVersion, decimal? inMemoryVersion, bool distributed_config, string configType, IDictionary<string, string> apiDict, IDictionary<string, string> appDict)
+        public static bool distributedConfigCheck(decimal? appSettingsVersion, decimal? inMemoryVersion, bool distributed_config, string configType,string inputDTO, IDictionary<string, string> apiDict, IDictionary<string, string> appDict)
         {
             if (distributed_config == false )
             {
@@ -19,7 +19,7 @@ namespace API
                     ApiServicesHelper.ApplicationLoaded = false;
                     return false;
                 }
-                MemCachedD_Value version_data = ApiServicesHelper.CacheD.Get_BSO<dynamic>(configType, "Configuration", "Version", "app_config_version");
+                MemCachedD_Value version_data = ApiServicesHelper.CacheD.Get_BSO<dynamic>(configType, "Configuration", "Version", inputDTO);
 
                 //if record exists in cache
                 if (version_data.hasData)
@@ -137,12 +137,12 @@ namespace API
             }
         }
 
-        public static void memcacheSave(decimal? inMemoryVersion, string configType, bool distributed_config, IDictionary<string, string> dict)
+        public static void memcacheSave(decimal? inMemoryVersion, string configType,string inputDTO, bool distributed_config, IDictionary<string, string> dict)
         {
               if (distributed_config == true && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == true)
                {
  
-                    ApiServicesHelper.CacheD.Store_BSO<dynamic>(configType, "Configuration", "Version", "app_config_version", inMemoryVersion, DateTime.Today.AddDays(30));
+                    ApiServicesHelper.CacheD.Store_BSO<dynamic>(configType, "Configuration", "Version", inputDTO, inMemoryVersion, DateTime.Today.AddDays(30));
 
                }
         }
