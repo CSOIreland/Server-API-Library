@@ -5,18 +5,21 @@ namespace API
     public static class CommonConfig 
     {
 
-        public static bool distributedConfigCheck(decimal? appSettingsVersion, decimal? inMemoryVersion, bool distributed_config, string configType,string inputDTO, IDictionary<string, string> apiDict, IDictionary<string, string> appDict)
+        public static bool distributedConfigCheck(decimal? appSettingsVersion, decimal? inMemoryVersion, string configType,string inputDTO, IDictionary<string, string> apiDict, IDictionary<string, string> appDict)
         {
-            if (distributed_config == false )
+            if (appSettingsVersion != null )
             {
                 return false;
             }
-            else if (distributed_config == true && appSettingsVersion == null)
+            else if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false)
             {
+                Log.Instance.Fatal("Memcache must be enabled if version is null");
+                return false;
+            }
+            else { 
                 if (!ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED)
                 {
-                    Log.Instance.Error("Configuration Error: Memcache is disabled but distributed flag is true.");
-                    ApiServicesHelper.ApplicationLoaded = false;
+                    Log.Instance.Error("Configuration Error: Memcache is disabled but version is null.");
                     return false;
                 }
                 MemCachedD_Value version_data = ApiServicesHelper.CacheD.Get_BSO<dynamic>(configType, "Configuration", "Version", inputDTO);
@@ -56,10 +59,6 @@ namespace API
                         return false;
                     }
                 }
-            } else if (distributed_config == false && appSettingsVersion == null)
-            {
-                Log.Instance.Fatal("Distributed config must be true if version is null");
-                return false;
             }
             return false;
         }
@@ -137,14 +136,16 @@ namespace API
             }
         }
 
-        public static void memcacheSave(decimal? inMemoryVersion, string configType,string inputDTO, bool distributed_config, IDictionary<string, string> dict)
+        public static void memcacheSave(decimal? appSettingsVersion, decimal? inMemoryVersion, string configType,string inputDTO, IDictionary<string, string> dict)
         {
-              if (distributed_config == true && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == true)
-               {
- 
+              if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == true)
+                {
                     ApiServicesHelper.CacheD.Store_BSO<dynamic>(configType, "Configuration", "Version", inputDTO, inMemoryVersion, DateTime.Today.AddDays(30));
-
-               }
+                }
+            else if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false)
+                {
+                Log.Instance.Fatal("Unable to store configuration version in memecache as it is disabled");
+                }
         }
     }
 }

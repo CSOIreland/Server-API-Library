@@ -18,18 +18,11 @@ namespace API
 
             _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
 
-            if (distributed_config == false && version == null)
+            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false && version == null)
             {
-                Log.Instance.Fatal("APP : Distributed config must be true if version is null");
-                throw new Exception("APP : Distributed config must be true if version is null");
+                Log.Instance.Fatal("APP : Memcache should be enabled if version is null");
             }
-            else if (distributed_config == true && version != null)
-            {
-                Log.Instance.Fatal("APP : Distributed config must be false if version is not null");
-                throw new Exception("APP : Distributed config must be false if version is not null");
-            }
-            else
-            {
+
                 Log.Instance.Info("load APP settings");
                 if (appConfiguration == null)
                 {
@@ -40,7 +33,7 @@ namespace API
                 {
                     appConfiguration = CheckSettingsAreCurrent(appConfiguration);
                 }
-            }
+            
         }
 
         /// <summary>
@@ -64,19 +57,6 @@ namespace API
         }
 
         /// <summary>
-        /// Gets the distribtued flag from
-        /// appsettings.json 
-        /// </summary>
-        /// <returns></returns>
-        public bool distributed_config
-        {
-            get
-            {
-                return _ApplicationSettingsDelegate.CurrentValue.distributed_config;
-            }
-        }
-
-        /// <summary>
         /// Gets the version from
         /// appsettings.json 
         /// </summary>
@@ -97,7 +77,7 @@ namespace API
         private IDictionary<string, string> CheckSettingsAreCurrent(IDictionary<string, string> appSettings)
         {
 
-            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "APP", "app_config_version", ApiServicesHelper.ApiConfiguration.Settings, appSettings))
+            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, "APP", "app_config_version", ApiServicesHelper.ApiConfiguration.Settings, appSettings))
             {
                 //we have valid config
                 if (appSettings == null)
@@ -108,24 +88,17 @@ namespace API
             else
             {
 
-                if (distributed_config == false && version == null)
+                if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false && version == null)
                 {
-                    Log.Instance.Fatal("APP : Distributed config must be true if version is null");
-                    throw new Exception("APP : Distributed config must be true if version is null");
+                    Log.Instance.Fatal("APP : Memcache should be enabled if version is null");
                 }
-                else if (distributed_config == true && version != null)
-                {
-                    Log.Instance.Fatal("APP : Distributed config must be false if version is not null");
-                    throw new Exception("APP : Distributed config must be false if version is not null");
-                }
-                else
-                {
+               
                     if (version != inMemoryVersion || appSettings == null)
                     {
                         inMemoryVersion = version;
                         ReadAppSettings();
                     }
-                }
+                
             }
             return appSettings;
         }
@@ -140,10 +113,10 @@ namespace API
             {
                 appConfiguration = ReadDBAppSettings(new ADO());
 
-                if (distributed_config == true)
+                if (version == null)
                 {
                     //update memcache
-                    CommonConfig.memcacheSave(inMemoryVersion, "APP", "app_config_version", distributed_config, appConfiguration);
+                    CommonConfig.memcacheSave(version,inMemoryVersion, "APP", "app_config_version", appConfiguration);
                 }
             }
             else

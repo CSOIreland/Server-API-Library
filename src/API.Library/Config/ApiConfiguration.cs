@@ -17,18 +17,11 @@ namespace API
 
             _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
 
-            if (distributed_config == false && version == null)
+            if (version == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false)
             {
-                Log.Instance.Fatal("API : Distributed config must be true if version is null");
-                throw new Exception("API : Distributed config must be true if version is null");
+                Log.Instance.Fatal("API : Memcache should be enabled if version is null");
             }
-            else if (distributed_config == true && version != null)
-            {
-                Log.Instance.Fatal("API : Distributed config must be false if version is not null");
-                throw new Exception("API : Distributed config must be false if version is not null");
-            }
-            else
-            {
+           
                 Log.Instance.Info("load api settings");
                 if (apiConfiguration == null)
                 {
@@ -39,7 +32,7 @@ namespace API
                 {
                     apiConfiguration = CheckSettingsAreCurrent(apiConfiguration);
                 }
-            }
+            
         }
 
         /// <summary>
@@ -74,19 +67,6 @@ namespace API
             Log.Instance.Info("refresh app settings");
             //refresh apiConfiguration if necessary
             CheckSettingsAreCurrent(apiConfiguration);
-        }
-
-        /// <summary>
-        /// Gets the distribtued flag from
-        /// appsettings.json 
-        /// </summary>
-        /// <returns></returns>
-        public bool distributed_config
-        {
-            get
-            {
-                return _ApplicationSettingsDelegate.CurrentValue.distributed_config;
-            }
         }
 
         /// <summary>
@@ -137,7 +117,7 @@ namespace API
         private IDictionary<string, string> CheckSettingsAreCurrent(IDictionary<string, string> appSettings)
         {
 
-            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, distributed_config, "API", "api_config_version", appSettings,null))
+            if (CommonConfig.distributedConfigCheck(version, inMemoryVersion, "API", "api_config_version", appSettings,null))
             {
                 //we have valid config
                 if (appSettings == null)
@@ -148,24 +128,17 @@ namespace API
             else
             {
 
-                if (distributed_config == false && version == null)
+                if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false && version == null)
                 {
-                    Log.Instance.Fatal("API : Distributed config must be true if version is null");
-                    throw new Exception("API : Distributed config must be true if version is null");
+                    Log.Instance.Fatal("API : Memcache should be enabled if version is null");
                 }
-                else if (distributed_config == true && version != null)
-                {
-                    Log.Instance.Fatal("API : Distributed config must be false if version is not null");
-                    throw new Exception("API : Distributed config must be false if version is not null");
-                }
-                else
-                {
+            
                     if (version != inMemoryVersion || appSettings == null)
                     {
                         inMemoryVersion = version;
                        ReadAppSettings();
                     }
-                }
+               
             }
             return appSettings;
         }
@@ -180,10 +153,10 @@ namespace API
             {
                 apiConfiguration = ReadDBAppSettings(new ADO());
 
-                if (distributed_config == true)
+                if (version == null)
                 {
                     //update memcache
-                    CommonConfig.memcacheSave( inMemoryVersion, "API", "api_config_version",distributed_config, apiConfiguration);
+                    CommonConfig.memcacheSave(version, inMemoryVersion, "API", "api_config_version", apiConfiguration);
                 }
             }
             else
@@ -215,7 +188,6 @@ namespace API
             }
 
             var dictionary = new Dictionary<string, string>();
-
 
             foreach (var c in output.data[0])
             {

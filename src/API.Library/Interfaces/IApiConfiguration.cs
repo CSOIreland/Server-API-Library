@@ -9,8 +9,6 @@ namespace API
 
         decimal? version { get; }
 
-        bool distributed_config { get; }
-
         void Refresh();
 
         bool API_TRACE_RECORD_IP { get; }

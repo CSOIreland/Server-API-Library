@@ -17,8 +17,6 @@
         public bool API_MAINTENANCE { get; set; }
         public string Settings_Type { get; set; }
 
-        public bool distributed_config { get; set; }
-
         public bool API_TRACE_RECORD_IP { get; set; }
 
         public bool API_TRACE_ENABLED { get; set; }
@@ -30,8 +28,6 @@
         public decimal? version { get; set; }
        
         public string Settings_Type { get; set; }
-
-        public bool distributed_config { get; set; }
         
     }
 

@@ -94,15 +94,14 @@ namespace API
                         }
                     }
 
-                    if (!ApiServicesHelper.ApplicationLoaded)
-                    {
+      
                         ApiServicesHelper.ApiConfiguration.Refresh();
 
                         if (ApiServicesHelper.APPConfig.enabled)
                         {
                             ApiServicesHelper.AppConfiguration.Refresh();
                         }
-                    }
+              
 
                     //https://devblogs.microsoft.com/dotnet/re-reading-asp-net-core-request-bodies-with-enablebuffering/
                     context.Request.EnableBuffering();
