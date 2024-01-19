@@ -12,13 +12,12 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.17</Version>
+    <Version>6.1.18</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [BUG FIX] bug fix reading distributed config from cache
-      - [ENHANCEMENT] remove distributed config flag, rely on version being null
+      - [BUG FIX] upgrading Microsoft.Data.SqlClient to 5.1.4 as 5.1.1 is deprecated
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -44,7 +43,7 @@
 		<PackageReference Include="FirebaseAdmin" Version="2.4.0" />
 		<PackageReference Include="HtmlSanitizer" Version="8.0.723" />
 		<PackageReference Include="log4net" Version="2.0.15" />
-		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.1" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="7.0.0" />
@@ -72,11 +71,5 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>portable</DebugType>
   </PropertyGroup>
-
-
-
-  <ItemGroup Condition="'$(Configuration)'=='Release'">
-    <None Include="bin\Release\net6.0\*.pdb" Pack="true" PackagePath="lib\net6.0" />
-  </ItemGroup>
 
 </Project>

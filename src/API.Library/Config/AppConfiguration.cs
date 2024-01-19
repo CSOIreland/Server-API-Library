@@ -154,7 +154,7 @@ namespace API
             {
                 if (dictionary.ContainsKey(c.APP_KEY))
                 {
-                    Log.Instance.Fatal("Duplicate APP Config Key detected : " + c.APS_KEY);
+                    Log.Instance.Fatal("Duplicate APP Config Key detected : " + c.APP_KEY);
                 }
                 else
                 {
