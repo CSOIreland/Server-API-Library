@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+  <metadata minClientVersion="2.12">
+    <id>Microsoft.Data.SqlClient.SNI.runtime</id>
+    <version>5.1.1</version>
+    <title>Microsoft.Data.SqlClient.SNI.runtime</title>
+    <authors>Microsoft</authors>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="file">LICENSE.txt</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>dotnet.png</icon>
+    <projectUrl>https://aka.ms/sqlclientproject</projectUrl>
+    <description>Internal implementation package not meant for direct consumption. Please do not reference directly.
+
+When using NuGet 3.x this package requires at least version 3.4.</description>
+    <releaseNotes>https://go.microsoft.com/fwlink/?linkid=2090501</releaseNotes>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+  </metadata>
+</package>
