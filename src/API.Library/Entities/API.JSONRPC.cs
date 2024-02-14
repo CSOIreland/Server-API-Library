@@ -98,8 +98,6 @@ namespace API
                                 performanceThread.Start();
                             }
                             result = GetResult(httpContext, JSONRPC_Request,trace, sessionCookie);
-                            //result.sessionCookie always null unless set it to the sessionCookie from the request
-                            result.sessionCookie = sessionCookie;
                             break;
                         case true: //Windows Authentication
                             if (API_PERFORMANCE_ENABLED)
@@ -138,18 +136,12 @@ namespace API
                     // Set the Session Cookie if requested
                     if (!string.IsNullOrEmpty(SessionCookieName) && result.sessionCookie != null && result.sessionCookie.Name.Equals(SessionCookieName))
                     {
-                        // No expiry time allowed in the future
-                        if (result.sessionCookie.Expires > DateTime.Now)
-                        {
-                            result.sessionCookie.Expires = default;
-                        }
                         var cookieOptions = new CookieOptions
                         {
                             Secure = true,
                             HttpOnly = true,
                             Domain = null,
                             SameSite = SameSiteMode.Strict,
-                            Expires = result.sessionCookie.Expires
                         };
 
                         // Add the cookie to the response cookie collection

@@ -269,12 +269,6 @@ namespace API
                 Log.Instance.Fatal("No SQL Server Connection available");
                 return;
             }
-            // Check that the transaction exists
-            if (!CheckTransaction())
-            {
-                Log.Instance.Fatal("No transaction found for ExecuteNonQueryProcedure");
-                throw new Exception("Unable to execute action");
-            }
 
             // Initiate Stopwatch
             Stopwatch sw = new Stopwatch();

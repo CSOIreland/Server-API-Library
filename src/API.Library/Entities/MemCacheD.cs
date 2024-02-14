@@ -1,11 +1,9 @@
 ﻿using Enyim.Caching.Memcached;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Newtonsoft.Json.Linq;
-using System.Data;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Net;
-using System.Text.Json;
+
 
 namespace API
 {
@@ -602,7 +600,7 @@ namespace API
 
                 var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
                 Log.Instance.Info("Memcache SubStore Execution Time (s): " + duration + " Object:" + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, Utility.StopWatchToSeconds(sw), "SubStore", successTraceFlag, cacheTraceCompressLength, null);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "SubStore", successTraceFlag, cacheTraceCompressLength, null);
             }
         }
 
@@ -638,14 +636,30 @@ namespace API
             // Initiate Keys
             List<string> keys = new List<string>();
 
+
+
+
             try
             {
                 // Initiate loop
                 bool pending = true;
                 do
                 {
+                   
+                    Log.Instance.Info("CasRepositoryStore repository is " + repository);
                     // Get list of Keys by Cas per Repository
-                    CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+                    CasResult<List<string>> casCache = new();
+                    try
+                    {
+                        casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+                    }
+                    catch
+                    {
+                        // Silent catching (see https://github.com/cnblogs/EnyimMemcachedCore/issues/211)
+
+                        // Store the time of exception in the Cache
+                        ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, "GET_WITH_CAS_TIME_OF_EXCEPTION", DateTime.Now.ToString());
+                    }
 
                     // Check if Cas record exists
                     if (casCache.Result != null && casCache.Result.Count > 0)
@@ -670,8 +684,7 @@ namespace API
                         pending = !casStore.Result;
 
                     }
-
-
+                    
                 } while (pending);
 
                 Log.Instance.Info("Key [" + key + "] added to Repository [" + repository + "]");
@@ -684,7 +697,7 @@ namespace API
             }
             finally
             {
-                sw.Stop();      
+                sw.Stop();
                 var duration = Utility.StopWatchToSeconds(sw);
 
 
@@ -696,9 +709,11 @@ namespace API
 
                 var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
                 Log.Instance.Info("Memcache CasRepositoryStore Execution Time (s): " + duration + " Cas Repository:" + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, Utility.StopWatchToSeconds(sw), "CasRepositoryStore",successTraceFlag,cacheTraceCompressLength,null);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "CasRepositoryStore", successTraceFlag, cacheTraceCompressLength, null);
             }
         }
+
+
 
         /// <summary>
         /// Remove all the cached records stored into a Cas Repository
@@ -706,7 +721,7 @@ namespace API
         /// <param name="repository"></param>
         public bool CasRepositoryFlush(string repository)
         {
-            bool allOk = true;
+            Exception ex = null;
             // Check if it's enabled first
             if (!IsEnabled())
             {
@@ -729,33 +744,94 @@ namespace API
 
             // Initiate Keys
             List<string> keys = new List<string>();
-
-            //Get list of Keys by Cas per Repository
-            CasResult<List<string>> casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
-            // Check if Cas record exists
-            if (casCache.Result != null && casCache.Result.Count > 0)
-            {
-                // Get the list of Keys
-                keys = casCache.Result;
-            }
+            int keyCount = 0;
             try
             {
-                ApiServicesHelper.MemcachedClient.Remove(repository);
+                Log.Instance.Info("CasRepositoryFlush repository is " + repository);
+
+                CasResult<List<string>> casCache = new();
+                //Get list of Keys by Cas per Repository
+                try
+                {
+                    casCache = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+                }
+                catch
+                {
+                    // Silent catching (see https://github.com/cnblogs/EnyimMemcachedCore/issues/211)
+
+                    // Store the time of exception in the Cache
+                    ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, "GET_WITH_CAS_TIME_OF_EXCEPTION", DateTime.Now.ToString());
+                }
+                // Check if Cas record exists
+                if (casCache.Result != null && casCache.Result.Count > 0)
+                {
+                    // Get the list of Keys
+                    keys = casCache.Result;
+                    keyCount = keys.Count;
+                }
 
                 foreach (var key in keys)
                 {
-                    ApiServicesHelper.MemcachedClient.Remove(key);
+                    try
+                    {
+
+                        if (!ApiServicesHelper.MemcachedClient.Remove(key))
+                        {
+                            //This will happen if the CAS contains an expired/removed key
+                            //Make sure that it has really been removed
+                            if (ApiServicesHelper.MemcachedClient.TryGet(key, out casCache))
+                                successTraceFlag = false;
+
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        ex = e;
+                        successTraceFlag = false;
+                        Log.Instance.Error(e);
+                        Log.Instance.Error("Failed to remove key " + key + " in repository " + repository);
+
+                    }
+
                 }
 
-                var check = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
 
-                return check.Cas == 0;
+                if (successTraceFlag)
+                {
+                    var checkData = new CasResult<List<string>>();
+                    try
+                    {
+                        checkData = ApiServicesHelper.MemcachedClient.GetWithCas<List<string>>(repository);
+
+                    }
+                    catch
+                    {
+                        // Silent catching (see https://github.com/cnblogs/EnyimMemcachedCore/issues/211)
+
+                        // Store the time of exception in the Cache
+                        ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, "GET_WITH_CAS_TIME_OF_EXCEPTION", DateTime.Now.ToString());
+                    }
+                    if (checkData.Equals(null)) return true;
+                    if (checkData.Result == null) return true;
+
+                    //For the slight possibility that something may have sneaked into the CAS between the gathering of keys and their disposal
+                    if (keyCount >= checkData.Result.Count)
+                    {
+                        ApiServicesHelper.MemcachedClient.Remove(repository);
+                        return true;
+                    }
+                    else return false;
+                }
+
+                else throw new Exception("Error clearing CAS repository " + repository, ex);  //CAS flush was not reliable
+
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
                 successTraceFlag = false;
                 return false;
+
             }
             finally
             {
@@ -764,17 +840,15 @@ namespace API
 
                 JObject obj = new JObject
                 {
-                   new JProperty("repository",repository)
+                    new JProperty("repository",repository)
                 };
 
                 var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
 
 
                 Log.Instance.Info("Memcache CasRepositoryFlush Execution Time (s): " + duration + " Repository:" + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "CasRepositoryFlush", successTraceFlag, null,null);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "CasRepositoryFlush", successTraceFlag, null, null);
             }
-
-
         }
 
         /// <summary>
@@ -923,7 +997,8 @@ namespace API
                 successTraceFlag = false;
                 Log.Instance.Fatal(e);
             }
-            finally{
+            finally
+            {
                 sw.Stop();
                 var duration = Utility.StopWatchToSeconds(sw);
 
@@ -935,7 +1010,7 @@ namespace API
                 var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
 
                 Log.Instance.Info("Memcache get Execution Time (s): " + duration + " Key : " + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "GET",successTraceFlag, cacheTraceCompressLength, traceExpiresAt);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "GET", successTraceFlag, cacheTraceCompressLength, traceExpiresAt);
             }
 
             return value;
@@ -1033,7 +1108,7 @@ namespace API
 
 
                 Log.Instance.Info("Memcache remove Execution Time (s): " + duration + " Key : " + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj,traceStart, duration, "REMOVE", successTraceFlag, cacheTraceCompressLength,null);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "REMOVE", successTraceFlag, cacheTraceCompressLength, null);
             }
         }
 
@@ -1060,12 +1135,13 @@ namespace API
                 {
                     successTraceFlag = false;
                     Log.Instance.Fatal(e);
-                }finally
+                }
+                finally
                 {
                     sw.Stop();
                     var duration = Utility.StopWatchToSeconds(sw);
                     Log.Instance.Info("Memcache flush all Execution Time (s): " + duration);
-                    CacheTrace.PopulateCacheTrace(null,traceStart, duration, "FLUSH", successTraceFlag,cacheTraceCompressLength,null);
+                    CacheTrace.PopulateCacheTrace(null, traceStart, duration, "FLUSH", successTraceFlag, cacheTraceCompressLength, null);
                 }
             }
 
@@ -1101,9 +1177,9 @@ namespace API
                 sw.Stop();
                 var duration = Utility.StopWatchToSeconds(sw);
                 Log.Instance.Info("Memcache get stats Execution Time (s): " + duration);
-                CacheTrace.PopulateCacheTrace(null,traceStart, duration, "GETSTATS", successTraceFlag,null,null);
+                CacheTrace.PopulateCacheTrace(null, traceStart, duration, "GETSTATS", successTraceFlag, null, null);
             }
-     
+
         }
 
         /// <summary>
@@ -1123,7 +1199,7 @@ namespace API
             {
                 return value;
             }
-         
+
             try
             {
                 value.datetime = DateTime.Now;
