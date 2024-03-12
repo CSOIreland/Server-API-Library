@@ -12,13 +12,12 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.21</Version>
+    <Version>6.1.22</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [BUG FIX] Added cache storage of the key GET_WITH_CAS_TIMEOF_EXCEPTION key to store the datetime value of when the GetWithCas exception occurred.
-      - [BUG FIX] Fixes for session to not be expired and System.ArgumentOutOfRangeException when calling GetWithCas.
+      [ENHANCEMENT] Ensure Stateless flag functions as designed for session management
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>

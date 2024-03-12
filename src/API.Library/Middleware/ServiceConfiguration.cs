@@ -1,5 +1,4 @@
 ﻿using Enyim.Caching;
-using Enyim.Caching.Configuration;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -15,38 +14,38 @@ namespace API
         public static IServiceCollection AddApiLibrary(this IServiceCollection service, WebApplicationBuilder builder)
         {
             var loggingOptions = builder.Configuration.GetSection("Log4NetCore").Get<Log4NetProviderOptions>();
-            
+
             //log name of the machine for identification purposes
             log4net.GlobalContext.Properties["MachineName"] = System.Environment.MachineName;
             builder.Logging.AddLog4Net(loggingOptions);
-          
+
             //watches for any changes to log4net config file
             XmlConfigurator.ConfigureAndWatch(new FileInfo(loggingOptions.Log4NetConfigFileName));
 
             Log.Instance.Info("service configration started");
-               
+
             // Add services to the container.
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
             {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto; 
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
-               
+
             builder.Services.AddHttpContextAccessor();
 
             service.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
-            service.Configure<ADOSettings>(builder.Configuration.GetSection("ADOSettings"));               
-            service.Configure<APIConfig>(builder.Configuration.GetSection("API_Config"));               
-            service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));               
-            service.Configure<APISettings>(builder.Configuration.GetSection("API_SETTINGS"));               
+            service.Configure<ADOSettings>(builder.Configuration.GetSection("ADOSettings"));
+            service.Configure<APIConfig>(builder.Configuration.GetSection("API_Config"));
+            service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));
+            service.Configure<APISettings>(builder.Configuration.GetSection("API_SETTINGS"));
             service.Configure<BlockedRequests>(builder.Configuration.GetSection("Blocked_Requests"));
             service.Configure<APIPerformanceSettings>(builder.Configuration.GetSection("APIPerformanceSettings"));
 
             service.AddEnyimMemcached();
             service.AddSingleton<ICacheConfig, CacheConfig>();
-            service.AddSingleton<IApiConfiguration, ApiConfiguration>();               
-            service.AddSingleton<IAppConfiguration, APPConfiguration>();               
-            service.AddSingleton<IWebUtility, WebUtility>();                          
-            service.AddSingleton<IMemcachedClient, MemcachedClient>();              
+            service.AddSingleton<IApiConfiguration, ApiConfiguration>();
+            service.AddSingleton<IAppConfiguration, APPConfiguration>();
+            service.AddSingleton<IWebUtility, WebUtility>();
+            service.AddSingleton<IMemcachedClient, MemcachedClient>();
             service.AddSingleton<ICacheD, MemCacheD>();
             service.AddSingleton<IActiveDirectory, ActiveDirectory>();
             service.AddSingleton<IFirebase, Firebase>();
@@ -57,6 +56,9 @@ namespace API
 
             service.AddSingleton<ICleanser, Cleanser>();
             service.AddSingleton<ISanitizer, Sanitizer>();
+
+
+
 
             var sp = service.BuildServiceProvider();
             var ADOSettings = sp.GetService<IOptions<ADOSettings>>();
@@ -85,7 +87,7 @@ namespace API
 
             //we need to load API config here as needed for application to work.
             ApiServicesHelper.ApiConfiguration = sp.GetRequiredService<IApiConfiguration>();
-            if(ApiServicesHelper.ApiConfiguration.Settings == null)
+            if (ApiServicesHelper.ApiConfiguration.Settings == null)
             {
                 ApiServicesHelper.ApplicationLoaded = false;
             }
@@ -97,11 +99,22 @@ namespace API
             ApiServicesHelper.Sanitizer = sp.GetRequiredService<ISanitizer>();
             ApiServicesHelper.Cleanser = sp.GetRequiredService<ICleanser>();
 
-       
-            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded) 
+
+            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
             {
                 //load APP config here as if can't load application wont work
-                ApiServicesHelper.AppConfiguration = sp.GetRequiredService<IAppConfiguration>(); 
+                ApiServicesHelper.AppConfiguration = sp.GetRequiredService<IAppConfiguration>();
+            }
+            bool isStateless = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]);
+            if (!isStateless)
+            {
+                service.AddSession(options =>
+                {
+                    options.IdleTimeout = TimeSpan.FromMinutes(30);//We set Time here 
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.IsEssential = true;
+                    options.Cookie.Name = "apiSessionCookie";
+                });
             }
 
             Log.Instance.Info("All API setup completed");

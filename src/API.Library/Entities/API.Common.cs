@@ -114,6 +114,8 @@ namespace API
             //Log.Instance.Info("AD Username: " + ApiServicesHelper.ApiConfiguration.Settings["API_AD_USERNAME"]);
             //Log.Instance.Info("AD Password: ********"); // Hide API_AD_PASSWORD from logs
 
+
+
             // Check if the request is Stateless
             if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]))
             {
@@ -122,7 +124,7 @@ namespace API
                 if (userPricipalCache.hasData)
                 {
                     isAuthenticated = true;
-                    var userPricipalCacheDeserialized  = Utility.JsonDeserialize_IgnoreLoopingReference<ExpandoObject>(userPricipalCache.data.ToString());
+                    var userPricipalCacheDeserialized = Utility.JsonDeserialize_IgnoreLoopingReference<ExpandoObject>(userPricipalCache.data.ToString());
                     UserPrincipal = userPricipalCacheDeserialized == null ? null : userPricipalCacheDeserialized;
                     Log.Instance.Info("Authentication retrieved from Cache");
                 }
@@ -137,7 +139,7 @@ namespace API
                         UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
 
                         // Set the cache to expire at midnight
-                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity,Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal), DateTime.Today.AddDays(1)))
+                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal), DateTime.Today.AddDays(1)))
                         {
                             Log.Instance.Info("Authentication stored in Cache");
                         }
@@ -152,26 +154,36 @@ namespace API
                     // Call the SessionID to initiate the Session
                     Log.Instance.Info("Session ID: " + context.Session.Id);
 
-                    isAuthenticated = AuthenticateByType();
-
-                    // Initiate a new Session only when authentication works.
-                    if (isAuthenticated != null)
+                    var user = context.Session.GetString(UserPrincipal_Container);
+                    if (user == null)
                     {
-                        // Save the serialized userPrincipal in the Session
-                        //context.Session[UserPrincipal_Container] = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
-                        Log.Instance.Info("Authentication stored in Session");
+                        isAuthenticated = AuthenticateByType();
+
+                        // Initiate a new Session only when authentication works.
+                        if (isAuthenticated != null)
+                        {
+                            // Save the serialized userPrincipal in the Session
+
+                            //set userprincipal to be a smaller object
+                            UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
+                            string upString = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
+                            context.Session.SetString(UserPrincipal_Container, upString);
+                            Log.Instance.Info("Authentication stored in Session");
+                        }
+
                     }
-                }
-                else
-                {
-                    isAuthenticated = true;
 
-                    // Call the SessionID to initiate the Session
-                    Log.Instance.Info("Session ID: " + context.Session.Id);
+                    else
+                    {
+                        isAuthenticated = true;
 
-                    // Deserialise userPrincipal from Session
-                    //UserPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference((string)(context.Session[UserPrincipal_Container]));
-                    Log.Instance.Info("Authentication retrieved from Session");
+                        // Call the SessionID to initiate the Session
+                        Log.Instance.Info("Session ID: " + context.Session.Id);
+                        // Deserialise userPrincipal from Session
+                        UserPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference(context.Session.GetString(UserPrincipal_Container));
+                        Log.Instance.Info("Authentication retrieved from Session");
+                    }
+
                 }
             }
 
@@ -252,7 +264,8 @@ namespace API
                 else
                 {
                     //if account is enabled
-                    if(UserPrincipal.Enabled) {
+                    if (UserPrincipal.Enabled)
+                    {
                         return true;
                     }
                     else
@@ -408,7 +421,8 @@ namespace API
                 throw new TaskCanceledException();
             }
 
-            if (context.Response.HasStarted) {
+            if (context.Response.HasStarted)
+            {
                 sourceToken.Cancel(true);
 
                 if (sourceToken.IsCancellationRequested)
@@ -447,24 +461,25 @@ namespace API
             //httpContext.Request.Headers.Add("Cookie", "session=\"84c2f0b319460ee991924908198d46795049c83f1ebdfcaf90bd899c8d9d0bd2\";");        
 
             Cookie sessionCookie = new Cookie();
-                
-            if (!string.IsNullOrEmpty(SessionCookieName))
-                {
-                    //need to create a cookie using the value and  the SessionCookieName
-                    string testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
 
-                    if (!string.IsNullOrEmpty(testSessionCookieValue))
-                    {
-                        sessionCookie.Name = SessionCookieName;
-                        sessionCookie.Value = testSessionCookieValue;
-                    }
+            if (!string.IsNullOrEmpty(SessionCookieName))
+            {
+                //need to create a cookie using the value and  the SessionCookieName
+                string testSessionCookieValue = httpContext.Request.Cookies[SessionCookieName];
+
+                if (!string.IsNullOrEmpty(testSessionCookieValue))
+                {
+                    sessionCookie.Name = SessionCookieName;
+                    sessionCookie.Value = testSessionCookieValue;
+                }
             }
             return sessionCookie;
         }
 
         internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
         {
-            if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED) { 
+            if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
+            {
                 //gather trace information
                 trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
                 trace.TrcIp = apiRequest.ipAddress;
@@ -476,7 +491,7 @@ namespace API
                     trace.TrcUsername = apiRequest.userPrincipal.SamAccountName.ToString();
                 }
             }
-        }    
+        }
     }
 
     /// <summary>
