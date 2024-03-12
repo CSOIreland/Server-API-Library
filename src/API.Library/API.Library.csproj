@@ -12,12 +12,12 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.22</Version>
+    <Version>6.1.23</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      [ENHANCEMENT] Ensure Stateless flag functions as designed for session management
+      [BUG FIX] Dispose of database connection if it cant't be opened
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
