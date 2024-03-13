@@ -102,7 +102,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
-                connection.Dispose();
+                Dispose();
                 throw;
             }
         }
