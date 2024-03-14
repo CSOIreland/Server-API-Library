@@ -70,6 +70,39 @@ namespace API
             }
         }
 
+
+        /// <summary>
+        /// Check if MemCacheD cas is locked
+        /// </summary>
+        /// <returns></returns>
+        private bool IsCasLocked(string repository)
+        {
+            if (string.IsNullOrEmpty(repository))
+            {
+                return false;
+            }
+            else
+            {
+                // Force to Case Insensitive
+                repository = repository.ToUpper();
+            }
+
+
+            Log.Instance.Info("IsCasLocked repository is " + repository);
+
+            MemCachedD_Value casLock = Get_BSO<dynamic>("API", "MemCacheD", "casManagement",  repository + "-Lock");
+
+
+            if (casLock.hasData)
+            {
+                return casLock.data.Value;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         /// Generate the Key for ADO
         /// </summary>
@@ -427,6 +460,11 @@ namespace API
                 return false;
             }
 
+            if (IsCasLocked(repository))
+            {
+                return false;
+            }
+
             Stopwatch sw = Stopwatch.StartNew();
             int? cacheTraceCompressLength = null;
             DateTime traceStart = DateTime.Now;
@@ -636,9 +674,6 @@ namespace API
             // Initiate Keys
             List<string> keys = new List<string>();
 
-
-
-
             try
             {
                 // Initiate loop
@@ -721,12 +756,14 @@ namespace API
         /// <param name="repository"></param>
         public bool CasRepositoryFlush(string repository)
         {
+
             Exception ex = null;
             // Check if it's enabled first
             if (!IsEnabled())
             {
                 return false;
             }
+
 
             if (string.IsNullOrEmpty(repository))
             {
@@ -737,6 +774,23 @@ namespace API
                 // Force to Case Insensitive
                 repository = repository.ToUpper();
             }
+
+            /*** cas lock management **/
+            if (IsCasLocked(repository))
+            {
+                return false;
+            }
+
+            ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock", true, DateTime.Today.AddMinutes(2), "METACAS");
+           
+            MemCachedD_Value casLock = Get_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock");
+
+            //lock failed to set
+            if (!casLock.hasData)
+            {
+                return false;
+            }
+            /*** end cas lock management **/
 
             Stopwatch sw = Stopwatch.StartNew();
             DateTime traceStart = DateTime.Now;
@@ -835,6 +889,9 @@ namespace API
             }
             finally
             {
+                //unlock the cas
+                Remove_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock");
+
                 sw.Stop();
                 var duration = Utility.StopWatchToSeconds(sw);
 

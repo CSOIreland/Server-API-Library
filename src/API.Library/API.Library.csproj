@@ -12,12 +12,12 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.24</Version>
+    <Version>6.1.25</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      [BUG FIX] Dispose of database connection if it cant't be opened
+      [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -34,6 +34,8 @@
 	  <None Remove="Entities\ADO.cs~RF5780ef96.TMP" />
 	  <None Remove="Entities\API.Common.cs~RF1e6b9c0d.TMP" />
 	  <None Remove="Entities\MemCacheD.cs~RFcba3198.TMP" />
+	  <None Remove="Entities\MemCacheD.cs~RFf6fcfeae.TMP" />
+	  <None Remove="Entities\MemCacheD.cs~RFf747b93c.TMP" />
 	  <None Remove="log4net.config" />
 	</ItemGroup>
 
