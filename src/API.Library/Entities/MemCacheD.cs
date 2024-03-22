@@ -781,7 +781,7 @@ namespace API
                 return false;
             }
 
-            ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock", true, DateTime.Today.AddMinutes(2), "METACAS");
+            ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock", true, DateTime.Now.AddMinutes(2), "METACAS");
            
             MemCachedD_Value casLock = Get_BSO<dynamic>("API", "MemCacheD", "casManagement", repository + "-Lock");
 
