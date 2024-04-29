@@ -1,0 +1,15 @@
+2024-04-29 10:48:38,285 [CORK25198] [(null)] [1] INFO API.ConsoleConfiguration.AddApiLibrary:0 - service configuration started
+2024-04-29 10:48:38,445 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration.ConfigureServers:0 - Memcached server address - 3.9.2.41:11211
+2024-04-29 10:48:38,451 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - MinPoolSize: 1
+2024-04-29 10:48:38,454 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - MaxPoolSize: 10
+2024-04-29 10:48:38,458 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ConnectionTimeout: 00:00:15
+2024-04-29 10:48:38,460 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ReceiveTimeout: 00:00:15
+2024-04-29 10:48:38,462 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - DeadTimeout: 00:00:15
+2024-04-29 10:48:38,465 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - QueueTimeout: 00:00:00.1500000
+2024-04-29 10:48:38,468 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ConnectionIdleTimeout: 00:00:00
+2024-04-29 10:48:38,521 [CORK25198] [(null)] [1] INFO API.ApiConfiguration..ctor:0 - load api settings
+2024-04-29 10:48:38,523 [CORK25198] [(null)] [1] INFO API.CommonConfig.ReadJSONSettings:0 - Json apiConfig configuration loaded
+2024-04-29 10:48:38,525 [CORK25198] [(null)] [1] INFO API.APPConfiguration..ctor:0 - load APP settings
+2024-04-29 10:48:38,526 [CORK25198] [(null)] [1] INFO API.CommonConfig.ReadJSONSettings:0 - Json appConfig configuration loaded
+2024-04-29 10:48:38,526 [CORK25198] [(null)] [1] INFO API.ConsoleConfiguration.AddApiLibrary:0 - All API setup completed
+2024-04-29 10:48:38,527 [CORK25198] [(null)] [1] INFO TestConsoleApp.Program.Main:23 - TEST

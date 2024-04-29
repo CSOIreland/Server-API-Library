@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Collections.Specialized;
-using System.Dynamic;
 using System.Globalization;
 using System.Net;
 using System.Net.Mime;
@@ -242,34 +241,7 @@ namespace API
                 return null;
 
             // Search in the entire Assemplies till finding the right one
-
-            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-            var calledClass = allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
-
-            if (calledClass != null)
-            {
-                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
-                {
-
-                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
-                    {
-
-                        MethodInfo methodInfo = calledClass.GetMethod(methodName, new Type[] { typeof(Static_API) });
-                        if (methodInfo == null)
-                        {
-                            return null;
-                        }
-                        else
-                        {
-                            return methodInfo;
-                        }
-                    }
-                }
-            }
-
-
-            return null;
+            return CheckAPICallsAllowed(methodName, methodPath, typeof(Static_API));
         }
 
         /// <summary>

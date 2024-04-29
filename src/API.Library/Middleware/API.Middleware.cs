@@ -21,7 +21,7 @@ namespace API
         public async Task InvokeAsync(HttpContext context)
         {
             // Initiate the activity
-            var activity = Activity.Current;
+            Activity activity = Activity.Current;
 
             log4net.LogicalThreadContext.Properties["correlationID"] = activity.RootId;
 
@@ -48,8 +48,8 @@ namespace API
                 // Thread a PerfomanceCollector
 
                 /// <summary>
-                //    /// Flag to indicate if Performance is enabled 
-                //    /// </summary>
+                /// Flag to indicate if Performance is enabled 
+                /// </summary>
                 bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
                 Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
@@ -95,12 +95,12 @@ namespace API
                     }
 
       
-                        ApiServicesHelper.ApiConfiguration.Refresh();
+                    ApiServicesHelper.ApiConfiguration.Refresh();
 
-                        if (ApiServicesHelper.APPConfig.enabled)
-                        {
-                            ApiServicesHelper.AppConfiguration.Refresh();
-                        }
+                    if (ApiServicesHelper.APPConfig.enabled)
+                    {
+                      ApiServicesHelper.AppConfiguration.Refresh();
+                    }
               
 
                     //https://devblogs.microsoft.com/dotnet/re-reading-asp-net-core-request-bodies-with-enablebuffering/

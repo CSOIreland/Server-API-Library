@@ -34,17 +34,11 @@ namespace API
 
         public static ICacheD CacheD;
 
-        public static IMemcachedClient MemcachedClient;
+        internal static IMemcachedClient MemcachedClient;
 
         public static IWebUtility WebUtility;
 
         public static IActiveDirectory ActiveDirectory;
-
-        public static IFirebase Firebase;
-
-        public static ISanitizer Sanitizer;
-
-        public static ICleanser Cleanser;
 
         public static IAPIPerformanceConfiguration APIPerformanceSettings;
 

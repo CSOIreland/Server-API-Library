@@ -22,7 +22,7 @@ namespace API
             //watches for any changes to log4net config file
             XmlConfigurator.ConfigureAndWatch(new FileInfo(loggingOptions.Log4NetConfigFileName));
 
-            Log.Instance.Info("service configration started");
+            Log.Instance.Info("service configuration started");
 
             // Add services to the container.
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -48,17 +48,10 @@ namespace API
             service.AddSingleton<IMemcachedClient, MemcachedClient>();
             service.AddSingleton<ICacheD, MemCacheD>();
             service.AddSingleton<IActiveDirectory, ActiveDirectory>();
-            service.AddSingleton<IFirebase, Firebase>();
             service.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
             service.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
             service.AddScoped<IADO, ADO>();
-
-            service.AddSingleton<ICleanser, Cleanser>();
-            service.AddSingleton<ISanitizer, Sanitizer>();
-
-
-
 
             var sp = service.BuildServiceProvider();
             var ADOSettings = sp.GetService<IOptions<ADOSettings>>();
@@ -94,11 +87,6 @@ namespace API
 
             ApiServicesHelper.WebUtility = sp.GetRequiredService<IWebUtility>();
             ApiServicesHelper.ActiveDirectory = sp.GetRequiredService<IActiveDirectory>();
-
-            ApiServicesHelper.Firebase = sp.GetRequiredService<IFirebase>();
-            ApiServicesHelper.Sanitizer = sp.GetRequiredService<ISanitizer>();
-            ApiServicesHelper.Cleanser = sp.GetRequiredService<ICleanser>();
-
 
             if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
             {

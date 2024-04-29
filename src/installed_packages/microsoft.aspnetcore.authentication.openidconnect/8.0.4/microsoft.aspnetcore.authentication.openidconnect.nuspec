@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.AspNetCore.Authentication.OpenIdConnect</id>
+    <version>8.0.4</version>
+    <authors>Microsoft</authors>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>Icon.png</icon>
+    <projectUrl>https://asp.net/</projectUrl>
+    <description>ASP.NET Core middleware that enables an application to support the OpenID Connect authentication workflow.
+
+This package was built from the source code at https://github.com/dotnet/aspnetcore/tree/8486d31e24f30e3fa1809a95699a0adc16f448d7</description>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>aspnetcore authentication security</tags>
+    <serviceable>true</serviceable>
+    <repository type="git" url="https://github.com/dotnet/aspnetcore" commit="8486d31e24f30e3fa1809a95699a0adc16f448d7" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="Microsoft.IdentityModel.Protocols.OpenIdConnect" version="7.1.2" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  <frameworkReferences><group targetFramework="net8.0"><frameworkReference name="Microsoft.AspNetCore.App" /></group></frameworkReferences></metadata>
+</package>

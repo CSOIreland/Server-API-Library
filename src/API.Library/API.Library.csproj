@@ -4,7 +4,7 @@
 
     <ImplicitUsings>enable</ImplicitUsings>
 		<Platforms>AnyCPU;x64</Platforms>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
     <GenerateAssemblyInfo>True</GenerateAssemblyInfo> 
     <Configuration></Configuration>
@@ -12,12 +12,27 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>6.1.26</Version>
+    <Version>7.0.0</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      [BUG FIX] memcache CAS locking duration changed
+      - [ENHANCEMENT] removed references to classes that are not required for the API. They are now moved to different projects
+      - [BUG FIX] parse error function in restful had a default of " " instead of ""
+      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
+      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue
+      - [ENHANCEMENT] use method handle and static dictionary to speed up reflection lookup
+      - [BUG FIX] handle custom sql datatypes on non query procedure
+      - [BUG FIX] Dispose of database connection if it can't be opened
+      - [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
+      - [ENHANCEMENT] updated libraries -- sqlclient, enyim and log4net
+      - [ENHANCEMENT] move interfaces to interfaces directory
+      - [ENHANCEMENT] remove CustomPropertyAttributes.cs as now in CSOSanitiser
+      - [BUG FIX] removed  internal set bug --   public int API_ADO_BULKCOPY_TIMEOUT { get; internal set; }
+      - [ENHANCEMENT] change activity declaration type in Middleware/API.Middleware.
+      - [BUG FIX] parse error function in restful had a default of " " instead of ""
+      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
+      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -34,24 +49,20 @@
 	  <None Remove="Entities\ADO.cs~RF5780ef96.TMP" />
 	  <None Remove="Entities\API.Common.cs~RF1e6b9c0d.TMP" />
 	  <None Remove="Entities\MemCacheD.cs~RFcba3198.TMP" />
-	  <None Remove="Entities\MemCacheD.cs~RFf6fcfeae.TMP" />
-	  <None Remove="Entities\MemCacheD.cs~RFf747b93c.TMP" />
 	  <None Remove="log4net.config" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="12.0.1" />
-		<PackageReference Include="EnyimMemcachedCore" Version="2.6.6" />
-		<PackageReference Include="FirebaseAdmin" Version="2.4.0" />
-		<PackageReference Include="HtmlSanitizer" Version="8.0.723" />
-		<PackageReference Include="log4net" Version="2.0.15" />
-		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="7.0.0" />
+		<PackageReference Include="EnyimMemcachedCore" Version="3.2.1" />
+		<PackageReference Include="log4net" Version="2.0.17" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.4" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="8.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
-		<PackageReference Include="System.DirectoryServices.AccountManagement" Version="7.0.1" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+		<PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.0" />
 	</ItemGroup>
 
   

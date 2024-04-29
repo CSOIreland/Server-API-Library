@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>API.Library</id>
+    <version>7.0.0</version>
+    <authors>Central Statistics Office, Ireland</authors>
+    <description>Package Description</description>
+    <releaseNotes>- [ENHANCEMENT] removed references to classes that are not required for the API. They are now moved to different projects
+      - [BUG FIX] parse error function in restful had a default of " " instead of ""
+      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
+      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue
+      - [ENHANCEMENT] use method handle and static dictionary to speed up reflection lookup
+      - [BUG FIX] handle custom sql datatypes on non query procedure
+      - [BUG FIX] Dispose of database connection if it can't be opened
+      - [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
+      - [ENHANCEMENT] updated libraries -- sqlclient, enyim and log4net
+      - [ENHANCEMENT] move interfaces to interfaces directory
+      - [ENHANCEMENT] remove CustomPropertyAttributes.cs as now in CSOSanitiser
+      - [BUG FIX] removed  internal set bug --   public int API_ADO_BULKCOPY_TIMEOUT { get; internal set; }
+      - [ENHANCEMENT] change activity declaration type in Middleware/API.Middleware.
+      - [BUG FIX] parse error function in restful had a default of " " instead of ""
+      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
+      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue</releaseNotes>
+    <copyright>Central Statistics Office, Ireland</copyright>
+    <repository type="git" url="https://github.com/CSOIreland/Server-API-Library" />
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="EnyimMemcachedCore" version="3.2.1" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.AspNetCore.Authentication.OpenIdConnect" version="8.0.4" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Data.SqlClient" version="5.2.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.DependencyInjection" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.Logging.Log4Net.AspNetCore" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="13.0.3" exclude="Build,Analyzers" />
+        <dependency id="System.Diagnostics.PerformanceCounter" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices.AccountManagement" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="log4net" version="2.0.17" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net8.0">
+        <frameworkReference name="Microsoft.AspNetCore.App" />
+      </group>
+    </frameworkReferences>
+  </metadata>
+</package>

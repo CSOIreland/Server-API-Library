@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Reflection;
 using System.Collections.Specialized;
-using System.Dynamic;
 
 
 namespace API
@@ -368,34 +367,10 @@ namespace API
             // Never allow to call Public Methods in the API Namespace
             if (mapping[0].ToUpperInvariant() == "API")
             return null;
-            
-            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
 
-            var calledClass= allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+            // Search in the entire Assemplies till finding the right one
+            return CheckAPICallsAllowed(methodName, methodPath, typeof(JSONRPC_API));
 
-            if (calledClass != null)
-            {
-                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
-                {
-
-                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
-                    {
-
-                        MethodInfo methodInfo = calledClass.GetMethod(methodName, new Type[] { typeof(JSONRPC_API) });
-                        if (methodInfo == null)
-                        {
-                            return null;
-                        }
-                        else
-                        {
-                            return methodInfo;
-                        }
-                    }
-                }
-            }
-
-
-            return null;
         }
 
         /// <summary>

@@ -102,6 +102,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
+                //Dispose of the connection as can't be opened
                 Dispose();
                 throw;
             }
@@ -297,7 +298,14 @@ namespace API
                     foreach (dynamic inputParam in inputParams)
                     {
                         Log.Instance.Info("Bind Input Parameter: Name[" + inputParam.name + "] Value[" + inputParam.value.ToString() + "]");
-                        command.Parameters.AddWithValue(inputParam.name, inputParam.value).Direction = ParameterDirection.Input;
+
+                        SqlParameter param = command.Parameters.AddWithValue(inputParam.name, inputParam.value);
+                        param.Direction = ParameterDirection.Input;
+                        if (inputParam.typeName != null)
+                        {
+                            // Allow to pass a specific custom type (i.e. User Defined Data Types or User Defined Table Types)
+                            param.TypeName = inputParam.typeName;
+                        }
                     }
                 }
 

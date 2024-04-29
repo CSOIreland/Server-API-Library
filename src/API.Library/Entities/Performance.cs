@@ -22,8 +22,8 @@ namespace API
         {
 
             /// <summary>
-            //    /// Flag to indicate if Performance is enabled 
-            //    /// </summary>
+            /// Flag to indicate if Performance is enabled 
+            /// </summary>
             bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
             Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);

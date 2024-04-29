@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
+using System.Dynamic;
 using System.Reflection;
 
 namespace API
 {
-        /// <summary>
-        /// 
-        /// </summary>
-        public class MethodReader
+    /// <summary>
+    /// 
+    /// </summary>
+    public class MethodReader
         {
 
         /// <summary>
@@ -22,7 +20,24 @@ namespace API
         {
             try
             {
-                // The method contains the full path, e.g. "PxStat.Security.GroupAccount_API.Read"
+                //create key for the dictionary
+                dynamic jsonObj = new ExpandoObject();
+                jsonObj.method = method;
+                jsonObj.attributeName = attributeName;
+                jsonObj.parameters = parameters;
+
+                string serializedAPIInfo = Utility.JsonSerialize_IgnoreLoopingReference(jsonObj);
+
+                //if already in dictionary no need to find again
+                if (AttributeDictionary.DictMethodAttributeValue.ContainsKey(serializedAPIInfo))
+                {
+                    //return the methodInfo based on the methodInfo handle
+                    MethodInfo m2 = MethodBase.GetMethodFromHandle(AttributeDictionary.DictMethodAttributeValue[serializedAPIInfo]) as MethodInfo;
+                    var dictSearchedAttribute = m2.CustomAttributes.Where(CustomAttributeData => CustomAttributeData.AttributeType.Name == attributeName).FirstOrDefault();
+                    return dictSearchedAttribute;
+
+                }
+
                 // Create a List<string> of each individual element
                 List<string> mList = method.Split('.').ToList<string>();
 
@@ -72,6 +87,12 @@ namespace API
                 //Get the required "attributeName" attribute if it exists
                 var searchedAttribute = methodInfo.CustomAttributes.Where(CustomAttributeData => CustomAttributeData.AttributeType.Name == attributeName).FirstOrDefault();
 
+                //get the methods handle
+                RuntimeMethodHandle handle = methodInfo.MethodHandle;
+                      
+                //add handle to dictionary for future lookup
+                AttributeDictionary.DictMethodAttributeValue.Add(serializedAPIInfo, handle);
+
                 //Return true or false depending on whether the attribute was found
                 return searchedAttribute;
             }
@@ -94,9 +115,27 @@ namespace API
         {
                 try
                 {
-                    // The method contains the full path, e.g. "PxStat.Security.GroupAccount_API.Read"
-                    // Create a List<string> of each individual element
-                    List<string> mList = method.Split('.').ToList<string>();
+
+                //create key for the dictionary
+                dynamic jsonObj = new ExpandoObject();
+                jsonObj.method = method;
+                jsonObj.attributeName = attributeName;
+                jsonObj.parameters = parameters;
+                string serializedAPIInfo = Utility.JsonSerialize_IgnoreLoopingReference(jsonObj);
+
+                //if already in dictionary no need to find again
+                if (AttributeDictionary.DictMethodHasAttribute.ContainsKey(serializedAPIInfo))
+                {
+                    //return the methodInfo based on the methodInfo handle
+                    MethodInfo m2 = MethodBase.GetMethodFromHandle(AttributeDictionary.DictMethodHasAttribute[serializedAPIInfo]) as MethodInfo;
+                    var dictSearchedAttribute = m2.CustomAttributes.Where(CustomAttributeData => CustomAttributeData.AttributeType.Name == attributeName).FirstOrDefault();
+                    return dictSearchedAttribute != null;
+
+                }
+
+                // The method contains the full path, e.g. "PxStat.Security.GroupAccount_API.Read"
+                // Create a List<string> of each individual element
+                List<string> mList = method.Split('.').ToList<string>();
 
                     //If this can't be parsed then just return 
                     if (mList.Count < 2)
@@ -142,6 +181,12 @@ namespace API
 
                     //Get the required "attributeName" attribute if it exists
                     var searchedAttribute = methodInfo.CustomAttributes.Where(CustomAttributeData => CustomAttributeData.AttributeType.Name == attributeName).FirstOrDefault();
+
+                    //get the methods handle
+                    RuntimeMethodHandle handle = methodInfo.MethodHandle;
+
+                    //add handle to dictionary for future lookup
+                    AttributeDictionary.DictMethodHasAttribute.Add(serializedAPIInfo, handle);
 
                     //Return true or false depending on whether the attribute was found
                     return searchedAttribute != null;

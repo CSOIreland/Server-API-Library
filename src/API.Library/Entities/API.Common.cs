@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.DirectoryServices.AccountManagement;
 using System.Dynamic;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -278,6 +279,7 @@ namespace API
             catch (Exception e)
             {
                 Log.Instance.Fatal("Unable to connect/query AD");
+                Log.Instance.Fatal("NetworkUsername :" + NetworkUsername);
                 Log.Instance.Fatal(e);
                 return false;
             }
@@ -324,6 +326,7 @@ namespace API
                 catch (Exception e)
                 {
                     Log.Instance.Fatal("Unable to connect/query AD");
+                    Log.Instance.Fatal("NetworkUsername :" + NetworkUsername);
                     Log.Instance.Fatal(e);
                     return false;
                 }
@@ -439,6 +442,7 @@ namespace API
                 }
                 else
                 {
+
                     await context.Response.WriteAsync(message);
                 }
                 await context.Response.CompleteAsync();
@@ -492,7 +496,64 @@ namespace API
                 }
             }
         }
+
+        /// <summary>
+        /// method to check if the an api call is allowed and return the methodinfo if it is
+        /// </summary>
+        internal static MethodInfo CheckAPICallsAllowed(string methodName, string methodPath, dynamic typeOfClassType)
+        {
+            //create key for the dictionary
+            dynamic jsonObj = new ExpandoObject();
+            jsonObj.methodName = methodName;
+            jsonObj.methodPath = methodPath;
+
+            string serializedAPIInfo = Utility.JsonSerialize_IgnoreLoopingReference(jsonObj);
+
+            //if already in dictionary no need to find again
+            if (AttributeDictionary.AllowedAPIDictionary.ContainsKey(serializedAPIInfo))
+            {
+                //return the methodInfo based on the methodInfo handle
+                MethodInfo m2 = MethodBase.GetMethodFromHandle(AttributeDictionary.AllowedAPIDictionary[serializedAPIInfo]) as MethodInfo;
+                return m2;
+            }
+
+            // Search in the entire Assemplies till finding the right one
+
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            var calledClass = allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+
+            if (calledClass != null)
+            {
+                if (calledClass.FullName.Trim().Equals(methodPath.Trim()))
+                {
+
+                    if (calledClass.CustomAttributes.Where(xx => xx.AttributeType.Name == "AllowAPICall").ToList().Count > 0)
+                    {
+                        MethodInfo methodInfo = null;
+                        methodInfo = calledClass.GetMethod(methodName, new Type[] { typeOfClassType });
+
+                        if (methodInfo == null)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            //get the methods handle
+                            RuntimeMethodHandle handle = methodInfo.MethodHandle;
+
+                            //add handle to dictionary for future lookup
+                            AttributeDictionary.AllowedAPIDictionary.Add(serializedAPIInfo, handle);
+                            return methodInfo;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
     }
+
 
     /// <summary>
     /// Clone the UserPrincipal object structure for serialisation & deserialisation

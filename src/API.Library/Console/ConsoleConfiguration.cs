@@ -37,14 +37,11 @@ namespace API
                    ser.AddSingleton<IMemcachedClient, MemcachedClient>();
                    ser.AddSingleton<ICacheD, MemCacheD>();
                    ser.AddSingleton<IActiveDirectory, ActiveDirectory>();
-                   ser.AddSingleton<IFirebase, Firebase>();
                    ser.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
                    ser.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
                    ser.AddScoped<IADO, ADO>();
 
-                   ser.AddSingleton<ICleanser, Cleanser>();
-                   ser.AddSingleton<ISanitizer, Sanitizer>();
                    ser.AddLogging(builder =>
                    {
                        builder.AddLog4Net(loggingOptions);
@@ -105,10 +102,6 @@ namespace API
 
             ApiServicesHelper.WebUtility = builder.Services.GetService<IWebUtility> ();
             ApiServicesHelper.ActiveDirectory = builder.Services.GetService<IActiveDirectory>();
-
-            ApiServicesHelper.Firebase = builder.Services.GetService<IFirebase>();
-            ApiServicesHelper.Sanitizer = builder.Services.GetService<ISanitizer>();
-            ApiServicesHelper.Cleanser = builder.Services.GetService<ICleanser>();
 
             if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
             {

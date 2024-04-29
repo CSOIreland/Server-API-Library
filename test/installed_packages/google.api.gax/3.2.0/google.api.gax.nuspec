@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Google.Api.Gax</id>
+    <version>3.2.0</version>
+    <title>Google API Extensions</title>
+    <authors>Google LLC</authors>
+    <owners>Google LLC</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="file">LICENSE</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>NuGetIcon.png</icon>
+    <projectUrl>https://github.com/googleapis/gax-dotnet</projectUrl>
+    <iconUrl>https://www.gstatic.com/images/branding/product/1x/google_developers_64dp.png</iconUrl>
+    <description>Support classes for Google API client libraries</description>
+    <copyright>Copyright 2020 Google LLC</copyright>
+    <tags>Google</tags>
+    <repository type="git" url="https://github.com/googleapis/gax-dotnet" commit="002f6637d17e4170f5db7ec7ca6f0163e6df1481" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.1">
+        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="1.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="12.0.3" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="1.0.0" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="12.0.3" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
