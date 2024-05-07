@@ -89,9 +89,14 @@ namespace API
 
                 //get the methods handle
                 RuntimeMethodHandle handle = methodInfo.MethodHandle;
-                      
+
                 //add handle to dictionary for future lookup
-                AttributeDictionary.DictMethodAttributeValue.Add(serializedAPIInfo, handle);
+
+                if (!AttributeDictionary.DictMethodAttributeValue.TryAdd(serializedAPIInfo, handle))
+                {
+                    Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodAttributeValue' failed");
+                }
+                             
 
                 //Return true or false depending on whether the attribute was found
                 return searchedAttribute;
@@ -186,7 +191,11 @@ namespace API
                     RuntimeMethodHandle handle = methodInfo.MethodHandle;
 
                     //add handle to dictionary for future lookup
-                    AttributeDictionary.DictMethodHasAttribute.Add(serializedAPIInfo, handle);
+                    if (!AttributeDictionary.DictMethodHasAttribute.TryAdd(serializedAPIInfo, handle))
+                    {
+                        Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodHasAttribute' failed");
+                    }
+                
 
                     //Return true or false depending on whether the attribute was found
                     return searchedAttribute != null;

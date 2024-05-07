@@ -152,7 +152,7 @@ namespace API
             else if (ApiServicesHelper.APIConfig.Settings_Type == "DB")
             {
                 apiConfiguration = ReadDBAppSettings(new ADO());
-
+                
                 if (version == null)
                 {
                     //update memcache

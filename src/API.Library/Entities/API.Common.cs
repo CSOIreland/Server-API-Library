@@ -502,6 +502,7 @@ namespace API
         /// </summary>
         internal static MethodInfo CheckAPICallsAllowed(string methodName, string methodPath, dynamic typeOfClassType)
         {
+           
             //create key for the dictionary
             dynamic jsonObj = new ExpandoObject();
             jsonObj.methodName = methodName;
@@ -543,7 +544,10 @@ namespace API
                             RuntimeMethodHandle handle = methodInfo.MethodHandle;
 
                             //add handle to dictionary for future lookup
-                            AttributeDictionary.AllowedAPIDictionary.Add(serializedAPIInfo, handle);
+                            if (!AttributeDictionary.AllowedAPIDictionary.TryAdd(serializedAPIInfo, handle))
+                           {
+                                Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'CheckAPICallsAllowed' failed");
+                           }
                             return methodInfo;
                         }
                     }

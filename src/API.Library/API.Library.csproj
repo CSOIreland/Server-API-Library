@@ -12,27 +12,12 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>7.0.0</Version>
+    <Version>7.0.1</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [ENHANCEMENT] removed references to classes that are not required for the API. They are now moved to different projects
-      - [BUG FIX] parse error function in restful had a default of " " instead of ""
-      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
-      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue
-      - [ENHANCEMENT] use method handle and static dictionary to speed up reflection lookup
-      - [BUG FIX] handle custom sql datatypes on non query procedure
-      - [BUG FIX] Dispose of database connection if it can't be opened
-      - [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
-      - [ENHANCEMENT] updated libraries -- sqlclient, enyim and log4net
-      - [ENHANCEMENT] move interfaces to interfaces directory
-      - [ENHANCEMENT] remove CustomPropertyAttributes.cs as now in CSOSanitiser
-      - [BUG FIX] removed  internal set bug --   public int API_ADO_BULKCOPY_TIMEOUT { get; internal set; }
-      - [ENHANCEMENT] change activity declaration type in Middleware/API.Middleware.
-      - [BUG FIX] parse error function in restful had a default of " " instead of ""
-      - [BUG FIX] changed accessibility level of MemcachedClient to be internal
-      - [ENHANCEMENT] added logging of networkusername when AD connectivity issue
+      - [BUG FIX] check that key is not already in attribute dictionarys
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
