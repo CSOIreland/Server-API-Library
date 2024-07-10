@@ -71,6 +71,11 @@ namespace API
                         cancelPerformance.Cancel(true);
                         Log.Instance.Info("performance thread cancelled");
                     }
+                    catch (Exception ex)
+                    {
+                        Log.Instance.Error("Something went wrong with performance thread");
+                        Log.Instance.Error(ex);
+                    }
                 });
 
 
@@ -263,33 +268,36 @@ namespace API
                 }
                 finally
                 {
-                    if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
+                    try
                     {
 
-                        //IF NO RESPONSE SENT AT ALL SEND 204 STATUS CODE
-                        if (!context.Response.HasStarted)
+                        if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
                         {
-                            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                            await context.Response.WriteAsync("");
+
+                            //IF NO RESPONSE SENT AT ALL SEND 204 STATUS CODE
+                            if (!context.Response.HasStarted)
+                            {
+                                context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                                await context.Response.WriteAsync("");
+                            }
                         }
-                    }
 
-                    apiCancellationToken.Cancel(true);
-                    apiCancellationToken.Dispose();
-                    // Terminate Performance collection
-                    cancelPerformance.Cancel(true);//safely cancel thread    
-                    cancelPerformance.Dispose();
-                    // Stop the activity
-                    activity.Stop();
-                    
-                    Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
-                    Log.Instance.Info("API Interface Closed");
+                        apiCancellationToken.Cancel(true);
+                        apiCancellationToken.Dispose();
+                        // Terminate Performance collection
+                        cancelPerformance.Cancel(true);//safely cancel thread    
+                        cancelPerformance.Dispose();
+                        // Stop the activity
+                        activity.Stop();
 
+                        Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
+                        Log.Instance.Info("API Interface Closed");
 
 
-                    if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
-                    {
-                       
+
+                        if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
+                        {
+
                             trace.TrcStatusCode = context.Response.StatusCode;
                             trace.TrcDuration = ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3));
                             trace.TrcMachineName = System.Environment.MachineName;
@@ -308,23 +316,30 @@ namespace API
 
                             Trace_ADO.Create(trace);
 
+                        }
+
+                        if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
+                        {
+                            //store the cache trace info
+                            CacheTrace_ADO.Create(cacheTraceDataTable.Value);
+                            cacheTraceDataTable.Value.Dispose();
+                            cacheTraceDataTable.Value = null;
+                        }
+
+                        if (ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
+                        {
+                            //store the database trace info
+                            DatabaseTrace_ADO.Create(databaseTraceDataTable.Value);
+                            databaseTraceDataTable.Value.Dispose();
+                            databaseTraceDataTable.Value = null;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Instance.Error("Something went wrong after response sent");
+                        Log.Instance.Error(ex);
                     }
 
-                    if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
-                    {
-                        //store the cache trace info
-                        CacheTrace_ADO.Create(cacheTraceDataTable.Value);
-                        cacheTraceDataTable.Value.Dispose();
-                        cacheTraceDataTable.Value = null;
-                    }
-
-                    if (ApiServicesHelper.DatabaseTracingConfiguration.API_DATABASE_TRACE_ENABLED)
-                    {
-                        //store the database trace info
-                        DatabaseTrace_ADO.Create(databaseTraceDataTable.Value);
-                        databaseTraceDataTable.Value.Dispose();
-                        databaseTraceDataTable.Value = null;
-                    }
                 }
             }
         }

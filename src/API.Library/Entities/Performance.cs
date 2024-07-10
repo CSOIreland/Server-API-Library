@@ -53,12 +53,17 @@ namespace API
                     performanceObj.MemoryAvailableMBytes = (int)Math.Round(memoryAvailableMBytes);
                     performanceObj.RequestsQueued = (int)Math.Round(requestsQueued);
                     performanceObj.RequestPerSec = (int)Math.Round(requestPerSec);
-                    performanceObj.DateTime = DateTime.Now.TrimToMinute(TimeSpan.TicksPerMinute); ;
+                    performanceObj.DateTime = DateTime.Now.TrimToMinute(TimeSpan.TicksPerMinute);
 
                     items.Add(performanceObj);
 
                     // Collect data every second
                     Thread.Sleep(1000);
+                }
+
+                if (cancelToken.IsCancellationRequested)
+                {
+                    Performance_ADO.Create(String.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE), items, ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED);
                 }
             }
             catch (ThreadAbortException e)
@@ -82,22 +87,7 @@ namespace API
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        ///  The bulk of the clean-up code is implemented in Dispose(bool)
-        /// </summary>
-        /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing)
-        {
-            // Store Perfromance
-            if (disposing)
-            {
-                // Store data
-                Performance_ADO.Create(String.IsNullOrEmpty(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE) ? new ADO() : new ADO(ApiServicesHelper.ADOSettings.API_PERFORMANCE_DATABASE), items, ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED);
-            }
         }
     }
 }

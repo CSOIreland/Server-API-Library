@@ -29,10 +29,12 @@
                 new ADO_inputParams() {name= "@TrcDuration",value=trace.TrcDuration},
                 new ADO_inputParams() {name= "@TrcStatusCode",value=trace.TrcStatusCode},
                 new ADO_inputParams() {name= "@TrcMachineName",value=trace.TrcMachineName},
-                new ADO_inputParams() {name= "@TrcRequestType", value = trace.TrcRequestType},
                 new ADO_inputParams() {name= "@TrcRequestVerb", value = trace.TrcRequestVerb},
                 new ADO_inputParams() {name= "@TrcCorrelationID", value = trace.TrcCorrelationID},
             };
+
+            if (!string.IsNullOrEmpty(trace.TrcRequestType))
+                    inputParamList.Add(new ADO_inputParams() { name = "@TrcRequestType", value = trace.TrcRequestType });
 
             if (trace.TrcJsonRpcErrorCode != null)
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcJsonRpcErrorCode", value = trace.TrcJsonRpcErrorCode });

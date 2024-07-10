@@ -110,6 +110,9 @@ namespace API
 
                     if (httpContext.Request.Method == "HEAD")
                     {
+
+                        trace.TrcRequestType = "HEAD";
+
                         httpContext.Response.Headers.Append("Cache-Control", "public");
 
                         if (!String.IsNullOrEmpty(result.mimeType))

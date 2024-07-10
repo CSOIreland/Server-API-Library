@@ -507,6 +507,7 @@ namespace API
             dynamic jsonObj = new ExpandoObject();
             jsonObj.methodName = methodName;
             jsonObj.methodPath = methodPath;
+            jsonObj.methodType = typeOfClassType.Name; //Fixes bug where previous RESTful call breaks subsequent JSON-rpc calls and vice versa
 
             string serializedAPIInfo = Utility.JsonSerialize_IgnoreLoopingReference(jsonObj);
 

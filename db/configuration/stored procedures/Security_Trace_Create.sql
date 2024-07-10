@@ -25,7 +25,7 @@ CREATE PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
 	,@TrcMachineName varchar(256)
 	,@TrcErrorPath varchar(1028) = null
 	,@TrcRequestVerb varchar(50)
-	,@TrcRequestType varchar(50)
+	,@TrcRequestType varchar(50) = null
 	,@TrcCorrelationID varchar(1028)
 	,@TrcJsonRpcErrorCode int  =null
 AS
