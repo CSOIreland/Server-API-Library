@@ -482,7 +482,7 @@ namespace API
 
         internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
         {
-            if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
+            if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
             {
                 //gather trace information
                 trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
