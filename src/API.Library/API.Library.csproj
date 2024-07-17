@@ -12,12 +12,19 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>7.0.5</Version>
+    <Version>7.0.6</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
 			- [BUG FIX] trace method and params not being recorded if cache trace disable
+      - [ENHANCEMENT] changed when trace gets its correlationID
+			- [ENHANCEMENT] removed threadAbortException as performance thread abort is handled in its own try catch. removed from middleware,static, jsonrpc and RESTful
+			- [BUG FIX] added try catch around dictionary tryadd function use
+			- [ENHANCEMENT] improved logging for jsonrpc and restful requests
+			- [BUG FIX] returnResponseAsync now raises OperationCanceledException rather than TaskCanceledException
+			-	[ENHANCEMENT] wrap performance thread creation in existing try catch block
+			- [BUG FIX] change from sending e.message to "Bad Request" in restful and static exception response
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -26,7 +33,8 @@
 	<ItemGroup>
 	  <Compile Remove="bin\**" />
 	  <EmbeddedResource Remove="bin\**" />
-	  <None Remove="bin\**" />
+	  <None Remove="
+          -bin\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -34,6 +42,7 @@
 	  <None Remove="Entities\ADO.cs~RF5780ef96.TMP" />
 	  <None Remove="Entities\API.Common.cs~RF1e6b9c0d.TMP" />
 	  <None Remove="Entities\MemCacheD.cs~RFcba3198.TMP" />
+	  <None Remove="Entities\MethodReader.cs~RF8645ca5e.TMP" />
 	  <None Remove="log4net.config" />
 	</ItemGroup>
 

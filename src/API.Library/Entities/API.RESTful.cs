@@ -98,6 +98,8 @@ namespace API
                 }
                 catch (Exception e)
                 {
+                    Log.Instance.Error(e);
+                    Log.Instance.Error(Utility.JsonSerialize_IgnoreLoopingReference(trace));
                     await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                 }
 
@@ -125,14 +127,14 @@ namespace API
                             httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                             httpContext.Response.Headers["expires"] = DateTime.Now.AddDays(1).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
                             httpContext.Response.Headers.Add("Last-Modified", DateTime.Now.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
-                         //   httpContext.Response.Headers["Cache-Control"] = "86400"; //one day
+                            //   httpContext.Response.Headers["Cache-Control"] = "86400"; //one day
                             httpContext.Response.ContentLength = 0;
                             await returnResponseAsync(httpContext, result.response, apiCancellationToken, result.statusCode);
                         }
                         else
                         {
                             httpContext.Response.StatusCode = (int)result.statusCode;
-                           await ParseError(httpContext, result.statusCode, apiCancellationToken,result.response);
+                            await ParseError(httpContext, result.statusCode, apiCancellationToken, result.response);
                         }
                     }
                     else if (result.statusCode == HttpStatusCode.OK)
@@ -178,20 +180,16 @@ namespace API
                         await ParseError(httpContext, result.statusCode, apiCancellationToken, result.response);
                     }
                 }
-
             }
             catch (OperationCanceledException e)
             {
                 //don't need to do anything here as operation has been cancelled
             }
-            catch (ThreadAbortException e)
-            {
-                // Thread aborted, do nothing
-                // The finally block will take care of everything safely
-            }
             catch (Exception e)
             {
+                Log.Instance.Fatal(Utility.JsonSerialize_IgnoreLoopingReference(trace));
                 Log.Instance.Fatal(e);
+                Log.Instance.Fatal(e.StackTrace);
                 await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }
@@ -287,7 +285,7 @@ namespace API
             {
                 Log.Instance.Fatal("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
                 Log.Instance.Fatal(e);
-                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, e.Message);
+                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Bad Request");
             }
         }
 

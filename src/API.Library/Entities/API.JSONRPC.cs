@@ -56,6 +56,7 @@ namespace API
             {
                 Log.Instance.Info("Starting JSONRPC processing");
 
+               
                 // Set HTTP Requests
                 httpGET = GetHttpGET(httpContext);
                 httpPOST = await GetHttpPOST(httpContext);
@@ -115,10 +116,12 @@ namespace API
                 }
                 catch (Exception e)
                 {
+                    Log.Instance.Error(e);
+                    Log.Instance.Error(Utility.JsonSerialize_IgnoreLoopingReference(trace));
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
                     await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken, trace);
                 }
-             
+                
 
                 if (result == null)
                 {
@@ -178,13 +181,9 @@ namespace API
             {
                 //don't need to do anything here as operation has been cancelled
             }
-            catch (ThreadAbortException e)
-            {
-                // Thread aborted, do nothing
-                // The finally block will take care of everything safely
-            }
             catch (Exception e)
             {
+                Log.Instance.Fatal(Utility.JsonSerialize_IgnoreLoopingReference(trace));
                 Log.Instance.Fatal(e);
                 Log.Instance.Fatal(e.StackTrace);
                 await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
@@ -405,6 +404,7 @@ namespace API
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(JSONRPC_Request);
+
             //Invoke the API Method
             return methodInfo.Invoke(null, new object[] { apiRequest });
         }

@@ -421,7 +421,7 @@ namespace API
             //check if already cancelled
             if (sourceToken.IsCancellationRequested)
             {
-                throw new TaskCanceledException();
+                throw new OperationCanceledException();
             }
 
             if (context.Response.HasStarted)
@@ -430,7 +430,7 @@ namespace API
 
                 if (sourceToken.IsCancellationRequested)
                 {
-                    throw new TaskCanceledException();
+                    throw new OperationCanceledException();
                 }
             }
             else
@@ -450,7 +450,7 @@ namespace API
 
                 if (sourceToken.IsCancellationRequested)
                 {
-                    throw new TaskCanceledException();
+                    throw new OperationCanceledException();
                 }
             }
         }
@@ -545,10 +545,19 @@ namespace API
                             RuntimeMethodHandle handle = methodInfo.MethodHandle;
 
                             //add handle to dictionary for future lookup
-                            if (!AttributeDictionary.AllowedAPIDictionary.TryAdd(serializedAPIInfo, handle))
-                           {
-                                Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'CheckAPICallsAllowed' failed");
-                           }
+
+                            try
+                            {
+                                if (!AttributeDictionary.AllowedAPIDictionary.TryAdd(serializedAPIInfo, handle))
+                                {
+                                    Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'CheckAPICallsAllowed' failed");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Instance.Error(ex); 
+                            }
+                         
                             return methodInfo;
                         }
                     }

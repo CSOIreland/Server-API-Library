@@ -331,12 +331,14 @@ namespace API
         result = JsonConvert.DeserializeObject<T>(@this, settings);
         return success;
     }
-    #endregion
+
     
     public static decimal StopWatchToSeconds(Stopwatch sw)
     {
             return decimal.Round((decimal)sw.Elapsed.TotalMilliseconds / 1000, 3);
     }
 
-  }
+     #endregion
+
+    }
 }

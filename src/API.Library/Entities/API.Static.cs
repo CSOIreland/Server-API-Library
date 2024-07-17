@@ -107,13 +107,11 @@ namespace API
             {
                 //don't need to do anything here as operation has been cancelled
             }
-            catch (ThreadAbortException e)
-            {
-                // Thread aborted, do nothing
-                // The finally block will take care of everything safely
-            }
             catch (Exception e)
             {
+                Log.Instance.Fatal(Utility.JsonSerialize_IgnoreLoopingReference(trace));
+                Log.Instance.Fatal(e);
+                Log.Instance.Fatal(e.StackTrace);
                 await returnResponseAsync(httpContext, "", apiCancellationToken, HttpStatusCode.InternalServerError);
             }
         }
@@ -197,7 +195,7 @@ namespace API
             {
                 Log.Instance.Fatal("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
                 Log.Instance.Fatal(e);
-                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, e.Message);
+                await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Bad Request");
             }
         }
 

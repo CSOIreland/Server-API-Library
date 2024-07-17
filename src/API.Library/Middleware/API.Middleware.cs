@@ -38,6 +38,7 @@ namespace API
             {
                 Trace trace = new Trace();
                 trace.TrcStartTime = DateTime.Now;
+                trace.TrcCorrelationID = activity.RootId;
 
                 // Start the activity Stopwatch
                 activity.Start();
@@ -59,30 +60,36 @@ namespace API
 
                 var cancelPerformance = new CancellationTokenSource();
 
-                Thread performanceThread = new Thread(() =>
-                {
-                    try
-                    {
-                        performanceCollector.CollectData(cancelPerformance.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        performanceCollector.Dispose();
-                        cancelPerformance.Cancel(true);
-                        Log.Instance.Info("performance thread cancelled");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Instance.Error("Something went wrong with performance thread");
-                        Log.Instance.Error(ex);
-                    }
-                });
-
+                
 
                 CancellationTokenSource apiCancellationToken = new CancellationTokenSource();
 
                 try
                 {
+                  
+                    
+                    Thread performanceThread = new Thread(() =>
+                    {
+                        try
+                        {
+                            performanceCollector.CollectData(cancelPerformance.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            performanceCollector.Dispose();
+                            cancelPerformance.Cancel(true);
+                            Log.Instance.Info("performance thread cancelled");
+                        }
+                        catch (Exception ex)
+                        {
+                            performanceCollector.Dispose();
+                            cancelPerformance.Cancel(true);
+                            Log.Instance.Error("Something went wrong with performance thread");
+                            Log.Instance.Error(ex);
+                        }
+                    });
+
+
                     if (ApiServicesHelper.CacheConfig.API_CACHE_TRACE_ENABLED)
                     {
                         if (cacheTraceDataTable.Value == null)
@@ -256,11 +263,6 @@ namespace API
                 {
                     //don't need to do anything here as operation has been cancelled
                 }
-                catch (ThreadAbortException e)
-                {
-                    // Thread aborted, do nothing
-                    // The finally block will take care of everything safely
-                }
                 catch (Exception ex)
                 {
                     Log.Instance.Fatal(ex);
@@ -293,8 +295,6 @@ namespace API
                         Log.Instance.Info("API Execution Time (s): " + ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3)).ToString());
                         Log.Instance.Info("API Interface Closed");
 
-
-
                         if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
                         {
 
@@ -303,7 +303,7 @@ namespace API
                             trace.TrcMachineName = System.Environment.MachineName;
                             trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
                             trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
-                            trace.TrcCorrelationID = activity.RootId;
+                         
                             //trace parameters
 
                             if (ActiveDirectory.IsAuthenticated(UserPrincipal))

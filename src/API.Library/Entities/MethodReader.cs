@@ -90,16 +90,22 @@ namespace API
                 //get the methods handle
                 RuntimeMethodHandle handle = methodInfo.MethodHandle;
 
-                //add handle to dictionary for future lookup
-
-                if (!AttributeDictionary.DictMethodAttributeValue.TryAdd(serializedAPIInfo, handle))
+                try 
                 {
-                    Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodAttributeValue' failed");
+                    //add handle to dictionary for future lookup
+                    if (!AttributeDictionary.DictMethodAttributeValue.TryAdd(serializedAPIInfo, handle))
+                    {
+                        Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodAttributeValue' failed");
+                    }
                 }
-                             
+                catch (Exception ex)
+                {
+                    Log.Instance.Error(ex);
+                }
 
-                //Return true or false depending on whether the attribute was found
-                return searchedAttribute;
+
+            //Return true or false depending on whether the attribute was found
+            return searchedAttribute;
             }
             catch
             {
@@ -189,13 +195,18 @@ namespace API
 
                     //get the methods handle
                     RuntimeMethodHandle handle = methodInfo.MethodHandle;
-
-                    //add handle to dictionary for future lookup
-                    if (!AttributeDictionary.DictMethodHasAttribute.TryAdd(serializedAPIInfo, handle))
+                    try
                     {
-                        Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodHasAttribute' failed");
+                        //add handle to dictionary for future lookup
+                        if (!AttributeDictionary.DictMethodHasAttribute.TryAdd(serializedAPIInfo, handle))
+                        {
+                            Log.Instance.Debug("Adding : " + serializedAPIInfo + " to dictionary 'DictMethodHasAttribute' failed");
+                        }
                     }
-                
+                    catch (Exception ex)
+                    {
+                        Log.Instance.Error(ex);
+                    }
 
                     //Return true or false depending on whether the attribute was found
                     return searchedAttribute != null;
