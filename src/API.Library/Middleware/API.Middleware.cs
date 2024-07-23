@@ -37,8 +37,20 @@ namespace API
             else
             {
                 Trace trace = new Trace();
-                trace.TrcStartTime = DateTime.Now;
-                trace.TrcCorrelationID = activity.RootId;
+
+                if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
+                {
+                    trace.TrcStartTime = DateTime.Now;
+                    trace.TrcCorrelationID = activity.RootId;
+                    trace.TrcMachineName = System.Environment.MachineName;
+                    trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
+                    trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
+                    trace.TrcContentLength = context.Request.ContentLength;
+                    trace.TrcReferrer = context.Request.Headers["Referer"].ToString();
+
+                  
+
+                }
 
                 // Start the activity Stopwatch
                 activity.Start();
@@ -300,16 +312,14 @@ namespace API
 
                             trace.TrcStatusCode = context.Response.StatusCode;
                             trace.TrcDuration = ((float)Math.Round(activity.Duration.TotalMilliseconds / 1000, 3));
-                            trace.TrcMachineName = System.Environment.MachineName;
-                            trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
-                            trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
-                         
+
                             //trace parameters
 
                             if (ActiveDirectory.IsAuthenticated(UserPrincipal))
                             {
                                 trace.TrcUsername = UserPrincipal.SamAccountName.ToString();
                             }
+
 
                             if (string.IsNullOrEmpty(trace.TrcMethod))
                                 trace.TrcErrorPath = MaskParameters(context.Request.Path.ToString());

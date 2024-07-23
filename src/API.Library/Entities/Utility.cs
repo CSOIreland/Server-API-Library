@@ -320,25 +320,29 @@ namespace API
         }
  
 
-    public static bool TryParseJson<T>(this string @this, out T result)
-    {
-        bool success = true;
-        var settings = new JsonSerializerSettings
+        public static bool TryParseJson<T>(this string @this, out T result)
         {
-            Error = (sender, args) => { success = false; args.ErrorContext.Handled = true; },
-            MissingMemberHandling = MissingMemberHandling.Error
-        };
-        result = JsonConvert.DeserializeObject<T>(@this, settings);
-        return success;
-    }
+            bool success = true;
+            var settings = new JsonSerializerSettings
+            {
+                Error = (sender, args) => { success = false; args.ErrorContext.Handled = true; },
+                MissingMemberHandling = MissingMemberHandling.Error
+            };
+            result = JsonConvert.DeserializeObject<T>(@this, settings);
+            return success;
+        }
 
     
-    public static decimal StopWatchToSeconds(Stopwatch sw)
-    {
-            return decimal.Round((decimal)sw.Elapsed.TotalMilliseconds / 1000, 3);
-    }
+        public static decimal StopWatchToSeconds(Stopwatch sw)
+        {
+                return decimal.Round((decimal)sw.Elapsed.TotalMilliseconds / 1000, 3);
+        }
 
-     #endregion
+        public static bool IsValidStatusCode(int code)
+        {
+            return Enum.IsDefined(typeof(HttpStatusCode), code);
+        }
+        #endregion
 
     }
 }

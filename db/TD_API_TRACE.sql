@@ -15,6 +15,8 @@
     [TRC_ERROR_PATH] VARCHAR(1024) NULL,
     [TRC_CORRELATION_ID] VARCHAR(1024) null,
     [TRC_JSONRPC_ERROR_CODE] int null,
+    [TRC_CONTENT_LENGTH] BIGINT NULL, 
+    [TRC_REFERER] VARCHAR(MAX) NULL, 
     PRIMARY KEY CLUSTERED ([TRC_ID] ASC)
 )
 
@@ -108,3 +110,21 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'TD_API_TRACE',
     @level2type = N'COLUMN',
     @level2name = N'TRC_JSONRPC_ERROR_CODE'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'stores the referrer information',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TD_API_TRACE',
+    @level2type = N'COLUMN',
+    @level2name = N'TRC_REFERER'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'stores the lenght of the request',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TD_API_TRACE',
+    @level2type = N'COLUMN',
+    @level2name = N'TRC_CONTENT_LENGTH'

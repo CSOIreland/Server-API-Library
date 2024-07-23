@@ -71,6 +71,10 @@ namespace API
                 {
                     await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                 }
+                else if (!Utility.IsValidStatusCode((int)result.statusCode))
+                {
+                    await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
+                }
                 else if (result.statusCode == HttpStatusCode.OK)
                 {
                    

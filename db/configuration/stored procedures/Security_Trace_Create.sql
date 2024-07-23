@@ -8,16 +8,18 @@ Records Request information from the API
 
 REVISION HISTORY 
 ---------------- 
+REVIEW NO.    DATE          CHANGED BY         COMMENTS 
+1			23/07/2024		Stephen Lane	added content length and referrer
 
 PEER REVIEW HISTORY 
 ------------------- 
 REVIEW NO.    DATE          REVIEWED BY         COMMENTS 
 
 *************************************************************************************/
-CREATE PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
+CREATE or alter PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
 	,@TrcParams NVARCHAR(2048)  = null
 	,@TrcIp VARCHAR(15) = NULL
-	,@TrcUseragent VARCHAR(2048)
+	,@TrcUseragent VARCHAR(2048)  = NULL
 	,@Username NVARCHAR(256) = NULL
 	,@TrcStartTime datetime
 	,@TrcDuration decimal(18,3)
@@ -28,6 +30,8 @@ CREATE PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
 	,@TrcRequestType varchar(50) = null
 	,@TrcCorrelationID varchar(1028)
 	,@TrcJsonRpcErrorCode int  =null
+	,@TrcContentLength bigint  =null
+	,@TrcReferrer varchar(max)  =null
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -47,7 +51,9 @@ BEGIN
 		,TRC_REQUEST_VERB
 		,TRC_ERROR_PATH
 		,TRC_CORRELATION_ID
-		,TRC_JSONRPC_ERROR_CODE)
+		,TRC_JSONRPC_ERROR_CODE
+		,TRC_CONTENT_LENGTH
+		,TRC_REFERER)
 	VALUES (
 		 @TrcMethod
 		,@TrcParams
@@ -64,6 +70,8 @@ BEGIN
 		,@TrcErrorPath
 		,@TrcCorrelationID
 		,@TrcJsonRpcErrorCode
+		,@TrcContentLength
+		,@TrcReferrer
 		)
 
 	RETURN 1

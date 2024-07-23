@@ -24,14 +24,20 @@
             Log.Instance.Info("Trace information : " + Utility.JsonSerialize_IgnoreLoopingReference(trace));
             List<ADO_inputParams> inputParamList = new List<ADO_inputParams>()
             {
-                new ADO_inputParams() {name= "@TrcUseragent",value=trace.TrcUseragent},
                 new ADO_inputParams() {name= "@TrcStartTime",value=trace.TrcStartTime},
                 new ADO_inputParams() {name= "@TrcDuration",value=trace.TrcDuration},
                 new ADO_inputParams() {name= "@TrcStatusCode",value=trace.TrcStatusCode},
                 new ADO_inputParams() {name= "@TrcMachineName",value=trace.TrcMachineName},
                 new ADO_inputParams() {name= "@TrcRequestVerb", value = trace.TrcRequestVerb},
                 new ADO_inputParams() {name= "@TrcCorrelationID", value = trace.TrcCorrelationID},
+                new ADO_inputParams() {name= "@TrcContentLength", value = trace.TrcContentLength}
             };
+
+            if (!string.IsNullOrEmpty(trace.TrcUseragent))
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcUseragent", value = trace.TrcUseragent });
+
+            if (!string.IsNullOrEmpty(trace.TrcReferrer))
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcReferrer", value = trace.TrcReferrer });
 
             if (!string.IsNullOrEmpty(trace.TrcRequestType))
                     inputParamList.Add(new ADO_inputParams() { name = "@TrcRequestType", value = trace.TrcRequestType });

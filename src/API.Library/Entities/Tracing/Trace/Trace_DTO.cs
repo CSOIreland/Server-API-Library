@@ -73,9 +73,24 @@
         public string TrcCorrelationID { get; set; }
 
         /// <summary>
-        /// request josn rpc error code
+        /// request json rpc error code
         /// </summary>
         public int? TrcJsonRpcErrorCode { get; set; }
+
+
+        /// <summary>
+        /// request referrer
+        /// </summary>
+        public string TrcReferrer { get; set; }
+
+
+        /// <summary>
+        /// request content length
+        /// </summary>
+        public long? TrcContentLength { get; set; }
+        
         #endregion
+
+
     }
 }
