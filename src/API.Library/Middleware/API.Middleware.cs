@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 using System.Diagnostics;
 using System.Net;
@@ -7,17 +8,16 @@ namespace API
 {
     public class APIMiddleware : Common
     {
-
         private readonly RequestDelegate _next;
         public static AsyncLocal<DataTable> cacheTraceDataTable = new AsyncLocal<DataTable>();
         public static AsyncLocal<DataTable> databaseTraceDataTable = new AsyncLocal<DataTable>();
         public static AsyncLocal<string> correlationID = new AsyncLocal<string>();
 
-        public APIMiddleware(RequestDelegate next) : base()
+		public APIMiddleware(RequestDelegate next) : base()
         {
             _next = next;
-        }
-
+        }        
+        
         public async Task InvokeAsync(HttpContext context)
         {
             // Initiate the activity
@@ -67,14 +67,10 @@ namespace API
 
                 Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
 
-
-                PerformanceCollector performanceCollector = new PerformanceCollector();
-
-                var cancelPerformance = new CancellationTokenSource();
-
-                
-
-                CancellationTokenSource apiCancellationToken = new CancellationTokenSource();
+                //makes sure always disposed
+                using var performanceCollector = new PerformanceCollector();
+                using var cancelPerformance = new CancellationTokenSource();
+                using var apiCancellationToken = new CancellationTokenSource();
 
                 try
                 {

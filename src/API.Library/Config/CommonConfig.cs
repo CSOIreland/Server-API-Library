@@ -104,27 +104,26 @@ namespace API
         }
   
 
-        public static void deployUpdate(IADO ado, decimal? inMemoryVersion, string configType)
+        public static void deployUpdate( decimal? inMemoryVersion, string configType)
         {
+
+           
             var inputParamList = new List<ADO_inputParams>()
-                {
-                    new ADO_inputParams() {name= "@app_settings_version", value = inMemoryVersion},
-                    new ADO_inputParams() {name= "@config_setting_type", value = configType}
-                };
+            {
+               new ADO_inputParams() {name= "@app_settings_version", value = inMemoryVersion},
+               new ADO_inputParams() {name= "@config_setting_type", value = configType}
+            };
 
             var retParam = new ADO_returnParam();
             retParam.name = "return";
             retParam.value = 0;
-
+            IADO ado = new ADO(); 
             try
             {
-                ado.StartTransaction();
                 ado.ExecuteNonQueryProcedure("App_Setting_Deploy_Update", inputParamList, ref retParam);
-                ado.CommitTransaction();
             }
             catch (Exception ex)
             {
-                ado.RollbackTransaction();
                 //log the audit insert failed but no need to raise error.
                 Log.Instance.Fatal("failed to insert into App_Setting_Deploy_Update : version - " + inMemoryVersion + " , config_setting_type - "+ configType + "");
                 Log.Instance.Fatal(ex.ToString());
@@ -132,7 +131,7 @@ namespace API
             finally
             {
                 //now close the connection
-                ado.CloseConnection(true);
+                ado.Dispose();
             }
         }
 

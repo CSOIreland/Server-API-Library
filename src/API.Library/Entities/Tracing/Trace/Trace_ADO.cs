@@ -1,4 +1,6 @@
-﻿namespace API
+﻿using Microsoft.IdentityModel.Tokens;
+
+namespace API
 {
     /// <summary>
     /// ADO classes for Trace
@@ -29,9 +31,11 @@
                 new ADO_inputParams() {name= "@TrcStatusCode",value=trace.TrcStatusCode},
                 new ADO_inputParams() {name= "@TrcMachineName",value=trace.TrcMachineName},
                 new ADO_inputParams() {name= "@TrcRequestVerb", value = trace.TrcRequestVerb},
-                new ADO_inputParams() {name= "@TrcCorrelationID", value = trace.TrcCorrelationID},
-                new ADO_inputParams() {name= "@TrcContentLength", value = trace.TrcContentLength}
+                new ADO_inputParams() {name= "@TrcCorrelationID", value = trace.TrcCorrelationID}
             };
+
+            if (trace.TrcContentLength != null)
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcContentLength", value = trace.TrcContentLength });
 
             if (!string.IsNullOrEmpty(trace.TrcUseragent))
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcUseragent", value = trace.TrcUseragent });

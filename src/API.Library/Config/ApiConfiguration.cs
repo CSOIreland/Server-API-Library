@@ -173,11 +173,31 @@ namespace API
             {
                 new ADO_inputParams() { name = "@app_settings_version", value = inMemoryVersion ?? (object)System.DBNull.Value },
             };
+
+            var dictionary = new Dictionary<string, string>();
+
+
             try
             {
                 // No transaction required
                 output = ado.ExecuteReaderProcedure("Api_Settings_Read", paramList);
 
+                foreach (var c in output.data[0])
+                {
+                    if (dictionary.ContainsKey(c.API_KEY))
+                    {
+                        Log.Instance.Fatal("Duplicate API Config Key detected : " + c.API_KEY);
+                    }
+                    else
+                    {
+                        dictionary.Add(c.API_KEY, c.API_VALUE);
+                    }               
+                }
+
+                var tVersion = output.data[1];
+                inMemoryVersion = tVersion[0].max_version_number;
+
+                CommonConfig.deployUpdate(inMemoryVersion, "API");
             }
             catch (Exception ex)
             {
@@ -186,26 +206,6 @@ namespace API
                 //version number not found in database
                 throw ex;
             }
-
-            var dictionary = new Dictionary<string, string>();
-
-            foreach (var c in output.data[0])
-            {
-                if (dictionary.ContainsKey(c.API_KEY))
-                {
-                    Log.Instance.Fatal("Duplicate API Config Key detected : " + c.API_KEY);
-                }
-                else
-                {
-                    dictionary.Add(c.API_KEY, c.API_VALUE);
-                }               
-            }
-
-            var tVersion = output.data[1];
-            inMemoryVersion = tVersion[0].max_version_number;
-
-            CommonConfig.deployUpdate(ado, inMemoryVersion, "API");
-
             return dictionary;
         }
     }

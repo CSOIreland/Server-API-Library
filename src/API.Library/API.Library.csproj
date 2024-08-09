@@ -12,12 +12,17 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>7.0.8</Version>
+    <Version>7.0.10</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [ENHANCEMENT] added referrer and content length to api trace
+      - [ENHANCEMENT] refactored configuration insert to deployupdate table
+      - [ENHANCEMENT]  removed scoped ADO as never used 
+      - [ENHANCEMENT]refactored to use a using statement 
+        > using var performanceCollector = new PerformanceCollector();
+        > using var cancelPerformance = new CancellationTokenSource();
+        > using var apiCancellationToken = new CancellationTokenSource();
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>

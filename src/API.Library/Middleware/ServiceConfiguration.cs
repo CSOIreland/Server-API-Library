@@ -51,7 +51,7 @@ namespace API
             service.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
             service.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
-            service.AddScoped<IADO, ADO>();
+           // service.AddScoped<IADO, ADO>();
 
             var sp = service.BuildServiceProvider();
             var ADOSettings = sp.GetService<IOptions<ADOSettings>>();
@@ -93,6 +93,7 @@ namespace API
                 //load APP config here as if can't load application wont work
                 ApiServicesHelper.AppConfiguration = sp.GetRequiredService<IAppConfiguration>();
             }
+
             bool isStateless = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]);
             if (!isStateless)
             {

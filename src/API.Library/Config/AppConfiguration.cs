@@ -133,39 +133,41 @@ namespace API
             {
                 new ADO_inputParams() { name = "@app_settings_version", value = inMemoryVersion ?? (object)System.DBNull.Value },
             };
+
+            var dictionary = new Dictionary<string, string>();
+
+
             try
             {
                 // No transaction required
                 output = ado.ExecuteReaderProcedure("App_Settings_Read", paramList);
+                    
+                foreach (var c in output.data[0])
+                {
+                    if (dictionary.ContainsKey(c.APP_KEY))
+                    {
+                        Log.Instance.Fatal("Duplicate APP Config Key detected : " + c.APP_KEY);
+                    }
+                    else
+                    {
+                        dictionary.Add(c.APP_KEY, c.APP_VALUE);
+                    }
+                }
+
+                var tVersion = output.data[1];
+                inMemoryVersion = tVersion[0].max_version_number;
+
+                CommonConfig.deployUpdate( inMemoryVersion, "APP");
 
             }
             catch (Exception ex)
             {
-                ado.CloseConnection();
+                ado.Dispose();
                 Log.Instance.Fatal(ex.ToString());
                 //version number not found in database
                 throw ex;
             }
 
-            var dictionary = new Dictionary<string, string>();
-
-
-            foreach (var c in output.data[0])
-            {
-                if (dictionary.ContainsKey(c.APP_KEY))
-                {
-                    Log.Instance.Fatal("Duplicate APP Config Key detected : " + c.APP_KEY);
-                }
-                else
-                {
-                    dictionary.Add(c.APP_KEY, c.APP_VALUE);
-                }
-            }
-
-            var tVersion = output.data[1];
-            inMemoryVersion = tVersion[0].max_version_number;
-
-            CommonConfig.deployUpdate(ado, inMemoryVersion, "APP");
 
             return dictionary;
         }
