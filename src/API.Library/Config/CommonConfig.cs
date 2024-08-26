@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace API
 {
@@ -93,7 +96,9 @@ namespace API
                         }
                         else
                         {
-                            dictionary.Add(val.Key, val.Value);
+                         
+                            var combinedValue = CombineSectionValues(val);
+                            dictionary.Add(val.Key, combinedValue);
                         }
                     }
                 }
@@ -102,12 +107,35 @@ namespace API
                 return dictionary;
             }
         }
-  
+
+
+       // Method to recursively combine section values into a JSON string
+       public static string CombineSectionValues(IConfigurationSection section)
+        {
+            // Get the children of the current section
+            var children = section.GetChildren();
+
+            // If there are no children, return the section value
+            if (!children.Any())
+            {
+                return section.Value;
+            }
+
+            // Create a JSON object to hold the combined values
+            var jsonObject = new JObject();
+
+            // Recursively process each child section
+            foreach (var child in children)
+            {
+                jsonObject[child.Key] = CombineSectionValues(child);
+            }
+
+            // Convert the JSON object to a string and return it
+            return jsonObject.ToString();
+        }
 
         public static void deployUpdate( decimal? inMemoryVersion, string configType)
-        {
-
-           
+        {          
             var inputParamList = new List<ADO_inputParams>()
             {
                new ADO_inputParams() {name= "@app_settings_version", value = inMemoryVersion},
