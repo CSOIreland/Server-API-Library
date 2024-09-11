@@ -37,6 +37,9 @@ namespace API
             {
                 return _CacheSettingsDelegate.CurrentValue.API_MEMCACHED_ENABLED;
             }
+            set{
+                _CacheSettingsDelegate.CurrentValue.API_MEMCACHED_ENABLED = value;
+            }
         }
 
         public bool API_CACHE_TRACE_ENABLED

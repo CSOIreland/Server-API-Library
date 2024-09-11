@@ -88,6 +88,7 @@ namespace API
                             if (inMemoryVersion != Convert.ToDecimal(val.Value))
                             {
                                 Log.Instance.Fatal("" + ConfigType + " : Configuration version not found for version " + inMemoryVersion);
+                                return null;
                             }
                         }
                         if (dictionary.ContainsKey(val.Key))

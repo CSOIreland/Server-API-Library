@@ -33,17 +33,15 @@ namespace API
                 var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
                 var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
 
-                ServerStats stats = ApiServicesHelper.MemcachedClient.Stats();
-
                 try
                 {
+                    ServerStats stats = ApiServicesHelper.MemcachedClient.Stats();            
                     var upTime = stats.GetUptime(new IPEndPoint(IPAddress.Parse(address), int.Parse(port)));
                 }
                 catch (Exception ex)
                 {
                     Log.Instance.Fatal(ex);
                     Log.Instance.Fatal("Memcache has not returned any stats data. Memcache may be unavailable");
-
                 }
             }
         }

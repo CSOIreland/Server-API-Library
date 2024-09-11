@@ -1,4 +1,5 @@
 ﻿using Enyim.Caching;
+using Enyim.Caching.Memcached;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -40,7 +41,20 @@ namespace API
             service.Configure<BlockedRequests>(builder.Configuration.GetSection("Blocked_Requests"));
             service.Configure<APIPerformanceSettings>(builder.Configuration.GetSection("APIPerformanceSettings"));
 
-            service.AddEnyimMemcached();
+            bool memcachedFailedtoLoad = false;
+            try
+            {
+                service.AddEnyimMemcached();
+            }
+            catch (Exception ex)
+            {
+                Log.Instance.Fatal(ex);
+                Log.Instance.Fatal("Memcache failed to load");
+                memcachedFailedtoLoad = true;
+            }
+         
+
+
             service.AddSingleton<ICacheConfig, CacheConfig>();
             service.AddSingleton<IApiConfiguration, ApiConfiguration>();
             service.AddSingleton<IAppConfiguration, APPConfiguration>();
@@ -73,25 +87,54 @@ namespace API
             ApiServicesHelper.APIPerformanceSettings = sp.GetRequiredService<IAPIPerformanceConfiguration>();
             ApiServicesHelper.DatabaseTracingConfiguration = sp.GetRequiredService<IDatabaseTracingConfiguration>();
 
+
             //setup memcache here
-            ApiServicesHelper.CacheConfig = sp.GetRequiredService<ICacheConfig>();
-            ApiServicesHelper.MemcachedClient = sp.GetRequiredService<IMemcachedClient>();
-            ApiServicesHelper.CacheD = sp.GetRequiredService<ICacheD>();
+            try
+            {
+                ApiServicesHelper.CacheConfig = sp.GetRequiredService<ICacheConfig>();
+                ApiServicesHelper.MemcachedClient = sp.GetRequiredService<IMemcachedClient>();
+                ApiServicesHelper.CacheD = sp.GetRequiredService<ICacheD>();
+                ServerStats stats = ApiServicesHelper.CacheD.GetStats();
+                if (stats == null)
+                {
+                    throw new Exception("Error reading memcache stats");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Instance.Fatal(ex);
+                Log.Instance.Fatal("Memcache failed to load");
+                memcachedFailedtoLoad = true;
+            }
+
+            //if memcached failed to load then mark it as disabled
+            if (memcachedFailedtoLoad == true)
+            {
+                ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED = false;
+            }
+
 
             //we need to load API config here as needed for application to work.
             ApiServicesHelper.ApiConfiguration = sp.GetRequiredService<IApiConfiguration>();
             if (ApiServicesHelper.ApiConfiguration.Settings == null)
             {
-                ApiServicesHelper.ApplicationLoaded = false;
+                throw new Exception("API Settings failed to load");
             }
+     
+    
 
             ApiServicesHelper.WebUtility = sp.GetRequiredService<IWebUtility>();
             ApiServicesHelper.ActiveDirectory = sp.GetRequiredService<IActiveDirectory>();
 
-            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
+            if (ApiServicesHelper.APPConfig.enabled)
             {
                 //load APP config here as if can't load application wont work
                 ApiServicesHelper.AppConfiguration = sp.GetRequiredService<IAppConfiguration>();
+
+                if (ApiServicesHelper.AppConfiguration.Settings == null)
+                {
+                    throw new Exception("APP Settings failed to load");
+                }
             }
 
             bool isStateless = Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]);

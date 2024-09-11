@@ -97,16 +97,21 @@ namespace API
             ApiServicesHelper.ApiConfiguration = builder.Services.GetService<IApiConfiguration>();
             if (ApiServicesHelper.ApiConfiguration.Settings == null)
             {
-                ApiServicesHelper.ApplicationLoaded = false;
+                throw new Exception("API Settings failed to load");
             }
 
             ApiServicesHelper.WebUtility = builder.Services.GetService<IWebUtility> ();
             ApiServicesHelper.ActiveDirectory = builder.Services.GetService<IActiveDirectory>();
 
-            if (ApiServicesHelper.APPConfig.enabled && ApiServicesHelper.ApplicationLoaded)
+            if (ApiServicesHelper.APPConfig.enabled)
             {
                 //load APP config here as if can't load application wont work
                 ApiServicesHelper.AppConfiguration = builder.Services.GetService<IAppConfiguration>();
+
+                if (ApiServicesHelper.AppConfiguration.Settings == null)
+                {
+                    throw new Exception("APP Settings failed to load");
+                }
             }
 
             Log.Instance.Info("All API setup completed");

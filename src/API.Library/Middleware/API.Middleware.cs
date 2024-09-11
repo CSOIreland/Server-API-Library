@@ -28,17 +28,10 @@ namespace API
             //set asynclocal value
             correlationID.Value = activity.RootId.ToString();
 
-            if (!ApiServicesHelper.ApplicationLoaded)
-            {
-                Log.Instance.Fatal("No API configuration loaded.");
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                await context.Response.WriteAsync("");
-            }
-            else
-            {
-                Trace trace = new Trace();
+           
+            Trace trace = new Trace();
 
-                if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
+           if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
                 {
                     trace.TrcStartTime = DateTime.Now;
                     trace.TrcCorrelationID = activity.RootId;
@@ -52,30 +45,27 @@ namespace API
 
                 }
 
-                // Start the activity Stopwatch
-                activity.Start();
+           // Start the activity Stopwatch
+           activity.Start();
 
                
-                Log.Instance.Info("API Interface Opened");
+           Log.Instance.Info("API Interface Opened");
 
-                // Thread a PerfomanceCollector
+           // Thread a PerfomanceCollector
 
-                /// <summary>
+           /// <summary>
                 /// Flag to indicate if Performance is enabled 
                 /// </summary>
-                bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
+           bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
-                Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
+           Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
 
-                //makes sure always disposed
-                using var performanceCollector = new PerformanceCollector();
-                using var cancelPerformance = new CancellationTokenSource();
-                using var apiCancellationToken = new CancellationTokenSource();
+           //makes sure always disposed
+           using var performanceCollector = new PerformanceCollector();
+           using var cancelPerformance = new CancellationTokenSource();
+           using var apiCancellationToken = new CancellationTokenSource();
 
-                try
-                {
-                  
-                    
+           try{   
                     Thread performanceThread = new Thread(() =>
                     {
                         try
@@ -266,20 +256,13 @@ namespace API
                             await returnResponseAsync(context, "", apiCancellationToken, HttpStatusCode.BadRequest);
                             break;
                     }
-                }
-                catch (OperationCanceledException e)
-                {
-                    //don't need to do anything here as operation has been cancelled
-                }
-                catch (Exception ex)
-                {
-                    Log.Instance.Fatal(ex);
-                    await returnResponseAsync(context, "", apiCancellationToken, HttpStatusCode.InternalServerError);
-                }
-                finally
-                {
-                    try
-                    {
+           }catch (OperationCanceledException e){
+             //don't need to do anything here as operation has been cancelled
+           }catch (Exception ex){
+                Log.Instance.Fatal(ex);
+                await returnResponseAsync(context, "", apiCancellationToken, HttpStatusCode.InternalServerError);
+           }finally{
+                try{
 
                         if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
                         {
@@ -339,15 +322,12 @@ namespace API
                             databaseTraceDataTable.Value.Dispose();
                             databaseTraceDataTable.Value = null;
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Instance.Error("Something went wrong after response sent");
-                        Log.Instance.Error(ex);
-                    }
-
+                }catch (Exception ex){
+                    Log.Instance.Error("Something went wrong after response sent");
+                    Log.Instance.Error(ex);
                 }
-            }
+
+           }
         }
     }
 }

@@ -12,12 +12,17 @@
     <PackageId>API.Library</PackageId>
     <Product>API Library</Product>
     <Copyright>Central Statistics Office, Ireland</Copyright>
-    <Version>7.0.13</Version>
+    <Version>7.0.14</Version>
     <Authors>Central Statistics Office, Ireland</Authors>
     <SignAssembly>False</SignAssembly>
     <RepositoryUrl>https://github.com/CSOIreland/Server-API-Library</RepositoryUrl>
     <PackageReleaseNotes>
-      - [LIBRARY UPDATE] upgraded microsoft.data.sqlclient to 5.2.2  
+      - [ENHANCEMENT] updated code to allow application pool to start if memcache is unavailable
+      - [ENHANCEMENT] removed ApplicationLoaded flag from api as if there is no API config loaded on application startup then let an exception be thrown that is not caught
+      - [ENHANCEMENT] updated ICacheConfig to allow API_MEMCACHED_ENABLED to be set in Code
+      - [ENHANCEMENT] updated MemCacheD constructor to have the stats query within try catch Block
+      - [ENHANCEMENT] updated ConsoleConfiguration.cs to remove ApplicationLoaded flag
+      - [BUG FIX] updated ReadJSONSettings to return null if the version that is being looked for is not there
     </PackageReleaseNotes>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
@@ -36,6 +41,7 @@
 	  <None Remove="Entities\MemCacheD.cs~RFcba3198.TMP" />
 	  <None Remove="Entities\MethodReader.cs~RF8645ca5e.TMP" />
 	  <None Remove="log4net.config" />
+	  <None Remove="Middleware\ServiceConfiguration.cs~RF1c6e307d.TMP" />
 	</ItemGroup>
 
 	<ItemGroup>

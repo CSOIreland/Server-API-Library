@@ -7,10 +7,6 @@ namespace API
 {
     public class ApiServicesHelper
     {
-        /// <summary>
-        /// indicator to indicate if the api config has loaded successfully
-        /// </summary>
-        public static bool ApplicationLoaded { get; set; } = true;
         public static IConfiguration Configuration { get; set; }
         public static ServiceProvider ServiceProvider { get; set; }
 
