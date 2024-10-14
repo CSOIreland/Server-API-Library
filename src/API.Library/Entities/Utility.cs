@@ -4,6 +4,10 @@ using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Konscious.Security.Cryptography;
+using System.DirectoryServices.ActiveDirectory;
+using System.Threading;
+using System;
 
 namespace API
 {
@@ -41,10 +45,11 @@ namespace API
         }
 
         /// <summary>
-        /// Geberate the SHA256 hash of the input parameter
+        /// Generate the SHA256 hash of the input parameter
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
+        [ObsoleteAttribute("This property is obsolete. Use NewProperty GetArgon2SHA256.", false)]
         public static string GetSHA256(string input)
         {
             // Create a SHA256   
@@ -64,6 +69,148 @@ namespace API
 
                 return hashSHA256;
             }
+        }
+
+
+
+        /// <summary>
+        /// Generate the SHA256 hash of the input parameter using argon2 and a salt
+        /// uses https://github.com/kmaragon/Konscious.Security.Cryptography
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static string GetArgon2SHA256(string input)
+        {
+
+            //declare minimum allowable values
+            //number between 1 and 10. -- High-security scenarios: 4–10 iterations (more iterations increase the time cost, making attacks more difficult).
+            const int minNumIterations = 4;
+
+            //Moderate-security scenarios: 64 MB (65536 KB) to 128 MB (131072 KB).
+            // High - security scenarios: 256 MB(262144 KB) to 1 GB(1048576 KB) for sensitive data.
+            const int minMemorySize = 65536; //64mb of memory
+
+            //Low - security scenarios: 1–2(single - threaded hashing).
+            //High - security scenarios: 4–8, depending on available CPU cores.For stronger security,
+            //  it's recommended to align this with the number of cores on your system.
+
+            //min set as 1 as every machine will have 1 thread
+            const int minDegreeOfParallelism = 1;
+
+            var argon2 = new Argon2id(Encoding.UTF8.GetBytes(input));
+
+            var salt = ApiServicesHelper.ApiConfiguration.Settings["API_ENCRYPTION_SALT"];
+            var sDegreeOfParallelism = ApiServicesHelper.ApiConfiguration.Settings["API_ENCRYPTION_DEGREEE_OF_PARALLELISM"];
+            var sMemorySize = ApiServicesHelper.ApiConfiguration.Settings["API_ENCRYPTION_MEMORYSIZE"];
+            var sIterations = ApiServicesHelper.ApiConfiguration.Settings["API_ENCRYPTION_ITERATIONS"];
+
+
+            if (string.IsNullOrEmpty(salt))
+            {
+                throw new Exception("API_ENCRYPTION_SALT must be defined");
+            }
+
+            int iDegreeOfParallelism = 0;
+            if (!string.IsNullOrEmpty(sDegreeOfParallelism))
+            {
+                //check its a number
+                bool DegreeOfParallelismFlag = int.TryParse(sDegreeOfParallelism, out iDegreeOfParallelism);
+
+                if (!DegreeOfParallelismFlag)
+                {
+                    throw new Exception("API_ENCRYPTION_DEGREEE_OF_PARALLELISM must be a valid number");
+
+                }
+            }
+            else
+            {
+                //minimum number of threads to use.
+                iDegreeOfParallelism = minDegreeOfParallelism;
+            }
+
+            int iMemorySize = 0;
+            if (!string.IsNullOrEmpty(sMemorySize))
+            {
+                //check its a number
+                bool MemorySizeFlag = int.TryParse(sMemorySize, out iMemorySize);
+
+                if (!MemorySizeFlag)
+                {
+                    throw new Exception("API_ENCRYPTION_MEMORYSIZE must be a valid number");
+
+                }
+            }
+            else
+            {
+                //default value of 64mb memory
+                iMemorySize = minMemorySize;
+            }
+
+            int iIterations = 0;
+            if (!string.IsNullOrEmpty(sIterations))
+            {
+                //check its a number
+                bool IterationsFlag = int.TryParse(sIterations, out iIterations);
+
+                if (!IterationsFlag)
+                {
+                    throw new Exception("API_ENCRYPTION_ITERATIONS must be a valid number");
+
+                }
+            }
+            else
+            {
+                //minimum number of iteration required
+                iIterations = minNumIterations;
+            }
+
+            if(iDegreeOfParallelism < minDegreeOfParallelism)
+            {
+                iDegreeOfParallelism = minDegreeOfParallelism; //mandatory minimum value
+                Log.Instance.Error("The number for DegreeOfParallelism specified for encryption is using the default value, as value supplied is to small");
+            }
+
+            if (iMemorySize < minMemorySize)
+            {
+                iMemorySize = minMemorySize; //mandatory minimum memory size of 64mb 
+                Log.Instance.Error("The number for MemorySize specified for encryption is using the default value, as value supplied is to small");
+            }
+
+            if (iIterations < minNumIterations)
+            {
+                iIterations = minNumIterations; //mandatory number of iterations for security
+                Log.Instance.Error("The number of iterations specified for encryption is using the default value, as value supplied is to small");
+            }
+
+            argon2.Salt = Encoding.UTF8.GetBytes(salt);
+            argon2.DegreeOfParallelism = iDegreeOfParallelism; //number of thread;
+            argon2.MemorySize = iMemorySize; //memory in KB (64mb)
+            argon2.Iterations = iIterations; //number of iterations
+
+            // generate the hash
+            return Convert.ToBase64String(argon2.GetBytes(32)); //256 but hash
+        }
+
+
+        /// <summary>
+        /// Verify that new hash is equal to existing hash
+        /// /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static bool VerifyArgon2SHA256(string input, string expectedHash)
+        {
+
+            string newSha256 = GetArgon2SHA256(input);
+
+            //if hashes are the same thrn return true
+            if (newSha256.Equals(expectedHash)) {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
         }
 
         /// <summary>

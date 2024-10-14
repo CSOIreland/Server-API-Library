@@ -117,7 +117,8 @@ namespace API
                     context.Request.EnableBuffering();
                     string incomingUrl = context.Request.Path.ToString();
                     var requestMethod = context.Request.Method;
-
+                    //set the trace verb
+                    trace.TrcRequestVerb = requestMethod;
 
                     if (ApiServicesHelper.BlockedRequests.urls != null)
                     {
@@ -133,8 +134,7 @@ namespace API
                             }
                         }
                     }
-                    //set the trace verb
-                    trace.TrcRequestVerb = requestMethod;
+                
 
                     incomingUrl = incomingUrl.ToLower();
                     switch (true)
@@ -301,7 +301,9 @@ namespace API
 
 
                             if (string.IsNullOrEmpty(trace.TrcMethod))
+                            {
                                 trace.TrcErrorPath = MaskParameters(context.Request.Path.ToString());
+                            }
 
                             Trace_ADO.Create(trace);
 

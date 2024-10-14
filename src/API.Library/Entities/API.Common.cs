@@ -479,13 +479,23 @@ namespace API
             }
             return sessionCookie;
         }
-
-        internal void GatherTraceInformation(dynamic apiRequest, Trace trace)
+        
+        internal void GatherTraceInformation(IRequest apiRequest, Trace trace)
         {
             if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
             {
+                Type type = apiRequest.GetType();
+                if (type == typeof(JSONRPC_API))
+                {
+                    trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
+                }
+                else if (type == typeof(RESTful_API) || type == typeof(Static_API))
+                {
+                    //in non jsonrpc its a list of strings
+                    trace.TrcParams = MaskParameters(apiRequest.parameters[0]);
+                }
+
                 //gather trace information
-                trace.TrcParams = MaskParameters(apiRequest.parameters.ToString());
                 trace.TrcIp = apiRequest.ipAddress;
                 trace.TrcUseragent = apiRequest.userAgent;
                 trace.TrcMethod = apiRequest.method;
