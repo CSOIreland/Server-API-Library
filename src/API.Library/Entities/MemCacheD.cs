@@ -3,7 +3,8 @@ using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Net;
-
+using System.Text;
+using System.Security.Cryptography;
 
 namespace API
 {
@@ -259,7 +260,7 @@ namespace API
                 // Append the SALSA code
                 input.Add("salsa", API_MEMCACHED_SALSA);
 
-                hashKey = Utility.GetSHA256(Utility.JsonSerialize_IgnoreLoopingReference(input));
+                hashKey = GetSHA256(Utility.JsonSerialize_IgnoreLoopingReference(input));
                 return hashKey;
             }
             catch (Exception e)
@@ -408,6 +409,76 @@ namespace API
             }
         }
 
+
+        /// <summary>
+        /// Store a record for BSO with a cache lock
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="nameSpace"></param>
+        /// <param name="className"></param>
+        /// <param name="methodName"></param>
+        /// <param name="inputDTO"></param>
+        /// <param name="data"></param>
+        /// <param name="expiresAt"></param>
+        /// <param name="validFor"></param>
+        /// <param name="repository"></param>
+        /// <returns></returns>
+        private bool Store_BSO_REMOVELOCK<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, TimeSpan validFor, string repository)
+        {
+            try
+            {
+
+                // Check if it's enabled first
+                if (!IsEnabled())
+                {
+                    return false;
+                }
+
+                //check if cachelock is enabled
+                if (!ApiServicesHelper.CacheConfig.API_CACHE_LOCK_ENABLED)
+                {
+                    return false;
+                }
+
+                // Validate Expiry parameters
+                if (!ValidateExpiry(ref expiresAt, ref validFor))
+                {
+                    return false;
+                }
+
+                // Get the Key
+                string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
+
+                // Get the Value
+                MemCachedD_Value value = SetValue(data, expiresAt, validFor);
+
+                // Store the Value by Key
+                if (Store(key, value, validFor, repository))
+                {
+                    //Unlock the meta cache
+                    string metaKey = GenerateKey_BSO(nameSpace + ApiServicesHelper.CacheConfig.API_CACHE_LOCK_PREFIX, className, methodName, inputDTO);
+                    MemCachedD_Value mvalue = new();
+                    mvalue.data = "false";
+
+                    Log.Instance.Info("Remove Cache lock for correlation ID " + APIMiddleware.correlationID.Value);
+                    //expire cache immediately
+                    Store(metaKey, mvalue, TimeSpan.Zero, null);
+                    return true;
+                }
+                else
+                {
+                    string dtoSerialized = Utility.JsonSerialize_IgnoreLoopingReference(inputDTO);
+                    throw new Exception(String.Format($"Memcache Store_ADO: Cache store failed for namespace {0}, className {1},methodName {2},dto {3}", nameSpace, className, methodName, dtoSerialized));
+
+                }              
+            }
+            catch (Exception ex)
+            {
+                Log.Instance.Error(ex.Message);
+                return false;
+            }
+        }
+
         /// <summary>
         /// Store a record for BSO with a expiry date
         /// </summary>
@@ -423,6 +494,25 @@ namespace API
         public bool Store_BSO<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, string repository = null)
         {
             return Store_BSO<T>(nameSpace, className, methodName, inputDTO, data, expiresAt, new TimeSpan(0), repository);
+        }
+
+
+        /// <summary>
+        /// Stores a BSO record using the semaphore method to prevent cache stampede
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="semaConfig"></param>
+        /// <param name="nameSpace"></param>
+        /// <param name="className"></param>
+        /// <param name="methodName"></param>
+        /// <param name="inputDTO"></param>
+        /// <param name="data"></param>
+        /// <param name="expiresAt"></param>
+        /// <param name="repository"></param>
+        /// <returns></returns>
+        public bool Store_BSO_REMOVELOCK<T>(string nameSpace, string className, string methodName, T inputDTO, dynamic data, DateTime expiresAt, string repository = null)
+        {
+            return Store_BSO_REMOVELOCK<T>(nameSpace, className, methodName, inputDTO, data, expiresAt, TimeSpan.Zero, repository);
         }
 
         /// <summary>
@@ -941,12 +1031,179 @@ namespace API
         }
 
         /// <summary>
+        /// Gets a BSO value. Uses the semaphore method
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="nameSpace"></param>
+        /// <param name="className"></param>
+        /// <param name="methodName"></param>
+        /// <param name="inputDTO"></param>
+        /// <returns></returns>
+        public MemCachedD_Value Get_BSO_WITHLOCK<T>(string nameSpace, string className, string methodName, T inputDTO)
+        {
+            // Create a MemcachedD_Value object to be returned
+            MemCachedD_Value returnValue = new MemCachedD_Value();
+
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return returnValue;
+            }
+
+            //check if cachelock is enabled
+            if (!ApiServicesHelper.CacheConfig.API_CACHE_LOCK_ENABLED)
+            {
+                return returnValue;
+            }
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            try
+            {
+                //tracing variables
+                bool cacheLockUsed = false;
+                decimal? cacheLockDuration = null;
+
+                int? cacheTraceCompressLength = null;
+                DateTime traceStart = DateTime.Now;
+                bool successTraceFlag = true;
+                DateTime? traceExpiresAt = null;
+                      
+                // Get the Key of what is being looked for
+                string key = GenerateKey_BSO(nameSpace, className, methodName, inputDTO);
+
+                //get meta cache key
+                string metaKey = GenerateKey_BSO(nameSpace + ApiServicesHelper.CacheConfig.API_CACHE_LOCK_PREFIX, className, methodName, inputDTO);
+
+                //Is there a meta cache key and is it true?
+                MemCachedD_Value metaValue = Get(metaKey);      
+
+                if (metaValue.hasData)
+                {
+                    //There's a metacache entry 
+                    if (metaValue.data.ToString().Equals("true"))
+                    {
+                        cacheLockUsed = true;
+
+                        Log.Instance.Info("Correlation ID : " + APIMiddleware.correlationID.Value + " is waiting for cache item");
+                        Stopwatch swPoll = new();
+                        //MetaCache is locked - wait until it's scheduled to go free
+                        //poll the meta cache every "API_CACHE_LOCK_POLL_INTERVAL" seconds
+                        TimeSpan ts = metaValue.expiresAt - DateTime.Now;
+                        swPoll.Start();
+                        while (ts.TotalSeconds > 0 && swPoll.ElapsedMilliseconds / 1000 <= ts.TotalSeconds)
+                        {
+
+                            metaValue = Get(metaKey);
+
+                            //if it doesnt have data or total time elapsed then exit loop
+                            if (!metaValue.hasData)
+                            {
+                                Log.Instance.Info("Cache lock loop has been exited as lock has been removed for correlation ID " + APIMiddleware.correlationID.Value);
+                                //lock has been removed so try again
+                                swPoll.Stop();
+
+                                cacheLockDuration = Utility.StopWatchToSeconds(swPoll);
+                                returnValue = Get(key, cacheLockDuration, cacheLockUsed);
+                             
+
+                                returnValue.cacheLockDuration = cacheLockDuration;
+                                returnValue.cacheLockUsed = cacheLockUsed;
+                                return returnValue;
+                            }
+
+                            //pause the loop
+                            Thread.Sleep(ApiServicesHelper.CacheConfig.API_CACHE_LOCK_POLL_INTERVAL);
+                        }
+
+                        swPoll.Stop();
+                        //if time elapsed
+                        if (swPoll.ElapsedMilliseconds / 1000 >= ts.TotalSeconds)
+                        {
+                            Log.Instance.Info("Cache lock loop has been exited as time elapsed for correlation ID " + APIMiddleware.correlationID.Value);
+                            //time has elapsed and lock has not beed removed 
+
+                            cacheLockDuration = Utility.StopWatchToSeconds(swPoll);
+
+                            //record cache trace
+
+                            sw.Stop();
+                            var duration = Utility.StopWatchToSeconds(sw);
+
+                            JObject obj = new JObject
+                                {
+                                  new JProperty("key",key)
+                                 };
+
+                            var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+
+                            Log.Instance.Info("Memcache get Execution Time (s): " + duration + " Key : " + serializedObj);
+                            CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "GET_WITH_LOCK", successTraceFlag, cacheTraceCompressLength, traceExpiresAt, cacheLockDuration, cacheLockUsed);
+
+                            returnValue.cacheLockDuration = cacheLockDuration;
+                            returnValue.cacheLockUsed = cacheLockUsed;
+
+                            return returnValue;
+                        }
+                    }
+                }
+                else
+                {
+
+                    //Cache is not locked so check if key exists
+                    returnValue = Get(key);
+
+                    //if key has data then return
+                    if (returnValue.hasData)
+                    {
+                        return returnValue;
+                    }
+                    else
+                    {
+                        //key does not have data so add a lock to the cache to alleviate cache stampede
+                        metaCacheLock(metaKey);
+                        return returnValue;
+                    }
+                }
+            }
+            finally
+            {
+                //tidyup 
+                sw.Stop();
+            }
+
+            return returnValue;
+        }
+
+
+        /// <summary>
+        /// lock the cache item
+        /// </summary>
+        /// <param name="metaKey"></param>
+        /// <returns></returns>
+        private void metaCacheLock(string metaKey)
+        {
+            //create a lock on the meta cache
+            MemCachedD_Value mvalue = new();
+            mvalue.data = "true";
+            mvalue.hasData = true;
+            //ApiServicesHelper.CacheConfig.API_CACHE_LOCK_MAX_TIME is in milliseconds - timespan is in 100 nanosecond ticks
+            TimeSpan tstore = new TimeSpan(0, 0, ApiServicesHelper.CacheConfig.API_CACHE_LOCK_MAX_TIME);
+            //The cache will be locked until it is unlocked, however a short max time is included for safety reasons
+            mvalue.expiresAt = DateTime.Now.AddSeconds(ApiServicesHelper.CacheConfig.API_CACHE_LOCK_MAX_TIME);
+
+            Log.Instance.Info("Add Cache lock for correlation ID " + APIMiddleware.correlationID.Value);
+            Store(metaKey, mvalue, tstore, null);
+        }
+
+
+        /// <summary>
         /// Get the Value
         /// </summary>
         /// <typeparam name="MemCachedD_Value"></typeparam>
         /// <param name="key"></param>
         /// <returns></returns>
-        private MemCachedD_Value Get(string key)
+        private MemCachedD_Value Get(string key, decimal? cacheLockDuration = null, bool cacheLockUsed = false)
         {
             MemCachedD_Value value = new MemCachedD_Value();
 
@@ -999,8 +1256,7 @@ namespace API
                     bool isSubKey = IsSubKey(cache.data, key);
 
                     // double check the cache record is still valid if not cleared by the garbage collector
-                    if (cacheExpiresAt > DateTime.Now
-                    || cacheDateTime.AddSeconds(cacheValidFor.TotalSeconds) > DateTime.Now)
+                    if (cacheExpiresAt > DateTime.Now || cacheDateTime.AddSeconds(cacheValidFor.TotalSeconds) > DateTime.Now)
                     {
                         // Set properties
                         value.datetime = cacheDateTime;
@@ -1065,7 +1321,7 @@ namespace API
                 var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
 
                 Log.Instance.Info("Memcache get Execution Time (s): " + duration + " Key : " + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "GET", successTraceFlag, cacheTraceCompressLength, traceExpiresAt);
+                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, duration, "GET", successTraceFlag, cacheTraceCompressLength, traceExpiresAt, cacheLockDuration,cacheLockUsed);
             }
 
             return value;
@@ -1307,24 +1563,23 @@ namespace API
             }
 
             // Cache cannot be in the past
-            if (expiresAt < DateTime.Now
-                || validFor.Ticks < 0)
+            if (expiresAt < DateTime.Now || validFor.Ticks < 0)
             {
-                Log.Instance.Info("WARNING: Cache Validity cannot be in the past");
+                Log.Instance.Error("WARNING: Cache Validity cannot be in the past");
                 return false;
             }
 
             if (expiresAt > DateTime.Now.Add(maxTimeSpan))
             {
                 // Override the TimeSpan with the max validity if it exceeds the max length allowed by MemCacheD
-                Log.Instance.Info("WARNING: Cache Validity reduced to max 30 days (2592000 sec)");
+                Log.Instance.Error("WARNING: Cache Validity reduced to max 30 days (2592000 sec)");
                 expiresAt = DateTime.Now.Add(maxTimeSpan);
             }
 
             if (validFor > maxTimeSpan)
             {
                 // Override the TimeSpan with the max validity if it exceeds the max length allowed by MemCacheD
-                Log.Instance.Info("WARNING: Cache Validity reduced to max 30 days (2592000 sec)");
+                Log.Instance.Error("WARNING: Cache Validity reduced to max 30 days (2592000 sec)");
                 validFor = maxTimeSpan;
             }
 
@@ -1342,6 +1597,31 @@ namespace API
 
             return true;
             #endregion
+        }
+
+        /// <summary>
+        /// GetSHA256 Hashing function for memcache (efficient)
+        /// </summary>
+        /// <param name="input"></param>
+        private static string GetSHA256(string input)
+        {
+            // Create a SHA256   
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                // ComputeHash - returns byte array  
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+                // Convert byte array to a string   
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+
+                string hashSHA256 = builder.ToString();
+
+                return hashSHA256;
+            }
         }
 
     }
@@ -1377,6 +1657,18 @@ namespace API
         /// </summary>
         public dynamic data { get; set; }
 
+
+        /// <summary>
+        /// cacheLockUsed to determine if cache lock was used or not
+        /// </summary>
+        public bool cacheLockUsed = false;
+
+
+        /// <summary>
+        /// cacheLockDuration to indicate how long lock was in place for
+        /// </summary>
+        public decimal? cacheLockDuration;
+
         #endregion
 
         /// <summary>
@@ -1390,6 +1682,9 @@ namespace API
             validFor = new TimeSpan(0);
             hasData = false;
             data = null;
+            cacheLockUsed = false;
+            cacheLockDuration = null;
         }
     }
+
 }

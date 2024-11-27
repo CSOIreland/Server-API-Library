@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>System.DirectoryServices.AccountManagement</id>
+    <version>8.0.1</version>
+    <authors>Microsoft</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>Icon.png</icon>
+    <readme>PACKAGE.md</readme>
+    <projectUrl>https://dot.net/</projectUrl>
+    <description>Provides uniform access and manipulation of user, computer, and group security principals across the multiple principal stores: Active Directory Domain Services (AD DS), Active Directory Lightweight Directory Services (AD LDS), and Machine SAM (MSAM).</description>
+    <releaseNotes>https://go.microsoft.com/fwlink/?LinkID=799421</releaseNotes>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <serviceable>true</serviceable>
+    <repository type="git" url="https://github.com/dotnet/runtime" commit="81cabf2857a01351e5ab578947c7403a5b128ad1" />
+    <dependencies>
+      <group targetFramework="net6.0">
+        <dependency id="System.Configuration.ConfigurationManager" version="8.0.1" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices.Protocols" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices" version="8.0.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net7.0">
+        <dependency id="System.Configuration.ConfigurationManager" version="8.0.1" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices.Protocols" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices" version="8.0.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="System.Configuration.ConfigurationManager" version="8.0.1" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices.Protocols" version="8.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.DirectoryServices" version="8.0.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="System.Security.Principal.Windows" version="5.0.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.DirectoryServices.AccountManagement" targetFramework=".NETFramework4.6.2" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

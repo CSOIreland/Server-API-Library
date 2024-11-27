@@ -287,8 +287,8 @@ namespace API
                // Deserialize JSON to an Object dynamically
                JSONRPC_Request = Utility.JsonDeserialize_IgnoreLoopingReference<JSONRPC_Request>(request);
             } catch (Exception e){
-                Log.Instance.Fatal(request);
-                Log.Instance.Fatal(e);
+                Log.Instance.Error(request);
+                Log.Instance.Error(e);
 
                 var error = new JSONRPC_Error { code = -32700 };
                 await ParseError(httpContext, null, error, sourceToken,trace);

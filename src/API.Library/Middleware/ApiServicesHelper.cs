@@ -20,7 +20,7 @@ namespace API
 
         public static APPConfig APPConfig;
 
-        public static CacheSettings CacheSettings;
+      //  public static CacheSettings CacheSettings;
 
         public static ICacheConfig CacheConfig;
 

@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Konscious.Security.Cryptography.Blake2</id>
+    <version>1.1.1</version>
+    <authors>Keef Aragon</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <projectUrl>https://github.com/kmaragon/Konscious.Security.Cryptography</projectUrl>
+    <description>An implementation of Blake2 for .NET that integrates with the standard crypto libraries</description>
+    <copyright>(c) 2024 Keef Aragon</copyright>
+    <tags>crypto cryptography hash blake2 blake2b</tags>
+    <repository type="git" url="https://github.com/kmaragon/Konscious.Security.Cryptography.git" commit="4ed95a5377e411506ca6868409b5c7d7ecaa859b" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="System.Numerics.Vectors" version="4.5.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net6.0" />
+      <group targetFramework="net8.0" />
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="NETStandard.Library" version="1.6.1" exclude="Build,Analyzers" />
+        <dependency id="System.Numerics.Vectors" version="4.5.0" exclude="Build,Analyzers" />
+        <dependency id="System.Security.Cryptography.Algorithms" version="4.3.1" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="Microsoft.CSharp" targetFramework=".NETFramework4.6" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.6" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

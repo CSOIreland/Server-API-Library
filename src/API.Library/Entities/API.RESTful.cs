@@ -286,8 +286,8 @@ namespace API
             }
             catch (Exception e)
             {
-                Log.Instance.Fatal("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
-                Log.Instance.Fatal(e);
+                Log.Instance.Error("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
+                Log.Instance.Error(e);
                 await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Bad Request");
             }
         }

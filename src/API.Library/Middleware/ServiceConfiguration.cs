@@ -33,7 +33,29 @@ namespace API
 
             builder.Services.AddHttpContextAccessor();
 
-            service.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
+            service.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"))
+                .AddOptions<CacheSettings>()
+                .ValidateDataAnnotations()
+                .Validate(config =>
+                {
+                    if (config.API_MEMCACHED_ENABLED)
+                    {
+
+                        if (!ConfigValidation.cacheSalsaValidation(config))
+                        {
+                            return false;
+                        }
+
+
+                        return ConfigValidation.cacheLockValidation(config);
+
+                    }
+                    return true;
+                });
+
+
+
+
             service.Configure<ADOSettings>(builder.Configuration.GetSection("ADOSettings"));
             service.Configure<APIConfig>(builder.Configuration.GetSection("API_Config"));
             service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));
@@ -52,7 +74,7 @@ namespace API
                 Log.Instance.Fatal("Memcache failed to load");
                 memcachedFailedtoLoad = true;
             }
-         
+
 
 
             service.AddSingleton<ICacheConfig, CacheConfig>();
@@ -65,7 +87,7 @@ namespace API
             service.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
             service.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
 
-           // service.AddScoped<IADO, ADO>();
+            // service.AddScoped<IADO, ADO>();
 
             var sp = service.BuildServiceProvider();
             var ADOSettings = sp.GetService<IOptions<ADOSettings>>();
@@ -73,7 +95,7 @@ namespace API
             var BlockedRequests = sp.GetService<IOptions<BlockedRequests>>();
             var APIConfig = sp.GetService<IOptions<APIConfig>>();
             var APPConfig = sp.GetService<IOptions<APPConfig>>();
-            var CacheSettings = sp.GetService<IOptions<CacheSettings>>();
+            //     var CacheSettings = sp.GetService<IOptions<CacheSettings>>();
 
             ApiServicesHelper.ServiceProvider = sp;
             ApiServicesHelper.Configuration = builder.Configuration;
@@ -82,7 +104,8 @@ namespace API
             ApiServicesHelper.BlockedRequests = BlockedRequests.Value;
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
-            ApiServicesHelper.CacheSettings = CacheSettings.Value;
+
+            ///       ApiServicesHelper.CacheSettings = CacheSettings.Value;
 
             ApiServicesHelper.APIPerformanceSettings = sp.GetRequiredService<IAPIPerformanceConfiguration>();
             ApiServicesHelper.DatabaseTracingConfiguration = sp.GetRequiredService<IDatabaseTracingConfiguration>();
@@ -99,6 +122,11 @@ namespace API
                 {
                     throw new Exception("Error reading memcache stats");
                 }
+            }
+            catch (ConfigurationException ex)
+            {
+                Log.Instance.Fatal(ex);
+                throw;
             }
             catch (Exception ex)
             {
@@ -120,8 +148,8 @@ namespace API
             {
                 throw new Exception("API Settings failed to load");
             }
-     
-    
+
+
 
             ApiServicesHelper.WebUtility = sp.GetRequiredService<IWebUtility>();
             ApiServicesHelper.ActiveDirectory = sp.GetRequiredService<IActiveDirectory>();
@@ -160,5 +188,6 @@ namespace API
 
             return builder;
         }
-    }
+
+    } 
 }

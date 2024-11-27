@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Konscious.Security.Cryptography.Argon2</id>
+    <version>1.3.1</version>
+    <authors>Keef Aragon</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <projectUrl>https://github.com/kmaragon/Konscious.Security.Cryptography</projectUrl>
+    <description>An implementation of Argon2 winner of PHC
+
+https://password-hashing.net/#argon2
+
+Usage follows standard types found in System.Security.Cryptography in corefx. Specifically DeriveBytes.
+
+C# Implementation of the Argon2 1.3 spec with variants for Argon2i, Argon2d, and Argon2id</description>
+    <copyright>(c) 2024 Keef Aragon</copyright>
+    <tags>crypto cryptography argon2 argon2i argon2d argon2id password</tags>
+    <repository type="git" url="https://github.com/kmaragon/Konscious.Security.Cryptography.git" commit="4ed95a5377e411506ca6868409b5c7d7ecaa859b" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="Konscious.Security.Cryptography.Blake2" version="1.1.1" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net6.0">
+        <dependency id="Konscious.Security.Cryptography.Blake2" version="1.1.1" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="Konscious.Security.Cryptography.Blake2" version="1.1.1" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="Konscious.Security.Cryptography.Blake2" version="1.1.1" exclude="Build,Analyzers" />
+        <dependency id="NETStandard.Library" version="1.6.1" exclude="Build,Analyzers" />
+        <dependency id="System.IO.UnmanagedMemoryStream" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

@@ -59,7 +59,20 @@
         public uint API_MEMCACHED_MAX_SIZE { get; set; }
         public bool API_MEMCACHED_ENABLED { get; set; }
         public bool API_CACHE_TRACE_ENABLED { get; set; }
+        public CacheLockSettings API_CACHE_LOCK_SETTINGS { get; set; }
     }
+
+
+    public class CacheLockSettings
+    {
+        public bool API_CACHE_LOCK_ENABLED { get; set; }
+
+        public int API_CACHE_LOCK_POLL_INTERVAL { get; set; }
+        public string API_CACHE_LOCK_PREFIX { get; set; }
+        public int API_CACHE_LOCK_MAX_TIME { get; set; }
+
+    }
+
 
     public class APIPerformanceSettings
     {

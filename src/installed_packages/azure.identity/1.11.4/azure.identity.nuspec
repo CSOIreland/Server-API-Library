@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Azure.Identity</id>
+    <version>1.11.4</version>
+    <authors>Microsoft</authors>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <icon>azureicon.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/Azure/azure-sdk-for-net/blob/Azure.Identity_1.11.4/sdk/identity/Azure.Identity/README.md</projectUrl>
+    <description>This is the implementation of the Azure SDK Client Library for Azure Identity</description>
+    <releaseNotes>https://github.com/Azure/azure-sdk-for-net/blob/Azure.Identity_1.11.4/sdk/identity/Azure.Identity/CHANGELOG.md</releaseNotes>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>Microsoft Azure Identity windowsazureofficial azureofficial</tags>
+    <repository type="git" url="https://github.com/Azure/azure-sdk-for-net" commit="2856f9a00d6cb96f71b724d29b1ce8ce271c4137" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Azure.Core" version="1.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Identity.Client" version="4.61.3" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Identity.Client.Extensions.Msal" version="4.61.3" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.4" exclude="Build,Analyzers" />
+        <dependency id="System.Security.Cryptography.ProtectedData" version="4.7.0" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Json" version="4.7.2" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

@@ -1,4 +1,5 @@
 ﻿using Enyim.Caching;
+using Enyim.Caching.Memcached;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -20,6 +21,8 @@ namespace API
             //log name of the machine for identification purposes
             log4net.GlobalContext.Properties["MachineName"] = System.Environment.MachineName;
 
+            bool memcachedFailedtoLoad = false;
+
 
             var builder = Host.CreateDefaultBuilder()
                .ConfigureAppConfiguration(builder =>
@@ -28,7 +31,22 @@ namespace API
                    builder.AddConfiguration(configuration);
                }).ConfigureServices(ser =>
                {
-                   ser.AddEnyimMemcached();
+
+                   try
+                   {
+                       ser.AddEnyimMemcached();
+                   }
+                   catch (Exception ex)
+                   {
+                       Log.Instance.Fatal(ex);
+                       Log.Instance.Fatal("Memcache failed to load");
+                       memcachedFailedtoLoad = true;
+                   }
+
+
+
+
+            
                    ser.AddSingleton<ICacheConfig, CacheConfig>();
 
                    ser.AddSingleton<IApiConfiguration, ApiConfiguration>();
@@ -51,7 +69,23 @@ namespace API
                        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                    });
                    ser.AddHttpContextAccessor();
-                   ser.Configure<CacheSettings>(configuration.GetSection("CacheSettings"));
+
+                   ser.Configure<CacheSettings>(configuration.GetSection("CacheSettings"))
+                   .AddOptions<CacheSettings>()
+                   .ValidateDataAnnotations()
+                   .Validate(config =>
+                   {
+                       if (config.API_MEMCACHED_ENABLED)
+                       {
+                            if (!ConfigValidation.cacheSalsaValidation(config))
+                            {
+                                return false;
+                            }
+                            return ConfigValidation.cacheLockValidation(config);
+                        }
+                        return true;
+                    });
+
                    ser.Configure<ADOSettings>(configuration.GetSection("ADOSettings"));
                    ser.Configure<APIConfig>(configuration.GetSection("API_Config"));
                    ser.Configure<APPConfig>(configuration.GetSection("APP_Config"));
@@ -82,15 +116,34 @@ namespace API
             ApiServicesHelper.BlockedRequests = BlockedRequests.Value;
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
-            ApiServicesHelper.CacheSettings = CacheSettings.Value;
+          //  ApiServicesHelper.CacheSettings = CacheSettings.Value;
 
             ApiServicesHelper.APIPerformanceSettings = builder.Services.GetRequiredService<IAPIPerformanceConfiguration>();
             ApiServicesHelper.DatabaseTracingConfiguration = builder.Services.GetRequiredService<IDatabaseTracingConfiguration>();
 
             //setup memcache here
-            ApiServicesHelper.CacheConfig = builder.Services.GetRequiredService<ICacheConfig>();
-            ApiServicesHelper.MemcachedClient = builder.Services.GetRequiredService<IMemcachedClient>();
-            ApiServicesHelper.CacheD = builder.Services.GetRequiredService<ICacheD>();
+            try
+            {
+                ApiServicesHelper.CacheConfig = builder.Services.GetRequiredService<ICacheConfig>();
+                ApiServicesHelper.MemcachedClient = builder.Services.GetRequiredService<IMemcachedClient>();
+                ApiServicesHelper.CacheD = builder.Services.GetRequiredService<ICacheD>();
+                ServerStats stats = ApiServicesHelper.CacheD.GetStats();
+                if (stats == null)
+                {
+                    throw new Exception("Error reading memcache stats");
+                }
+            }
+            catch (ConfigurationException ex)
+            {
+                Log.Instance.Fatal(ex);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log.Instance.Fatal(ex);
+                Log.Instance.Fatal("Memcache failed to load");
+                memcachedFailedtoLoad = true;
+            }
 
 
             //we need to load API config here as needed for application to work.
