@@ -44,7 +44,7 @@ namespace API
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcReferrer", value = trace.TrcReferrer });
 
             if (!string.IsNullOrEmpty(trace.TrcRequestType))
-                    inputParamList.Add(new ADO_inputParams() { name = "@TrcRequestType", value = trace.TrcRequestType });
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcRequestType", value = trace.TrcRequestType });
 
             if (trace.TrcJsonRpcErrorCode != null)
                 inputParamList.Add(new ADO_inputParams() { name = "@TrcJsonRpcErrorCode", value = trace.TrcJsonRpcErrorCode });
@@ -65,17 +65,20 @@ namespace API
             if (!string.IsNullOrEmpty(trace.TrcUsername))
                 inputParamList.Add(new ADO_inputParams() { name = "@Username", value = trace.TrcUsername });
 
+            if (trace.TrcResponseContentLength !=null)
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcResponseContentLength", value = trace.TrcResponseContentLength });
+
+            if (trace.TrcCacheUsed != null)
+                inputParamList.Add(new ADO_inputParams() { name = "@TrcCacheUsed", value = trace.TrcCacheUsed });
+
             // A return parameter is required for the operation
             ADO_returnParam retParam = new ADO_returnParam();
             retParam.name = "return";
             retParam.value = 0;
             try
             {
-                ado.StartTransaction();
                 //Executing the stored procedure
                 ado.ExecuteNonQueryProcedure("Security_Trace_Create", inputParamList, ref retParam);
-
-                ado.CommitTransaction();
 
                 if (retParam.value != 1)
                 {

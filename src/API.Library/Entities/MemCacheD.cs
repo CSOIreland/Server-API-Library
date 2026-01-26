@@ -1,10 +1,14 @@
-﻿using Enyim.Caching.Memcached;
+﻿using Enyim.Caching;
+using Enyim.Caching.Memcached;
+using Microsoft.Graph.Models.CallRecords;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Dynamic;
+using System.Formats.Tar;
 using System.Net;
-using System.Text;
+using System.Reflection;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace API
 {
@@ -28,19 +32,30 @@ namespace API
 
         public MemCacheD()
         {
-            //test to see if memcache is working
+
             if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED)
             {
-                var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
-                var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
-
                 try
                 {
-                    ServerStats stats = ApiServicesHelper.MemcachedClient.Stats();            
-                    var upTime = stats.GetUptime(new IPEndPoint(IPAddress.Parse(address), int.Parse(port)));
+                    //test to see if memcache is working
+
+
+                    ServerStats stats = ApiServicesHelper.MemcachedClient.Stats();
+
+                    var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
+                    var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
+
+                    TimeSpan upTime = stats.GetUptime(new DnsEndPoint(address, int.Parse(port)));
+
+
+                    if (upTime == TimeSpan.Zero)
+                    {
+                        Log.Instance.Fatal("Memcache has not returned any stats data. Memcache may be unavailable");
+                    }
                 }
                 catch (Exception ex)
                 {
+                    ApiServicesHelper.MemcachedClient = null;
                     Log.Instance.Fatal(ex);
                     Log.Instance.Fatal("Memcache has not returned any stats data. Memcache may be unavailable");
                 }
@@ -59,7 +74,7 @@ namespace API
             /// </summary>
             Log.Instance.Info("MemCacheD Enabled: " + ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED);
 
-            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED)
+            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED && ApiServicesHelper.MemcachedClient != null)
             {
                 return true;
             }
@@ -571,52 +586,62 @@ namespace API
 
                     // Cast data to String and check if oversized
                     string sData = (String)value.data;
-                    if (sData.Length * sizeof(Char) > API_MEMCACHED_MAX_SIZE * 1024 * 1024)
-                    {
-                        // Get a subKey
-                        string subKey = GetSubKey(key);
 
-                        // SubStore the data by subKey
-                        if (SubStore(subKey, sData, validFor, repository))
-                        {
-                            // Override data with the subKey to fish it out later
-                            value.data = subKey;
-                        }
-                        else
-                        {
-                            successTraceFlag = false;
-                            return false;
-                        }
-                    }
+                    // For the moment we are disabling SubKey - doesn't seem to be effective 14/01/2026
+                    //if (sData.Length * sizeof(Char) > API_MEMCACHED_MAX_SIZE * 1024 * 1024)
+                    //{
+                    //    // Get a subKey
+                    //    string subKey = GetSubKey(key);
+
+                    //    // SubStore the data by subKey
+                    //    if (SubStore(subKey, sData, validFor, repository))
+                    //    {
+                    //        // Override data with the subKey to fish it out later
+                    //        value.data = subKey;
+                    //    }
+                    //    else
+                    //    {
+                    //        successTraceFlag = false;
+                    //        return false;
+                    //    }
+                    //}
                 }
             }
             try
             {
-                // The value must be serialised
-                string cacheSerialised = Utility.JsonSerialize_IgnoreLoopingReference(value);
-                Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
-                // The value must be compressed
-                string cacheCompressed = Utility.GZipCompress(cacheSerialised);
-                Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
-                cacheTraceCompressLength = cacheSerialised.Length * sizeof(Char);
-
+                
                 bool isStored = false;
-
-                // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
-                // validFor and expiresAt match each other
-                isStored = ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, key, cacheCompressed, validFor);
-
                 // Store Value by Key
-                if (isStored)
-                {
-                    Log.Instance.Info("Store succesfull: " + key);
 
+                if (repository != null)
+                {
                     // Add the cached record into a Repository
                     if (!String.IsNullOrEmpty(repository))
                     {
-                        CasRepositoryStore(key, repository);
+                        isStored = CasRepositoryStore(key, repository);
                     }
+                }
+                else
+                {
+                    isStored = true;
+                }
 
+                if (isStored)
+                {
+                    // The value must be serialised
+                    string cacheSerialised = Utility.JsonSerialize_IgnoreLoopingReference(value);
+                    Log.Instance.Info("Cache Size Serialised (Byte): " + cacheSerialised.Length * sizeof(Char));
+                    // The value must be compressed
+                    string cacheCompressed = Utility.GZipCompress(cacheSerialised);
+                    Log.Instance.Info("Cache Size Compressed (Byte): " + cacheCompressed.Length * sizeof(Char));
+                    cacheTraceCompressLength = cacheSerialised.Length * sizeof(Char);
+
+
+
+                    // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
+                    // validFor and expiresAt match each other
+                    isStored = ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, key, cacheCompressed, validFor);
+                    Log.Instance.Info("Store succesful: " + key);
                     return true;
                 }
                 else
@@ -625,7 +650,8 @@ namespace API
                     successTraceFlag = false;
                     return false;
                 }
-            }
+
+                }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
@@ -659,76 +685,86 @@ namespace API
         /// <param name="validFor"></param>
         /// <param name="repository"></param>
         /// <returns></returns>
-        private bool SubStore(string subKey, string data, TimeSpan validFor, string repository)
-        {
-            // Check if it's enabled first
-            if (!IsEnabled())
-            {
-                return false;
-            }
+        /// 
+        // For the moment we are disabling SubKey - doesn't seem to be effective 14/01/2026
+        //private bool SubStore(string subKey, string data, TimeSpan validFor, string repository)
+        //{
+        //    // Check if it's enabled first
+        //    if (!IsEnabled())
+        //    {
+        //        return false;
+        //    }
 
-            Stopwatch sw = Stopwatch.StartNew();
-            int? cacheTraceCompressLength = null;
-            DateTime traceStart = DateTime.Now;
-            bool successTraceFlag = true;
-            try
-            {
-                // The data is a string, no need to serialize
-                Log.Instance.Info("SubCache Size Uncompressed (Byte): " + data.Length * sizeof(Char));
+        //    Stopwatch sw = Stopwatch.StartNew();
+        //    int? cacheTraceCompressLength = null;
+        //    DateTime traceStart = DateTime.Now;
+        //    bool successTraceFlag = true;
+        //    try
+        //    {
+        //        // The data is a string, no need to serialize
+        //        Log.Instance.Info("SubCache Size Uncompressed (Byte): " + data.Length * sizeof(Char));
 
-                // The data must be compressed
-                string subCacheCompressed = Utility.GZipCompress(data);
-                Log.Instance.Info("SubCache Size Compressed (Byte): " + subCacheCompressed.Length * sizeof(Char));
-                cacheTraceCompressLength = subCacheCompressed.Length * sizeof(Char);
-                bool isStored = false;
+        //        // The data must be compressed
+        //        string subCacheCompressed = Utility.GZipCompress(data);
+        //        Log.Instance.Info("SubCache Size Compressed (Byte): " + subCacheCompressed.Length * sizeof(Char));
+        //        cacheTraceCompressLength = subCacheCompressed.Length * sizeof(Char);
+        //        bool isStored = false;
 
-                // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
-                // validFor and expiresAt match each other
-                isStored = ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, subKey, subCacheCompressed, validFor);
+        //        if (repository != null)
+        //        {
+        //            isStored = true;
 
-                // Store Value by Key
-                if (isStored)
-                {
-                    Log.Instance.Info("SubStore succesfull: " + subKey);
-
-                    // Add the cached record into a Repository
-                    if (!String.IsNullOrEmpty(repository))
-                    {
-                        CasRepositoryStore(subKey, repository);
-                    }
-
-                    return true;
-                }
-                else
-                {
-                    Log.Instance.Fatal("SubStore failed: " + subKey);
-                    successTraceFlag = false;
-                    return false;
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Fatal(e);
-                successTraceFlag = false;
-                return false;
-            }
-            finally
-            {
-                sw.Stop();
-                var duration = Utility.StopWatchToSeconds(sw);
-
-                JObject obj = new JObject
-                {
-                   new JProperty("subKey",subKey),
-                   new JProperty("repository",repository)
-                };
+        //            // Add the cached record into a Repository
+        //            if (!String.IsNullOrEmpty(repository))
+        //            {
+        //                isStored = CasRepositoryStore(subKey, repository);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            isStored = true;
+        //        }
 
 
-                var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
-                Log.Instance.Info("Memcache SubStore Execution Time (s): " + duration + " Object:" + serializedObj);
-                CacheTrace.PopulateCacheTrace(serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "SubStore", successTraceFlag, cacheTraceCompressLength, null);
-            }
-        }
+        //        // Store Value by Key
+        //        if (isStored)
+        //        {
+        //            // Fix the MemCacheD issue with bad Windows' compiled version: use validFor instead of expiresAt
+        //            // validFor and expiresAt match each other
+        //            ApiServicesHelper.MemcachedClient.Store(StoreMode.Set, subKey, subCacheCompressed, validFor);
+
+        //            return true;
+        //        }
+        //        else
+        //        {
+        //            Log.Instance.Fatal("SubStore failed: " + subKey);
+        //            successTraceFlag = false;
+        //            return false;
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Instance.Fatal(e);
+        //        successTraceFlag = false;
+        //        return false;
+        //    }
+        //    finally
+        //    {
+        //        sw.Stop();
+        //        var duration = Utility.StopWatchToSeconds(sw);
+
+        //        JObject obj = new JObject
+        //        {
+        //           new JProperty("subKey",subKey),
+        //           new JProperty("repository",repository)
+        //        };
+
+
+        //        var serializedObj = Utility.JsonSerialize_IgnoreLoopingReference(obj);
+        //        Log.Instance.Info("Memcache SubStore Execution Time (s): " + duration + " Object:" + serializedObj);
+        //        CacheTrace.PopulateCacheTrace(serializedObj, traceStart, Utility.StopWatchToSeconds(sw), "SubStore", successTraceFlag, cacheTraceCompressLength, null);
+        //    }
+        //}
 
         /// <summary>
         /// Add a Key into a Cas Repository
@@ -736,17 +772,17 @@ namespace API
         /// </summary>
         /// <param name="key"></param>
         /// <param name="repository"></param>
-        private void CasRepositoryStore(string key, string repository)
+        private bool CasRepositoryStore(string key, string repository)
         {
             // Check if it's enabled first
             if (!IsEnabled())
             {
-                return;
+                return false;
             }
 
             if (String.IsNullOrEmpty(repository))
             {
-                return;
+                return false;
             }
             else
             {
@@ -799,6 +835,7 @@ namespace API
                         // Try to "Compare And Swap" if the Cas identifier exists
                         CasResult<bool> casStore = ApiServicesHelper.MemcachedClient.Cas(StoreMode.Set, repository, keys, casCache.Cas);
                         pending = !casStore.Result;
+                        
                     }
                     else
                     {
@@ -811,12 +848,13 @@ namespace API
                 } while (pending);
 
                 Log.Instance.Info("Key [" + key + "] added to Repository [" + repository + "]");
+                return true;
             }
             catch (Exception e)
             {
                 Log.Instance.Fatal(e);
                 successTraceFlag = false;
-                return;
+                return false;
             }
             finally
             {
@@ -1250,11 +1288,14 @@ namespace API
                     Log.Instance.Info("Cache Valid For (s): " + cacheValidFor.TotalSeconds.ToString());
                     Log.Instance.Info("Cache Has Data: " + cache.hasData.ToString());
 
+                    // For the moment we are disabling SubKey - doesn't seem to be effective 14/01/2026
                     // Init subKey
-                    string subKey = GetSubKey(key);
+                    string subKey = "";// GetSubKey(key);
                     // Init isSubKey
-                    bool isSubKey = IsSubKey(cache.data, key);
-
+                    
+                    bool isSubKey = false; // IsSubKey(cache.data, key);
+                   
+                  
                     // double check the cache record is still valid if not cleared by the garbage collector
                     if (cacheExpiresAt > DateTime.Now || cacheDateTime.AddSeconds(cacheValidFor.TotalSeconds) > DateTime.Now)
                     {
@@ -1265,7 +1306,7 @@ namespace API
                         value.hasData = Convert.ToBoolean(cache.hasData);
                         value.data = isSubKey ? null : cache.data;
 
-                        // Check for data in the subKey
+                        // Check for data in the subKey - always false now, see above
                         if (isSubKey)
                         {
                             // Get subCacheCompressed from the subKey
@@ -1378,13 +1419,14 @@ namespace API
             bool successTraceFlag = true;
             try
             {
-                string subKey = GetSubKey(key);
+                // For the moment we are disabling SubKey - doesn't seem to be effective 14/01/2026
+                //string subKey = GetSubKey(key);
 
                 // Remove the (optional) subKey
-                if (ApiServicesHelper.MemcachedClient.Remove(subKey))
-                {
-                    Log.Instance.Info("SubRemoval successful: " + subKey);
-                }
+                //if (ApiServicesHelper.MemcachedClient.Remove(subKey))
+                //{
+                //    Log.Instance.Info("SubRemoval successful: " + subKey);
+                //}
 
                 // Remove the Key
                 if (ApiServicesHelper.MemcachedClient.Remove(key))
@@ -1490,8 +1532,79 @@ namespace API
                 Log.Instance.Info("Memcache get stats Execution Time (s): " + duration);
                 CacheTrace.PopulateCacheTrace(null, traceStart, duration, "GETSTATS", successTraceFlag, null, null);
             }
+        }
+
+        /// <summary>
+        /// Get server stats as a dictionary
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, string>? GetStatsDictionary()
+        {
+            // Check if it's enabled first
+            if (!IsEnabled())
+            {
+                return null;
+            }
+            Stopwatch sw = Stopwatch.StartNew();
+            bool successTraceFlag = true;
+            DateTime traceStart = DateTime.Now;
+
+            try
+            {
+                var stats = ApiServicesHelper.MemcachedClient.Stats();
+                var statsType = stats.GetType();
+                var field = statsType.GetField("_results", BindingFlags.NonPublic | BindingFlags.Instance);
+                var dict = field.GetValue(stats) as Dictionary<EndPoint, Dictionary<string, string>>;
+
+
+                Dictionary<string, string>? statsDictionary = FlattenedStats(dict);
+
+                if (statsDictionary != null)
+                {
+                    foreach (var kvp in statsDictionary)
+                    {
+                        Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+                    }
+                }
+
+                return statsDictionary;
+            }
+            catch (Exception e)
+            {
+                Log.Instance.Fatal(e);
+                successTraceFlag = false;
+                return null;
+            }
+            finally
+            {
+                sw.Stop();
+                var duration = Utility.StopWatchToSeconds(sw);
+                Log.Instance.Info("Memcache get stats Execution Time (s): " + duration);
+                CacheTrace.PopulateCacheTrace(null, traceStart, duration, "GETSTATS", successTraceFlag, null, null);
+            }
 
         }
+
+        internal Dictionary<string, string>? FlattenedStats(Dictionary<EndPoint, Dictionary<string, string>>? nestedStats)
+        {
+            var flatDict = new Dictionary<string, string>();
+
+            foreach (var outerEntry in nestedStats)
+            {
+                var innerDict = outerEntry.Value;
+
+                if (innerDict == null)
+                    continue;
+
+                foreach (var statEntry in innerDict)
+                {
+                    flatDict[statEntry.Key] = statEntry.Value;
+                }
+            }
+
+            return flatDict.Count > 0 ? flatDict : null;
+        }
+
 
         /// <summary>
         /// Set the Value object
@@ -1623,7 +1736,15 @@ namespace API
                 return hashSHA256;
             }
         }
-
+        /// <summary>
+        /// Get a valid IP Address from a string
+        /// </summary>
+        /// <param name="ipString"></param>
+        /// <returns></returns>
+        public static bool IsValidIpAddress(string ipString)
+        {
+            return IPAddress.TryParse(ipString, out _);
+        }
     }
 
     /// <summary>
@@ -1686,5 +1807,4 @@ namespace API
             cacheLockDuration = null;
         }
     }
-
 }

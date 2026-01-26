@@ -30,12 +30,13 @@ namespace API
         {
         }
 
+
         #region Methods
         /// <summary>
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
         /// <param name="httpContext"></param>
-        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
+        public async Task ProcessRequest(Auth auth, UserDetail userDetail, HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
         {
             // Were we already canceled?
             apiCancellationToken.Token.ThrowIfCancellationRequested();
@@ -65,7 +66,8 @@ namespace API
                 {
                     performanceThread.Start();
                 }
-                result = GetResult(ref httpContext, trace);
+                result = GetResult(ref httpContext, userDetail, trace, auth);
+                trace.TrcCacheUsed = result.responseUsedCache;
 
                 if (result == null)
                 {
@@ -90,11 +92,10 @@ namespace API
 
                     if (result.response?.GetType() == typeof(byte[]))
                     {
-                        httpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                        Stream stream = new MemoryStream(result.response);
-                        var fullFileName = Path.GetTempFileName();
-                        File.WriteAllBytes(fullFileName, result.response);
-                        await returnResponseAsync(httpContext, fullFileName, apiCancellationToken, HttpStatusCode.OK,true);
+                        // Use MemoryStream to store the byte array
+                        using var memoryStream = new MemoryStream(result.response);
+
+                        await returnResponseAsync(httpContext, result.fileName, apiCancellationToken, result.statusCode, memoryStream);
                     }
                     else
                     {                       
@@ -195,6 +196,12 @@ namespace API
                     await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Static method not found");
                 }
             }
+            catch (OperationCanceledException e)
+            {
+                //don't need to do anything here as operation has been cancelled
+                //exit this try catch and go to next one
+                throw new OperationCanceledException();
+            }
             catch (Exception e)
             {
                 Log.Instance.Error("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
@@ -250,7 +257,7 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(ref HttpContext context,Trace trace, Cookie sessionCookie = null)
+        private dynamic GetResult(ref HttpContext context, UserDetail userDetail, Trace trace,Auth auth, Cookie sessionCookie = null)
         {
             // Set the API object
             Static_API apiRequest = new Static_API();
@@ -268,7 +275,7 @@ namespace API
             //gather trace information
             GatherTraceInformation(apiRequest, trace);
 
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(userDetail)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -314,6 +321,11 @@ namespace API
         /// Static filename (optional)
         /// </summary>
         public string fileName { get; set; }
+
+        /// <summary>
+        /// request used cache 
+        /// </summary>
+        public bool? responseUsedCache { get; set; }
         #endregion
     }
 
@@ -353,7 +365,10 @@ namespace API
         /// </summary>
         public string httpPOST { get; set; }
 
-        public dynamic userPrincipal { get { return null; } set { } }
+        // public dynamic userPrincipal { get { return null; } set { } }
+
+        public UserDetail userDetail { get { return null; } set { } }
+
 
         public Cookie sessionCookie { get { return null; } set { } }
       

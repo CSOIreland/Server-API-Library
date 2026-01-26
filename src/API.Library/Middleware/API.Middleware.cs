@@ -1,24 +1,28 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 using System.Diagnostics;
 using System.Net;
+using System.Text;
 
 namespace API
 {
     public class APIMiddleware : Common
     {
         private readonly RequestDelegate _next;
+
         public static AsyncLocal<DataTable> cacheTraceDataTable = new AsyncLocal<DataTable>();
         public static AsyncLocal<DataTable> databaseTraceDataTable = new AsyncLocal<DataTable>();
         public static AsyncLocal<string> correlationID = new AsyncLocal<string>();
 
-		public APIMiddleware(RequestDelegate next) : base()
+        //get and store the userIdentity at the earliest opportunity so that it can be used in tracing
+        public static AsyncLocal<string> userIdentity = new AsyncLocal<string>();
+
+        public APIMiddleware(RequestDelegate next) : base()
         {
             _next = next;
         }        
         
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider, Auth authService, UserDetail userService)
         {
             // Initiate the activity
             Activity activity = Activity.Current;
@@ -32,18 +36,15 @@ namespace API
             Trace trace = new Trace();
 
            if (ApiServicesHelper.ApiConfiguration.API_TRACE_ENABLED)
-                {
+           {
                     trace.TrcStartTime = DateTime.Now;
                     trace.TrcCorrelationID = activity.RootId;
                     trace.TrcMachineName = System.Environment.MachineName;
                     trace.TrcUseragent = ApiServicesHelper.WebUtility.GetUserAgent();
                     trace.TrcIp = ApiServicesHelper.WebUtility.GetIP();
                     trace.TrcContentLength = context.Request.ContentLength;
-                    trace.TrcReferrer = context.Request.Headers["Referer"].ToString();
-
-                  
-
-                }
+                    trace.TrcReferrer = context.Request.Headers["Referer"].ToString();           
+           }
 
            // Start the activity Stopwatch
            activity.Start();
@@ -54,8 +55,8 @@ namespace API
            // Thread a PerfomanceCollector
 
            /// <summary>
-                /// Flag to indicate if Performance is enabled 
-                /// </summary>
+           /// Flag to indicate if Performance is enabled 
+           /// </summary>
            bool API_PERFORMANCE_ENABLED = ApiServicesHelper.APIPerformanceSettings.API_PERFORMANCE_ENABLED;
 
            Log.Instance.Info("Performance Enabled: " + API_PERFORMANCE_ENABLED);
@@ -161,7 +162,7 @@ namespace API
                                 }
                                 else
                                 {
-                                    await jsonrpc.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                    await jsonrpc.ProcessRequest(authService, userService, context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                 }
                             }
                             break;
@@ -187,7 +188,7 @@ namespace API
                                 }
                                 else
                                 {
-                                    await restful.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                    await restful.ProcessRequest(authService,userService, context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                 }
                             }
                             break;
@@ -234,20 +235,20 @@ namespace API
                                             else
                                             {
                                                 Log.Instance.Info("Response Status: " + context.Response.StatusCode);
-                                                await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                                await Static.ProcessRequest(authService,userService, context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                             }
 
                                         }
                                         else
                                         {
                                             Log.Instance.Info("Response Status: " + context.Response.StatusCode);
-                                            await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                            await Static.ProcessRequest(authService,userService, context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                         }
                                     }
                                     else
                                     {
                                         Log.Instance.Info("Response Status: " + context.Response.StatusCode);
-                                        await Static.ProcessRequest(context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
+                                        await Static.ProcessRequest(authService,userService, context, apiCancellationToken, performanceThread, API_PERFORMANCE_ENABLED, trace);
                                     }
                                 }
                             }
@@ -264,7 +265,7 @@ namespace API
            }finally{
                 try{
 
-                        if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
+                    if (context.Response.StatusCode != (int)HttpStatusCode.NotModified)
                         {
 
                             //IF NO RESPONSE SENT AT ALL SEND 204 STATUS CODE
@@ -294,9 +295,9 @@ namespace API
 
                             //trace parameters
 
-                            if (ActiveDirectory.IsAuthenticated(UserPrincipal))
+                            if (Auth.IsAuthenticated(userIdentity.Value))
                             {
-                                trace.TrcUsername = UserPrincipal.SamAccountName.ToString();
+                                trace.TrcUsername = userIdentity.Value;
                             }
 
 
@@ -304,6 +305,8 @@ namespace API
                             {
                                 trace.TrcErrorPath = MaskParameters(context.Request.Path.ToString());
                             }
+
+                            trace.TrcResponseContentLength = context.Response.ContentLength;
 
                             Trace_ADO.Create(trace);
 
@@ -332,4 +335,5 @@ namespace API
            }
         }
     }
+
 }

@@ -35,7 +35,20 @@ namespace API
 
         private PrincipalContext getContext()
         {
-       
+            string[] AuthenticationTypeAllowed = new string[]
+             {
+              APIConstants.AUTHENTICATION_TYPE_WINDOWS,
+              APIConstants.AUTHENTICATION_TYPE_ANY_WINDOWS
+            };
+
+            // Validate the Authentication type
+
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            {
+                Log.Instance.Fatal("Active Directory Not Enabled");
+                return null;
+            }
+
             string adUsername = ApiServicesHelper.ApiConfiguration.Settings["API_AD_USERNAME"];
             string adPassword = ApiServicesHelper.ApiConfiguration.Settings["API_AD_PASSWORD"];
             string adDomain = ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"];
@@ -65,13 +78,31 @@ namespace API
         /// This method returns the entire Active Directory list for the configure Domain
         /// </summary>
         /// <returns></returns>
-        private IDictionary<string, dynamic> GetDirectory<T>() where T : UserPrincipal
+        private IDictionary<string, UserDetail> GetDirectory<T>() where T : UserPrincipal
         {
+            // new ExpandoObject() and implement the interface for handling dynamic properties
+            Dictionary<string, UserDetail> adUsers_IDictionary = new Dictionary<string, UserDetail>();
+
+
+            string[] AuthenticationTypeAllowed = new string[]
+             {
+               APIConstants.AUTHENTICATION_TYPE_WINDOWS,
+               APIConstants.AUTHENTICATION_TYPE_ANY_WINDOWS
+             };
+
+            // Validate the Authentication type
+
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            {
+                Log.Instance.Fatal("Active Directory Not Enabled");
+                return adUsers_IDictionary;
+            }
+
+
             //OUs that we dont want users from
             List<string> blacklistOUs = (ApiServicesHelper.ApiConfiguration.Settings["API_AD_BLACKLIST_OUS"]).Split(',').ToList<string>();
 
-            // new ExpandoObject() and implement the interface for handling dynamic properties
-            var adUsers_IDictionary = new ExpandoObject() as IDictionary<string, dynamic>;
+         
 
             //create key for cache
             dynamic inputDTO = new ExpandoObject();
@@ -85,11 +116,11 @@ namespace API
 
             MemCachedD_Value adCache = ApiServicesHelper.CacheD.Get_BSO<dynamic>("API", "ActiveDirectory", "GetDirectory", Utility.GetSHA256(Utility.JsonSerialize_IgnoreLoopingReference(inputDTO)));
             if (adCache.hasData)
-                return adCache.data.ToObject<Dictionary<string, dynamic>>();
-
+                return adCache.data.ToObject<Dictionary<string, UserDetail>>();
             try
             {
                 // Get to the Domain
+
                 using (var context = ApiServicesHelper.ActiveDirectory.adContext)
                 {
                     // Crete the query filterusing enabled accounts and excluding those with blank basic properties
@@ -121,12 +152,13 @@ namespace API
                             }
                             else
                             {
-                                    // Create a shallow copy of AD with the mandatory proprieties for caching/serialising it later on
-                             
-                                    var userPrincipal_ShallowCopy = CreateAPIUserPrincipalObject(result);
-                                // Add user to the dictionary, serialise/deserialise to avoid looping references
-                                    adUsers_IDictionary.Add(result.SamAccountName, userPrincipal_ShallowCopy as ExpandoObject);
-                                }
+                                // Create a shallow copy of AD with the mandatory proprieties for caching/serialising it later on
+
+                                //     var userPrincipal_ShallowCopy = CreateAPIUserPrincipalObject(result);
+                                Dictionary<string, UserDetail> userPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(result);
+
+                                adUsers_IDictionary.Add(result.SamAccountName, userPrincipal[result.SamAccountName]);
+                            }
                             }
                         }
                     }
@@ -144,42 +176,70 @@ namespace API
         }
 
 
-        public dynamic CreateAPIUserPrincipalObject(dynamic userPrincipal)
+        public Dictionary<string, UserDetail> CreateAPIUserPrincipalObject(dynamic userPrincipal)
         {
+            //var userPrincipal_ShallowCopy = new ExpandoObject() as IDictionary<string, object>;
+            Dictionary<string, UserDetail> users = new Dictionary<string, UserDetail>();
+        
+            string[] AuthenticationTypeAllowed = new string[]
+             {
+               APIConstants.AUTHENTICATION_TYPE_WINDOWS,
+               APIConstants.AUTHENTICATION_TYPE_ANY_WINDOWS
+             };
 
-            var userPrincipal_ShallowCopy = new ExpandoObject() as IDictionary<string, object>;
-            userPrincipal_ShallowCopy.Add("SamAccountName", userPrincipal.SamAccountName);
-            userPrincipal_ShallowCopy.Add("UserPrincipalName", userPrincipal.UserPrincipalName);
-            userPrincipal_ShallowCopy.Add("DistinguishedName", userPrincipal.DistinguishedName);
-            userPrincipal_ShallowCopy.Add("DisplayName", userPrincipal.DisplayName);
-            userPrincipal_ShallowCopy.Add("Name", userPrincipal.Name);
-            userPrincipal_ShallowCopy.Add("GivenName", userPrincipal.GivenName);
-            userPrincipal_ShallowCopy.Add("MiddleName", userPrincipal.MiddleName);
-            userPrincipal_ShallowCopy.Add("Surname", userPrincipal.Surname);
-            userPrincipal_ShallowCopy.Add("EmailAddress", userPrincipal.EmailAddress);
-            userPrincipal_ShallowCopy.Add("EmployeeId", userPrincipal.EmployeeId);
-            userPrincipal_ShallowCopy.Add("VoiceTelephoneNumber", userPrincipal.VoiceTelephoneNumber);
-            userPrincipal_ShallowCopy.Add("Description", userPrincipal.Description);
+            // Validate the Authentication type
+
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            {
+                Log.Instance.Fatal("Active Directory Not Enabled");
+                return users;
+            }
+
+
+
+            var additionalProperties = new ExpandoObject() as IDictionary<string, object>;
 
             // Add the custom properties to the shallow copy if any
             foreach (string property in ApiServicesHelper.ApiConfiguration.Settings["API_AD_CUSTOM_PROPERTIES"].Split(','))
             {
-                userPrincipal_ShallowCopy.Add(property, userPrincipal.GetType().GetProperty(property)?.GetValue(userPrincipal, null));
+                additionalProperties.Add(property, userPrincipal.GetType().GetProperty(property)?.GetValue(userPrincipal, null));
             }
 
-            return userPrincipal_ShallowCopy;
+            // Add a User object with multiple properties to the dictionary
+            users[userPrincipal.SamAccountName] = new UserDetail(
+                userPrincipal.SamAccountName,
+                userPrincipal.SamAccountName,
+                userPrincipal.UserPrincipalName,
+                userPrincipal.DistinguishedName,
+                userPrincipal.DisplayName,
+                userPrincipal.Name,
+                userPrincipal.GivenName,
+                userPrincipal.MiddleName,
+                userPrincipal.Surname,
+                userPrincipal.EmailAddress,
+                userPrincipal.EmployeeId,
+                userPrincipal.Description,
+                userPrincipal.Enabled,
+                userPrincipal.VoiceTelephoneNumber,
+                null,
+                null,
+                additionalProperties
+                );
+
+
+            return users;
 
         }
         /// <summary>
         /// This method list Active Directory for the configured Domain
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, dynamic> List()
+        public IDictionary<string, UserDetail> List()
         {
             // Get the full directory
             return List<UserPrincipal>();
         }
-        public IDictionary<string, dynamic> List<T>() where T : UserPrincipal
+        public IDictionary<string, UserDetail> List<T>() where T : UserPrincipal
         {
             // Get the full directory
             return GetDirectory<T>();
@@ -197,8 +257,22 @@ namespace API
 
         public dynamic Search<T>(string username) where T : UserPrincipal
         {
-            // Get the full director
-            IDictionary<string, dynamic> adDirectory = GetDirectory<T>();
+            string[] AuthenticationTypeAllowed = new string[]
+            {
+              APIConstants.AUTHENTICATION_TYPE_WINDOWS,
+              APIConstants.AUTHENTICATION_TYPE_ANY_WINDOWS
+            };
+
+            // Validate the Authentication type
+
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            {
+                Log.Instance.Fatal("Active Directory Not Enabled");
+                return null;
+            }
+
+            // Get the full directory
+            IDictionary<string, UserDetail> adDirectory = GetDirectory<T>();
 
             if (adDirectory.ContainsKey(username))
                 return adDirectory[username];
@@ -207,26 +281,28 @@ namespace API
         }
 
         /// <summary>
-        /// Checks if the user is authenticated against Active Directory
-        /// </summary>
-        /// <param name="userPrincipal"></param>
-        /// <returns></returns>
-        public static bool IsAuthenticated(dynamic userPrincipal)
-        {
-            if (userPrincipal == null || String.IsNullOrEmpty(userPrincipal.SamAccountName.ToString()))
-                return false;
-            else
-                return true;
-        }
-
-        /// <summary>
         /// Validate a Password against an AD account
         /// </summary>
         /// <param name="userPrincipal"></param>
         /// <param name="password"></param>
         /// <returns></returns>
+        [Obsolete]
         public bool IsPasswordValid(dynamic userPrincipal, string password)
         {
+            string[] AuthenticationTypeAllowed = new string[]
+            {
+               APIConstants.AUTHENTICATION_TYPE_WINDOWS,
+               APIConstants.AUTHENTICATION_TYPE_ANY_WINDOWS
+            };
+
+            // Validate the Authentication type
+
+            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            {
+                Log.Instance.Fatal("Active Directory Not Enabled");
+                return false;
+            }
+
             bool isValid = false;
             using (var pricipalContext = ApiServicesHelper.ActiveDirectory.adContext)
             {

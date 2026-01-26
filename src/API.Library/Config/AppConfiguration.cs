@@ -18,7 +18,7 @@ namespace API
 
             _ApplicationSettingsDelegate = ApplicationSettingsDelegate;
 
-            if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false && version == null)
+            if ((ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false || ApiServicesHelper.MemcachedClient == null) && version == null)
             {
                 Log.Instance.Fatal("APP : Memcache should be enabled if version is null");
             }
@@ -88,7 +88,7 @@ namespace API
             else
             {
 
-                if (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false && version == null)
+                if ((ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false || ApiServicesHelper.MemcachedClient == null) && version == null)
                 {
                     Log.Instance.Fatal("APP : Memcache should be enabled if version is null");
                 }

@@ -88,8 +88,18 @@
         /// request content length
         /// </summary>
         public long? TrcContentLength { get; set; }
-        
+
+        /// <summary>
+        /// response content length
+        /// </summary>
+        public long? TrcResponseContentLength { get; set; }
+
         #endregion
+        /// <summary>
+        /// cache used - determined by application
+        /// </summary>
+        public bool? TrcCacheUsed { get; set; }
+
 
 
     }

@@ -38,7 +38,6 @@
         public Settings jsonrpc { get; set; }
         public Settings restful { get; set; }
         public Settings Static { get; set; }
-        public Settings head { get; set; }
     }
 
     public class Settings
@@ -78,4 +77,5 @@
     {
          public bool API_PERFORMANCE_ENABLED { get; set; }
     }
+
 }

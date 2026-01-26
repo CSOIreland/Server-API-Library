@@ -1,4 +1,5 @@
-﻿using Enyim.Caching;
+﻿using Azure;
+using Enyim.Caching;
 using Enyim.Caching.Memcached;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
@@ -7,6 +8,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using System.Net;
+using System.Reflection;
+
 
 namespace API
 {
@@ -53,9 +58,6 @@ namespace API
                     return true;
                 });
 
-
-
-
             service.Configure<ADOSettings>(builder.Configuration.GetSection("ADOSettings"));
             service.Configure<APIConfig>(builder.Configuration.GetSection("API_Config"));
             service.Configure<APPConfig>(builder.Configuration.GetSection("APP_Config"));
@@ -76,7 +78,6 @@ namespace API
             }
 
 
-
             service.AddSingleton<ICacheConfig, CacheConfig>();
             service.AddSingleton<IApiConfiguration, ApiConfiguration>();
             service.AddSingleton<IAppConfiguration, APPConfiguration>();
@@ -86,6 +87,12 @@ namespace API
             service.AddSingleton<IActiveDirectory, ActiveDirectory>();
             service.AddSingleton<IAPIPerformanceConfiguration, APIPerformanceConfiguration>();
             service.AddSingleton<IDatabaseTracingConfiguration, DatabaseTracingConfiguration>();
+            service.AddSingleton<ITokenAuthentication, EntraTokenAuthentication>();
+            service.AddSingleton<IExternalUserData, GraphAPI>();
+            service.AddSingleton<IGraphClientWrapper, GraphClientWrapper>();
+
+            service.AddScoped<Auth>();
+            service.AddScoped<UserDetail>();
 
             // service.AddScoped<IADO, ADO>();
 
@@ -95,7 +102,8 @@ namespace API
             var BlockedRequests = sp.GetService<IOptions<BlockedRequests>>();
             var APIConfig = sp.GetService<IOptions<APIConfig>>();
             var APPConfig = sp.GetService<IOptions<APPConfig>>();
-            //     var CacheSettings = sp.GetService<IOptions<CacheSettings>>();
+
+            //		var CacheSettings = sp.GetService<IOptions<CacheSettings>>();
 
             ApiServicesHelper.ServiceProvider = sp;
             ApiServicesHelper.Configuration = builder.Configuration;
@@ -105,11 +113,9 @@ namespace API
             ApiServicesHelper.APIConfig = APIConfig.Value;
             ApiServicesHelper.APPConfig = APPConfig.Value;
 
-            ///       ApiServicesHelper.CacheSettings = CacheSettings.Value;
-
             ApiServicesHelper.APIPerformanceSettings = sp.GetRequiredService<IAPIPerformanceConfiguration>();
             ApiServicesHelper.DatabaseTracingConfiguration = sp.GetRequiredService<IDatabaseTracingConfiguration>();
-
+       
 
             //setup memcache here
             try
@@ -117,10 +123,26 @@ namespace API
                 ApiServicesHelper.CacheConfig = sp.GetRequiredService<ICacheConfig>();
                 ApiServicesHelper.MemcachedClient = sp.GetRequiredService<IMemcachedClient>();
                 ApiServicesHelper.CacheD = sp.GetRequiredService<ICacheD>();
-                ServerStats stats = ApiServicesHelper.CacheD.GetStats();
-                if (stats == null)
-                {
-                    throw new Exception("Error reading memcache stats");
+
+                if (ApiServicesHelper.MemcachedClient != null)
+                {               
+                    ServerStats stats = ApiServicesHelper.CacheD.GetStats();
+
+                    var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
+                    var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
+
+                    TimeSpan upTime = stats.GetUptime(new DnsEndPoint(address, int.Parse(port)));
+                
+                    if (stats == null)
+                    {
+                        throw new Exception("Error reading memcache stats");
+                    }else if (upTime == TimeSpan.Zero)
+                    {
+                        throw new Exception("Memcache has not returned any stats data. Memcache may be unavailable");
+                    }
+                }
+                else {
+                    throw new Exception("Memcache not available");
                 }
             }
             catch (ConfigurationException ex)
@@ -138,6 +160,7 @@ namespace API
             //if memcached failed to load then mark it as disabled
             if (memcachedFailedtoLoad == true)
             {
+                ApiServicesHelper.MemcachedClient = null;
                 ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED = false;
             }
 
@@ -176,6 +199,22 @@ namespace API
                     options.Cookie.Name = "apiSessionCookie";
                 });
             }
+
+           string[] AuthenticationTypeAllowed = new string[]
+            {
+              APIConstants.AUTHENTICATION_TYPE_ENTRAID,
+              APIConstants.AUTHENTICATION_TYPE_ANY_ENTRAID
+           };
+
+            // Validate the Authentication type
+
+            if (AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
+            { 
+               //ENTRAID -- load after all other configuration is done and only if enabled
+               ApiServicesHelper.EntraTokenAuthentication = sp.GetRequiredService<ITokenAuthentication>();
+               ApiServicesHelper.GraphApi = sp.GetRequiredService<IExternalUserData>();
+               ApiServicesHelper.GraphClientWrapper = sp.GetRequiredService<IGraphClientWrapper>();
+            }     
 
             Log.Instance.Info("All API setup completed");
             return service;

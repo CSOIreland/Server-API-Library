@@ -8,13 +8,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
 
 
 namespace API
 {
     public static class ConsoleConfiguration
     {
-        public static IHost AddApiLibrary(IConfiguration configuration)
+        public static IHost AddApiLibrary(IConfiguration configuration, Action<IHost>? postBuildAction = null)
         {
             var loggingOptions = configuration.GetSection("Log4NetCore").Get<Log4NetProviderOptions>();
 
@@ -127,10 +128,21 @@ namespace API
                 ApiServicesHelper.CacheConfig = builder.Services.GetRequiredService<ICacheConfig>();
                 ApiServicesHelper.MemcachedClient = builder.Services.GetRequiredService<IMemcachedClient>();
                 ApiServicesHelper.CacheD = builder.Services.GetRequiredService<ICacheD>();
+
                 ServerStats stats = ApiServicesHelper.CacheD.GetStats();
+
+                var port = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Port").Value;
+                var address = ApiServicesHelper.Configuration.GetSection("enyimMemcached:Servers:0:Address").Value;
+
+                TimeSpan upTime = stats.GetUptime(new DnsEndPoint(address, int.Parse(port)));
+
                 if (stats == null)
                 {
                     throw new Exception("Error reading memcache stats");
+                }
+                else if (upTime == TimeSpan.Zero)
+                {
+                    throw new Exception("Memcache has not returned any stats data. Memcache may be unavailable");
                 }
             }
             catch (ConfigurationException ex)
@@ -166,6 +178,11 @@ namespace API
                     throw new Exception("APP Settings failed to load");
                 }
             }
+
+
+            // Call optional post-build action
+            postBuildAction?.Invoke(builder);
+
 
             Log.Instance.Info("All API setup completed");
             return builder;       

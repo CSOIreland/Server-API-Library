@@ -14,7 +14,7 @@ namespace API
             {
                 return false;
             }
-            else if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false)
+            else if (appSettingsVersion == null && (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false || ApiServicesHelper.MemcachedClient == null))
             {
                 Log.Instance.Fatal("Memcache must be enabled if version is null");
                 return false;
@@ -166,13 +166,13 @@ namespace API
 
         public static void memcacheSave(decimal? appSettingsVersion, decimal? inMemoryVersion, string configType,string inputDTO, IDictionary<string, string> dict)
         {
-              if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == true)
+              if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == true && ApiServicesHelper.MemcachedClient != null)
                 {
                     ApiServicesHelper.CacheD.Store_BSO<dynamic>(configType, "Configuration", "Version", inputDTO, inMemoryVersion, DateTime.Today.AddDays(30));
                 }
-            else if (appSettingsVersion == null && ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false)
+            else if (appSettingsVersion == null && (ApiServicesHelper.CacheConfig.API_MEMCACHED_ENABLED == false || ApiServicesHelper.MemcachedClient == null))
                 {
-                Log.Instance.Fatal("Unable to store configuration version in memecache as it is disabled");
+                Log.Instance.Fatal("Unable to store configuration version in memcache as it is disabled");
                 }
         }
     }

@@ -8,7 +8,7 @@ namespace API
     {
         string method { get; set; }
         dynamic parameters { get; set; }
-        dynamic userPrincipal { get; set; }
+        UserDetail userDetail { get; set; }
         string ipAddress { get; set; }
         string userAgent { get; set; }
 

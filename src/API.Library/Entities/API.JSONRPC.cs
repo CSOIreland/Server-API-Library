@@ -4,7 +4,6 @@ using System.Net;
 using System.Reflection;
 using System.Collections.Specialized;
 
-
 namespace API
 {
     /// <summary>
@@ -46,7 +45,7 @@ namespace API
         /// </summary>
         /// <param name="context"></param>
         //public async Task Invoke(HttpContext httpContext)
-        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
+        public async Task ProcessRequest(Auth auth, UserDetail userDetail, HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
         {
 
             // Were we already canceled?
@@ -86,33 +85,38 @@ namespace API
 
                 JSONRPC_Output result = null;
   
-                bool? isAuthenticated =  Authenticate(ref httpContext);
+                bool? isAuthenticated =  auth.Authenticate(ref httpContext,ref userDetail, apiCancellationToken);
 
                 try
                 {
                     switch (isAuthenticated)
                     {
-                        case null: //Anonymous authentication
+                        case null: //Anonymous
                             if (API_PERFORMANCE_ENABLED)
                             {
                                 performanceThread.Start();
                             }
-                            result = GetResult(httpContext, JSONRPC_Request,trace, sessionCookie);
+                            result = GetResult(httpContext, userDetail, JSONRPC_Request, trace, auth, sessionCookie);
                             break;
-                        case true: //Windows Authentication
+                        case true: //Windows/EntraID Authentication
                             if (API_PERFORMANCE_ENABLED)
                             {
                                 performanceThread.Start();
                             }
 
-                            result = GetResult(httpContext, JSONRPC_Request, trace, null);
-                          
+                            result = GetResult(httpContext, userDetail, JSONRPC_Request, trace, auth, null);
                             break;
-                        case false: //Error
+                        case false: //Error/entraID authentication
                             JSONRPC_Error error = new JSONRPC_Error { code = -32002 };
-                            await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken,trace);
+                            await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken, trace);
                             break;
                     }
+                }
+                catch (OperationCanceledException e)
+                {
+                    //don't need to do anything here as operation has been cancelled
+                    //exit this try catch and go to next one
+                    throw new OperationCanceledException();
                 }
                 catch (Exception e)
                 {
@@ -121,7 +125,11 @@ namespace API
                     JSONRPC_Error error = new JSONRPC_Error { code = -32603 };
                     await ParseError(httpContext, JSONRPC_Request.id, error, apiCancellationToken, trace);
                 }
-                
+
+                if (result != null)
+                {
+                    trace.TrcCacheUsed = result.responseUsedCache;
+                }
 
                 if (result == null)
                 {
@@ -287,8 +295,10 @@ namespace API
                // Deserialize JSON to an Object dynamically
                JSONRPC_Request = Utility.JsonDeserialize_IgnoreLoopingReference<JSONRPC_Request>(request);
             } catch (Exception e){
-                Log.Instance.Error(request);
-                Log.Instance.Error(e);
+
+                //not logging as error as when it is a public API call it causes too many error emails
+                Log.Instance.Info(request);
+                Log.Instance.Info(e);
 
                 var error = new JSONRPC_Error { code = -32700 };
                 await ParseError(httpContext, null, error, sourceToken,trace);
@@ -377,14 +387,14 @@ namespace API
         /// </summary>
         /// <param name="JSONRPC_Request"></param>
         /// <returns></returns>
-        private dynamic GetResult(HttpContext context, JSONRPC_Request JSONRPC_Request, Trace trace, Cookie sessionCookie = null)
+        private dynamic GetResult(HttpContext context, UserDetail userDetail, JSONRPC_Request JSONRPC_Request, Trace trace, Auth auth, Cookie sessionCookie = null)
         {
             // Set the API object
             JSONRPC_API apiRequest = new JSONRPC_API
             {
                 method = JSONRPC_Request.method,
                 parameters = JSONRPC_Request.@params,
-                userPrincipal = UserPrincipal,
+                userDetail = userDetail,//auth.UserPrincipal,
                 ipAddress = ApiServicesHelper.WebUtility.GetIP(),
                 userAgent = ApiServicesHelper.WebUtility.GetUserAgent(),
                 httpGET = httpGET,
@@ -400,7 +410,8 @@ namespace API
             GatherTraceInformation(apiRequest, trace);
 
             // Hide password from logs
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
+            //   Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(auth.UserPrincipal)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(userDetail)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(JSONRPC_Request);
@@ -472,6 +483,11 @@ namespace API
         public string mimeType { get; set; }
         public HttpStatusCode statusCode { get; set; }
         public string fileName { get; set; }
+
+        /// <summary>
+        /// request used cache 
+        /// </summary>
+        public bool? responseUsedCache { get; set; }
         #endregion
     }
 
@@ -518,7 +534,13 @@ namespace API
         /// <summary>
         /// Active Directory userPrincipal
         /// </summary>
-        public dynamic userPrincipal { get; set; }
+      //  public dynamic userPrincipal { get; set; }
+
+
+        /// <summary>
+        /// Active Directory userPrincipal
+        /// </summary>
+        public UserDetail userDetail { get; set; }
 
         /// <summary>
         /// Client IP address

@@ -1,0 +1,25 @@
+2024-08-27 15:44:12,419 [CORK25198] [(null)] [1] INFO API.ConsoleConfiguration.AddApiLibrary:0 - service configuration started
+2024-08-27 15:44:12,550 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration.ConfigureServers:0 - Memcached server address - 3.9.2.41:11211
+2024-08-27 15:44:12,563 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - MinPoolSize: 1
+2024-08-27 15:44:12,566 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - MaxPoolSize: 10
+2024-08-27 15:44:12,574 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ConnectionTimeout: 00:00:15
+2024-08-27 15:44:12,586 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ReceiveTimeout: 00:00:15
+2024-08-27 15:44:12,598 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - DeadTimeout: 00:00:15
+2024-08-27 15:44:12,603 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - QueueTimeout: 00:00:00.1500000
+2024-08-27 15:44:12,605 [CORK25198] [(null)] [1] INFO Enyim.Caching.Configuration.MemcachedClientConfiguration..ctor:0 - ConnectionIdleTimeout: 00:00:00
+2024-08-27 15:44:12,647 [CORK25198] [(null)] [1] INFO API.ApiConfiguration..ctor:0 - load api settings
+2024-08-27 15:44:12,877 [CORK25198] [(null)] [1] INFO API.CommonConfig.ReadJSONSettings:0 - Json apiConfig configuration loaded
+2024-08-27 15:44:12,891 [CORK25198] [(null)] [1] INFO API.APPConfiguration..ctor:0 - load APP settings
+2024-08-27 15:44:12,902 [CORK25198] [(null)] [1] INFO API.CommonConfig.ReadJSONSettings:0 - Json appConfig configuration loaded
+2024-08-27 15:44:12,906 [CORK25198] [(null)] [1] INFO API.ConsoleConfiguration.AddApiLibrary:0 - All API setup completed
+2024-08-27 15:44:17,016 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - Email Enabled: True
+2024-08-27 15:44:17,019 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - Email NoReply: test@noreply.cso.ie
+2024-08-27 15:44:17,019 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - Email Sender: test@noreply.cso.ie
+2024-08-27 15:44:17,020 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP Server: 3.1.2.22
+2024-08-27 15:44:17,021 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP Port: 25
+2024-08-27 15:44:17,022 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP Authentication: False
+2024-08-27 15:44:17,022 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP Username: 
+2024-08-27 15:44:17,027 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP Password: ********
+2024-08-27 15:44:17,030 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - SMTP SSL: False
+2024-08-27 15:44:21,840 [CORK25198] [(null)] [1] INFO System.Dynamic.UpdateDelegates.UpdateAndExecuteVoid2:0 - eMail sent
+2024-08-27 15:44:24,092 [CORK25198] [(null)] [1] INFO TestConsoleApp.Program.Main:31 - TEST

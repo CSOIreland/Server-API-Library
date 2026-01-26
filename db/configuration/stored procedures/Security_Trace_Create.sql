@@ -10,13 +10,15 @@ REVISION HISTORY
 ---------------- 
 REVIEW NO.    DATE          CHANGED BY         COMMENTS 
 1			23/07/2024		Stephen Lane	added content length and referrer
+2			08/05/2025		Stephen Lane	added response content length
+3			26/01/2026		Stephen Lane	added trace cache used flag
 
 PEER REVIEW HISTORY 
 ------------------- 
 REVIEW NO.    DATE          REVIEWED BY         COMMENTS 
 
 *************************************************************************************/
-CREATE or alter PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
+CREATE PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
 	,@TrcParams NVARCHAR(2048)  = null
 	,@TrcIp VARCHAR(15) = NULL
 	,@TrcUseragent VARCHAR(2048)  = NULL
@@ -32,6 +34,8 @@ CREATE or alter PROCEDURE Security_Trace_Create @TrcMethod NVARCHAR(256)  = null
 	,@TrcJsonRpcErrorCode int  =null
 	,@TrcContentLength bigint  =null
 	,@TrcReferrer varchar(max)  =null
+	,@TrcResponseContentLength varchar(max)  =null
+	,@TrcCacheUsed bit = null
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -53,7 +57,10 @@ BEGIN
 		,TRC_CORRELATION_ID
 		,TRC_JSONRPC_ERROR_CODE
 		,TRC_CONTENT_LENGTH
-		,TRC_REFERER)
+		,TRC_REFERER
+		,TRC_RESPONSE_CONTENT_LENGTH
+		,TRC_CACHE_USED
+		)
 	VALUES (
 		 @TrcMethod
 		,@TrcParams
@@ -72,6 +79,8 @@ BEGIN
 		,@TrcJsonRpcErrorCode
 		,@TrcContentLength
 		,@TrcReferrer
+		,@TrcResponseContentLength
+		,@TrcCacheUsed
 		)
 
 	RETURN 1

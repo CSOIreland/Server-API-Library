@@ -57,14 +57,11 @@ namespace API
                 //Use some Reflection methods to get info about the class and method
                 //   Type type = Type.GetType(className);
 
-                var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var allAssemblies = EndpointCache.GetListAssemblies();// AppDomain.CurrentDomain.GetAssemblies();
 
                 var type = allAssemblies.Select(y => y.GetType(className, false, true)).Where(p => p != null).FirstOrDefault();
 
-
-
                 int mcount = type.GetMethods().Where(x => x.Name == methodName).Count(); ;//.FirstOrDefault();
-
 
                 if (mcount == 0) return null;
                 MethodInfo methodInfo;
@@ -164,7 +161,7 @@ namespace API
                 //Use some Reflection methods to get info about the class and method
                 //   Type type = Type.GetType(className);
 
-                var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var allAssemblies = EndpointCache.GetListAssemblies();//AppDomain.CurrentDomain.GetAssemblies();
 
                 var type = allAssemblies.Select(y => y.GetType(className, false, true)).Where(p => p != null).FirstOrDefault();
 

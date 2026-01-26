@@ -18,9 +18,9 @@ namespace API
 
         public static APIConfig APIConfig;
 
-        public static APPConfig APPConfig;
+        public static APPConfig APPConfig;        
 
-      //  public static CacheSettings CacheSettings;
+        //  public static CacheSettings CacheSettings;
 
         public static ICacheConfig CacheConfig;
 
@@ -40,5 +40,10 @@ namespace API
 
         public static IDatabaseTracingConfiguration DatabaseTracingConfiguration;
 
+        public static ITokenAuthentication EntraTokenAuthentication;
+
+        public static IExternalUserData GraphApi;
+
+        public static IGraphClientWrapper GraphClientWrapper;
     }
 }

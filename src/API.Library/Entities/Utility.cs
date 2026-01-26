@@ -8,6 +8,7 @@ using Konscious.Security.Cryptography;
 using System.DirectoryServices.ActiveDirectory;
 using System.Threading;
 using System;
+using System.DirectoryServices.AccountManagement;
 
 namespace API
 {
@@ -241,6 +242,44 @@ namespace API
         public static dynamic JsonDeserialize_IgnoreLoopingReference<T>(string input)
         {
             return JsonConvert.DeserializeObject<T>(input, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
+        }
+
+        public class UserPrincipal_DTO
+        {
+            public string? SamAccountName { get; set; }
+            public string? EmailAddress { get; set; }
+            public string? GivenName { get; set; }
+            public string? Surname { get; set; }
+            public string? EmployeeId { get; set; }
+            public string? VoiceTelephoneNumber { get; set; }
+            public string? MiddleName { get; set; }
+        }
+
+        /// <summary>
+        /// Deserialize from JSON ignoring looping references (N.B. This call site is reachable on all platforms. 'UserPrincipal' is only supported on: 'Windows')
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="input"></param>
+        /// <param name="principalContext"></param>
+        /// <returns>T</returns>
+        public static dynamic JsonDeserialize_IgnoreLoopingReference<T>(string input, PrincipalContext principalContext)
+        {
+            UserPrincipal_DTO userPrincipal_DTO = Utility.JsonDeserialize_IgnoreLoopingReference<UserPrincipal_DTO>(input) ?? new UserPrincipal_DTO();
+
+
+            // Manually map the DTO to a UserPrincipal object
+            UserPrincipal userPrincipal = new UserPrincipal(principalContext)
+            {
+                SamAccountName = userPrincipal_DTO.SamAccountName,
+                EmailAddress = userPrincipal_DTO.EmailAddress,
+                GivenName = userPrincipal_DTO.GivenName,
+                Surname = userPrincipal_DTO.Surname,
+                EmployeeId = userPrincipal_DTO.EmployeeId,
+                VoiceTelephoneNumber = userPrincipal_DTO.VoiceTelephoneNumber,
+                MiddleName = userPrincipal_DTO.MiddleName
+            };
+
+            return userPrincipal;
         }
 
         /// <summary>

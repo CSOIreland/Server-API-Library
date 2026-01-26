@@ -1,0 +1,577 @@
+********************************************************************************
+Version 1.1.1 (.NET 4.5.2)
+This is the first initial release. There is no previous release to upgrade from.
+********************************************************************************
+Version 1.1.2 (.NET 4.5.2)
+NB, this is a security fix
+Add the "Access-Control-Allow-Credentials" set to "true" in your web.config
+Set a specific value (i.e. "https://something.cso.ie") for the "Access-Control-Allow-Origin" property in your web.config
+********************************************************************************
+Version 1.2.0 (.NET 4.5.2) [DECOMMISSIONED: DO NOT USE]
+This version allow to choose the type of authnetication for the API: Windows (only), Anonymous (only) or Any (Windows or Anonymous) 
+Apply the follwoing changes in your Web.config, under the AppSettings section.
+1)
+>> Replace <add key="AD_Domain" value="CSOCORK"/> with <add key="CSO_AD_DOMAIN" value="CSOCORK"/>
+>> The value contains the name of the AD Domain (i.e. CSOCORK, TDCSO)
+2) 
+>> Add <add key="CSO_AUTHENTICATION_TYPE" value="WINDOWS"/>
+>> The value contains the type of authentication. The values allowed are WINDOWS, ANONYMOUS, ANY (case sensitive)
+>> If ANONYMOUS,is used, then the CSO_AD_DOMAIN setting is irrelevant
+********************************************************************************
+Version 2.0.0 (.NET 4.7.2)
+N.B. This Version is NOT backward compatible
+Install the .NET Framework Developer Package 4.7.2 in your Developer PC
+Install the .NET Framework Runtime Package 4.7.2 in your Servers
+Transformation of Web.config implemented for TD, UAT, Live environments
+New API implementations added:
+>> ADO
+>> Email
+>> Google ReCAPTCHA
+>> MemCacheD
+>> Utility
+********************************************************************************
+Version 2.1.0 (.NET 4.7.2)
+Packages updated:
+>> FluentValidation 8.4.0
+>> HTMLAgilityPack 1.11.7
+>> Newtonsoft.Json 12.0.2
+Active Directory:
+>> Support for AD Path added (i.e. OU=xxx,DC=yyy)
+>> Support for optional (blank) AD Path, Username/Password added
+ADO:
+>> Configuration parameter API_ADO_EXECUTION_TIMEOUT added to Web.config for controlling the execution timeout
+>> Configuration parameter API_ADO_BULKCOPY_BATCHSIZE added to Web.config for controlling the Batch Size of the BulkCopy
+>> Connection String masked in logs for confidentiality
+>> Support of NextResult for ExecuteReader added
+>> Dispose mothod fixed
+>> Support of IsolationLevel for Transaction added, default to Snapshot
+>> Signature for methods ExecuteReaderProcedure and ExecuteNonQueryProcedure changed by removing the parameters inTransaction and IsolationLevel
+ReCAPTCHA:
+>> Private key masked in logs for confidentiality
+Utility:
+>> GetIP method extended to support HTTP_X_FORWARDED_FOR
+>> GetUserAgent method added
+>> DecodeBase64ToUTF8 method added
+Log4Net:
+>> configuration moved from log4net.config to Web.config to simplify deployment over different environments
+>> Log.Instance.Error changed to Log.Instance.Fatal in the API namespace
+>> AdoNetAppender appender added
+********************************************************************************
+Version 3.0.0 (.NET 4.7.2)
+Folder structure refactored for GitHub
+eMail upgrade to handle Template Parsing and no-reply added (API_EMAIL_MAIL_NOREPLY)
+Masking of input parameters in logs implemented (API_JSONRPC_MASK_PARAMETERS)
+Reealse folder moved from bin/Release to ../../rls
+********************************************************************************
+Version 3.0.1 (.NET 4.7.2)
+JSONRPC.MaskParameters method fixed for large requests
+MemCacheD.ValidateExpiry method fixed for validating default expiry datetime in the past
+********************************************************************************
+Version 3.0.2 (.NET 4.7.2)
+JSONRPC_Request.id updated to optional following the specification at https://www.jsonrpc.org/specification 
+********************************************************************************
+Version 3.0.3 (.NET 4.7.2)
+Stateless JSON-RPC support implemented. Add the application setting API_JSONRPC_STATELESS.
+********************************************************************************
+Version 3.0.4 (.NET 4.7.2)
+Mime-Type "application/json" set for the Content Type JSON-RPC response
+CacheControl "no-cache" set for the JSON-RPC response
+********************************************************************************
+Version 3.0.5 (.NET 4.7.2)
+New Methods added:
+>> API.Utility.GZipCompress to compress a string  with GZip
+>> API.Utility.GZipCompress to decompress a string with GZip
+MemCacheD enhanced to compress/decompress cached data
+********************************************************************************
+Version 3.0.6 (.NET 4.7.2)
+Methods fixed to handle an empty/null input:
+>> API.Utility.GZipCompress
+>> API.Utility.GZipCompress
+********************************************************************************
+Version 4.0.0 (.NET 4.7.2)
+N.B. This Version is NOT backward compatible. If you upgrade to this version then you must upgrade the Client Side code to implement the strict JSON-RPC specifications.
+JSON-RPC response structure fixed to implement strict specifications: https://www.jsonrpc.org/specification
+>> "data" property changed to "result" 
+>> "error.code" changed to type integer
+>> "error.message" changed to type string
+>> "error.data" added as type dynamic
+API.Utility.GetUserAcceptLanguage() added
+API.Utility.EncodeBase64FromUTF8() added
+API.Utility.EncodeBase64FromByteArray() added
+Hide/Remove the Server name and version Headers
+********************************************************************************
+Version 4.1.0 (.NET 4.7.2)
+RESTful API listener implemented using the "api.restful" handler
+>> Diff and merge the Web.*.config files accordingly.
+********************************************************************************
+Version 4.1.1 (.NET 4.7.2)
+Public method Utility.HttpGet() implemented to retrieve the HTTP(s) request for the GET verb
+Public method Utility.HttpPOST() implemented to retrieve the HTTP(s) request for the POST verb
+********************************************************************************
+Version 4.1.2 (.NET 4.7.2)
+Public method API.MemCacheD.GetStats() implemented
+********************************************************************************
+Version 4.1.3 (.NET 4.7.2)
+API authentication fixed when AD down or unreacheable
+********************************************************************************
+Version 4.2.0 (.NET 4.7.2)
+API.Utility static class fixed:
+>> API.Utility.IpAddress suppressed. Use the public API.Utility.GetIP() instead.
+>> API.Utility.UserAgent suppressed. Use the public API.Utility.GetUserAgent() instead.
+>> API.Utility.HttpGET suppressed. Use the JSONRPC_API and RESTful_API public member httpGET.
+>> API.Utility.HttpPOST suppressed. Use the JSONRPC_API and RESTful_API public member httpPOST.
+********************************************************************************
+Version 4.3.1 (.NET 4.7.2)
+Method Utility.GetUserAgent fixed when no user-agent is available
+Response.End() fixed when issuing an exception.
+********************************************************************************
+Version 4.3.2 (.NET 4.7.2)
+API.Performance Class fixed when the Web.config key API_PERFORMANCE_ENABLED is FALSE
+********************************************************************************
+Version 4.4.0 (.NET 4.7.2)
+Class API.TwoFA implemented for handling Two-Factor Authentication algorithm.
+API Session Cookie implemented for both API.JSON-RPC and API.RESTful. Add the API_SESSION_COOKIE key into the Web.config
+Method API.ActiveDirectory.IsValidPassword implemented
+Method API.Utility.GetRandomMD5 implemented
+Method API.Utility.GetRandomSHA256 implemented
+Method API.ReCAPTCHA.Validate fixed by logging at the INFO level rather than FATAL when the ReCAPTCHA does not validate
+********************************************************************************
+Version 4.4.1 (.NET 4.7.2)
+[ENHANCEMENT] Allow large objects over 2GB in memory #6
+[ENHANCEMENT] Improve JSON deserialize performance for large strings #7
+[ENHANCEMENT] Add database selection for Performance monitor #5
+[ENHANCEMENT] Extend RESTful API to allow optional custom HTTP status #9
+********************************************************************************
+Version 4.5.0 (.NET 4.7.2)
+[ENHANCEMENT] Implement API.Static interface #11
+********************************************************************************
+Version 4.6.0 (.NET 4.7.2)
+[ENHANCEMENT] Change default IsolationLevel in ADO.StartTransaction #13
+[ENHANCEMENT] Extend Active Directory to return Manager property #10
+[ENHANCEMENT] Add script to create default database #14
+********************************************************************************
+Version 4.7.0 (.NET 4.7.2)
+[ENHANCEMENT] Firebase Authentication support implemented
+>> Newtonsoft.json requires upgrade to 12.03.0
+********************************************************************************
+Version 5.0.0 (.NET 4.7.2)
+N.B. This Version is NOT backward compatible
+[ENHANCEMENT] Library upgrade to support interfaces
+[ENHANCEMENT] New attribute "AllowAPICall" implemented:
+>> Add the attribute to every public API methods that must be accessible from the Web.
+[ENHANCEMENT] New overridden method IADO.ExecuteBulkCopy with following signature:
+>> public void ExecuteBulkCopy(string destinationTableName, List<KeyValuePair<string, string>> mappings, DataTable dt, bool useCurrentTransaction = false, int copyOptions = 0)
+[ENHANCEMENT] Google Firebase Authentication integrated and library dependencies updated
+********************************************************************************
+Version 5.1.0 (.NET 4.7.2)
+[ENHANCEMENT] Support for HEAD request added
+[ENHANCEMENT] ADO for AD/SQL connection added
+
+********************************************************************************
+Version 6.0.0 (.NET 6.0.0)
+[ENHANCEMENT] Changed System.Data.SqlClient to Microsoft.Data.Client
+[ENHANCEMENT] Removed Ip and Datetime replacement in email parsetemplate function
+[ENHANCEMENT] Removed email.html
+[ENHANCEMENT] Ability to store configuration Keys in json file(s) or database
+[ENHANCEMENT] Split configuration between 2 different locations. appsettings.json (settings needed before startup) and either database or json file (settings needed at runtime). 
+[ENHANCEMENT] Added new configuration  keys : API_SETTINGS and APP_Settings
+[ENHANCEMENT] Consolidated head and restful classes
+[ENHANCEMENT] Ability to block types of API requests based on method verb
+[ENHANCEMENT] Ability to block requests e.g. /favicon
+[ENHANCEMENT] Added interface for firebase
+[ENHANCEMENT] Added interface for active directory
+[ENHANCEMENT] Added interface for memcache
+[ENHANCEMENT] Split utility class between web utility methods and static utility methods
+[ENHANCEMENT] Removed GetCustomConfig function from utility class
+[ENHANCEMENT] Removed GetCustomConfigand Datetime replacement in email parsetemplate function
+[ENHANCEMENT] Added IsFileExtensionAllowed function to utility class
+[ENHANCEMENT] Replaced memcachedD library with .net core EnyimMemcachedCore library (https://github.com/cnblogs/EnyimMemcachedCore)
+[ENHANCEMENT] Added AllowApiCall attribute
+[ENHANCEMENT] log4net hot reloadable
+[ENHANCEMENT] different log4net file for each environment
+	-	new Log4NetCore element in appsettings
+	-	Log4NetConfigFileName : name of log4net config file.
+[ENHANCEMENT] under appconfig key in appsettings new properties
+	-	auto_version : gets latest config from database
+	-	distributed_config : allows the current version to be stored in memcache
+	-	JSONRPC.success has been removed and should be replaced with `ApiServicesHelper.ApiConfiguration.Settings["API_SUCCESS"]`
+	-	Added enabled/disabled flag for APP_Config
+[ENHANCEMENT] updated ‘apiserviceshelper’ with interfaces to make unit testing easier
+[ENHANCEMENT] instantiate singletons before middleware is invoked
+[ENHANCEMENT] Split configuration between 2 different locations. appsettings.json (settings needed before startup) and either database or json file (settings needed at runtime). 
+[ENHANCEMENT] Removed impersonisation 
+[ENHANCEMENT] Use active directory and SQL database as application pool AD user
+[ENHANCEMENT] Split utility class between web utility methods and static utility methods
+[ENHANCEMENT] Removed all static variables where hot reloading is applicable
+[ENHANCEMENT] Added scheme to request object
+[ENHANCEMENT] store firebase key in the database
+********************************************************************************
+Version 6.0.1 (.NET 6.0.0)
+********************************************************************************
+[BUG FIX] removed JVALUE => object mapping from automap.cs
+********************************************************************************
+Version 6.0.2 (.NET 6.0.0)
+********************************************************************************
+[ENHANCEMENT] null values allowable for int,double,date,decimal data types using automapper
+[ENHANCEMENT] empty strings are mapped to null or default when using automapper
+[ENHANCEMENT] added decimal mapping to automapper
+[ENHANCEMENT] New api key to define which types of dates/datetimes you can parse : API_DATETIME_FORMAT E.g. "API_DATETIME_FORMAT": "yyyy-MM-ddTHH:mm,yyyy-MM-dd,yyyy-MM-ddTHH:mm:ss"
+********************************************************************************
+Version 6.0.3 (.NET 6.0.0)
+ - [BUG FIX]  allow literal null to be passed using automapper as a parameter value
+********************************************************************************
+Version 6.0.4 (.NET 6.0.0)
+- [BUG FIX]  allow nulls in memecache
+- [ENHANCEMENT] CasRepositoryFlush returns boolean
+********************************************************************************
+Version 6.0.5 (.NET 6.0.0)
+- [ENHANCEMENT] ability to exclude OU's from AD query using 'API_BLACKLIST_OUS' config key. Values should be in csv format
+********************************************************************************
+Version 6.0.6 (.NET 6.0.0)
+- [ENHANCEMENT] adding domain and path to caching of memcached AD object
+- [BUG FIX] only cache AD object if successfully executed code not regardless of success
+********************************************************************************
+Version 6.0.7 (.NET 6.0.0)
+- [ENHANCEMENT] if AD memcache already exists then does not try and requery AD to get the memcache key
+- [ENHANCEMENT] removing unneccessary logging
+- [ENHANCEMENT] masking parameteres for static and restful calls
+- [ENHANCEMENT] change API_BLACKLIST_OUS to API_AD_BLACKLIST_OUS
+- [ENHANCEMENT] change API_JSONRPC_MASK_PARAMETERS to API_MASK_PARAMETERS
+********************************************************************************
+Version 6.1.0 (.NET 6.0.0)
+ - [ENHANCEMENT] added DTO sanitizing functionality
+      #	HtmlSanitizer library
+      # custom attributes
+       = APINoHtmlStrip
+       = APINoTrim
+       = APILowerCase
+       = APIUpperCase
+       = APIHTMLSanitizer
+  - [ENHANCEMENT] added parameter cleansing functionality
+      # custom attributes
+       = APINoCleanseDto
+  - [ENHANCEMENT] added two new utility functions
+      # public static bool TryCast &gt;T&gt;(this object obj, out T result)
+      # public static bool TryParseJson &gt;T&gt;(this string @this, out T result)
+  - [ENHANCEMENT] added MethodHasAttribute class
+  - [ENHANCEMENT] added new config block to appsettings.json
+    "HTMLsanitizerRules": {
+    "RemoveAllowedTags": {
+      "items": []
+    },
+    "RemoveAllowedAttributes": {
+      "items": []
+    },
+    "RemoveAllowedCssClasses": {
+      "items": []
+    },
+    "RemoveAllowedCssProperties": {
+      "items": []
+    },
+    "RemoveAllowedAtRules": {
+      "items": []
+    },
+    "RemoveAllowedSchemes": {
+      "items": []
+    },
+    "RemoveUriAttributes": {
+      "items": []
+    }
+  }
+********************************************************************************
+Version 6.1.1 (.NET 6.0.0)
+- [BUG FIX] BUG FIX FOR SANITISER
+********************************************************************************
+Version 6.1.2 (.NET 6.0.0)
+- [BUG FIX] bug fix for memcache caching AD
+- [BUG FIX] API library no longer throws caught errors
+- [ENHANCEMENT] API library returns a 500 status code from catch blocks
+- [ENHANCEMENT] MemcacheD to return boolean result of CAS Flush
+- [BUG FIX] removed nulling of AD user certificates for logging as causes intermittent errors
+********************************************************************************
+Version 6.1.3 (.NET 6.0.0)
+- [ENHANCEMENT] If api config not loaded return 500 errors and not stop application pool
+- [BUG FIX]  after response sent to client finish task
+- [BUG FIX] only create thread if performance is enabled
+- [ENHANCEMENT] distributed flag and auto version are dependent on each other if distributed flag is true
+- [BUG FIX] Change to only call UserPrincipalForLogging if UserPrincipal not null
+- [ENHANCEMENT] change how performance thread is created
+- [ENHANCEMENT] change how api timing is recorded
+********************************************************************************
+Version 6.1.4 (.NET 6.0.0)
+- [ENHANCEMENT] log name of machine as well
+- [ENHANCEMENT] added fatal logging request information if error during parsing of request
+- [ENHANCEMENT] added logging if using json files for config items
+- [BUG FIX] appconfiguration parse as decimal version number
+********************************************************************************
+Version 6.1.5 (.NET 6.0.0)
+- [BUG FIX] appconfiguration parse as decimal version number
+********************************************************************************
+Version 6.1.6 (.NET 6.0.0)
+- [BUG FIX] cookie fix
+********************************************************************************
+Version 6.1.7 (.NET 6.0.0)
+- [ENHANCEMENT] when instantiating memcacheD class check to determine if memcache is available. If its not log a fatal message
+********************************************************************************
+Version 6.1.8 (.NET 6.0.0)
+- [ENHANCEMENT] adding class type fullname to AD memcache object
+********************************************************************************
+Version 6.1.9 (.NET 6.0.0)
+- [ENHANCEMENT] adding activity root id to log4net
+- [ENHANCEMENT] changing api stopwatch to activity duration
+- [ENHANCEMENT] including pdb on build
+********************************************************************************
+Version 6.1.10 (.NET 6.0.0)
+- [ENHANCEMENT] adding new ExecuteCustomReaderProcedureSetup ado function which returns an SLQ command object
+- [BUG FIX] no longer serializing responses for static, restful and head requests
+- [BUG FIX] memcache cas flush
+- [ENHANCEMENT] updated firebaseadmin
+- [ENHANCEMENT] updated Microsoft.Extensions.Logging.Log4Net.AspNetCore
+- [ENHANCEMENT] added ConsoleConfiguration as a way to setup console apps easily
+- [ENHANCEMENT] html sanitizer updated package as had vulnerability
+- [ENHANCEMENT] html sanitizer keys removed from appsettings and added to apiconfig
+********************************************************************************
+Version 6.1.11 (.NET 6.0.0)
+- [BUG FIX] static now returns 304 if not modified
+- [BUG FIX] restful cookie bug
+********************************************************************************
+Version 6.1.12 (.NET 6.0.0)
+- [ENHANCEMENT] removed API_PERFORMANCE_DATABASE from api config
+- [ENHANCEMENT] add tracing functionality to api
+ > new api config keys   "API_TRACE_ENABLED" and   "API_TRACE_RECORD_IP"
+ > new appsettings.json adosettings entry  "API_TRACE_DATABASE":
+- [ENHANCEMENT] static request 304 performance improvement
+********************************************************************************
+Version 6.1.13 (.NET 6.0.0)
+- [BUG FIX] head response can now return application defined response codes
+- [ENHANCEMENT] added methodreader function to return value of custom attribute
+- [ENHANCEMENT] Add expires and cache-control response headers for static
+- [ENHANCEMENT] Check last-updated on middleware for static
+********************************************************************************
+Version 6.1.14 (.NET 6.0.0)
+- [ENHANCEMENT] added date formatting for headers
+- [ENHANCEMENT] added cache control public, content length '0' for restful response
+- [ENHANCEMENT] changing userprincipal cache object to only cache a subset of keys rather than whole object
+- [ENHANCEMENT] add cache tracing
+- [ENHANCEMENT] adding api tracing in trace directory
+- [ENHANCEMENT] adding Ad enabled account check when authenticating user in API
+- [ENHANCEMENT] adding database tracing
+- [ENHANCEMENT] removing UserPrincipalForLogging as no longer needed
+- [ENHANCEMENT] changed root id to correlation id
+- [ENHANCEMENT] added correlationID as a parameter passed as part of apiRequest params
+- [ENHANCEMENT] refactored how individual AD object being created
+- [ENHANCEMENT] removed this function 'ExecuteBulkCopy' function with 'SqlBulkCopyColumnMapping' and refactored code as necessary
+********************************************************************************
+Version 6.1.15 (.NET 6.0.0)
+- [ENHANCEMENT] removed auto version for APP Config and replaced it with version being set as null
+- [ENHANCEMENT] add distributed configuration for API config with version allowed to be null to get latest DB version
+- [ENHANCEMENT] moved all cache settings to appsettings.json abd are hot reloadable
+- [ENHANCEMENT] add version, distributed_config,API_TRACE_ENABLED,API_TRACE_RECORD_IP  and refresh to IApiConfiguration interface
+- [ENHANCEMENT] added refresh and version, and removed auto_version from IAppConfiguration interface
+- [ENHANCEMENT] refactored appliction dictionary configuration code
+- [ENHANCEMENT] moved API tracing keys to appsettings.json and are hot reloadable
+- [ENHANCEMENT] moved pefromance enabled flag to appsettings.json and is hot reloadable
+- [ENHANCEMENT] moved datatbase tracing flag to appsettings.json and is hot reloadable
+- [ENHANCEMENT] check if application and api settings needs to be updated once per API request rather than per key request
+- [ENHANCEMENT] updated consoleconfiguration.cs
+- [ENHANCEMENT] updated serviceconfiguration.cs
+- [BUG FIX] bug fix for serializing and deserializing userpincipal object
+********************************************************************************
+Version 6.1.16 (.NET 6.0.0)
+[BUG FIX] bug fix reading distributed config from cache
+********************************************************************************
+Version 6.1.17 (.NET 6.0.0)
+- [BUG FIX] bug fix reading distributed config from cache
+- [ENHANCEMENT] remove distributed config flag, rely on version being null
+********************************************************************************
+Version 6.1.18 (.NET 6.0.0)
+- [BUG FIX] upgrading Microsoft.Data.SqlClient to 5.1.4 as 5.1.1 is deprecated
+********************************************************************************
+Version 6.1.19 (.NET 6.0.0)
+- [BUG FIX] improve resilience of MemCacheD CAS flush
+********************************************************************************
+Version 6.1.20 (.NET 6.0.0)
+- [BUG FIX] Update MemCacheD CAS flush for possibility of non-existent CAS
+********************************************************************************
+Version 6.1.21 (.NET 6.0.0)
+- [BUG FIX] Added cache storage of the key GET_WITH_CAS_TIMEOF_EXCEPTION key to store the datetime value of when the GetWithCas exception occurred.
+- [BUG FIX] Fixes for session to not be expired and System.ArgumentOutOfRangeException when calling GetWithCas.
+********************************************************************************
+Version 6.1.22 (.NET 6.0.0)
+- [ENHANCEMENT] Ensure Stateless flag functions as designed for session management
+********************************************************************************
+Version 6.1.23 (.NET 6.0.0)
+- [BUG FIX] Dispose of database connection if it cant't be opened
+********************************************************************************
+Version 6.1.24 (.NET 6.0.0)
+- [BUG FIX] Dispose of database connection if it can't be opened
+********************************************************************************
+Version 6.1.25 (.NET 6.0.0)
+- [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
+********************************************************************************
+Version 6.1.26 (.NET 6.0.0)
+- [BUG FIX] memcache CAS locking duration changed
+********************************************************************************
+Version 7.0.0 (.NET 8.0.0)
+- [ENHANCEMENT] removed references to classes that are not required for the API. They are now moved to different projects
+- [BUG FIX] parse error function in restful had a default of " " instead of ""
+- [BUG FIX] changed accessibility level of MemcachedClient to be internal
+- [ENHANCEMENT] added logging of networkusername when AD connectivity issue
+- [ENHANCEMENT] use method handle and static dictionary to speed up reflection lookup
+- [BUG FIX] handle custom sql datatypes on non query procedure 
+- [BUG FIX] Dispose of database connection if it can't be opened
+- [ENHANCEMENT] memcache CAS locking for casrepositoryflush implemented
+- [ENHANCEMENT] updated libraries -- sqlclient, enyim and log4net
+- [ENHANCEMENT] move interfaces to interfaces directory
+- [ENHANCEMENT] remove CustomPropertyAttributes.cs as now in CSOSanitiser
+- [BUG FIX] removed  internal set bug --   public int API_ADO_BULKCOPY_TIMEOUT { get; internal set; }
+- [ENHANCEMENT] change activity declaration type in Middleware/API.Middleware.
+- [BUG FIX] parse error function in restful had a default of " " instead of ""
+- [BUG FIX] changed accessibility level of MemcachedClient to be internal
+- [ENHANCEMENT] added logging of networkusername when AD connectivity issue
+********************************************************************************
+Version 7.0.1 (.NET 8.0.0)
+- [BUG FIX] check that key is not already in attribute dictionarys
+********************************************************************************
+Version 7.0.2 (.NET 8.0.0)
+- [ENHANCEMENT] removed Microsoft.AspNetCore.Authentication.OpenIdConnect package
+- [ENHANCEMENT] improved error catching of performance thread
+- [ENHANCEMENT] improved how performance data gets stored
+- [BUG FIX] Bug fix for AttributeDictionary in CheckAPICallsAllowed
+- [ENHANCEMENT] upgraded Microsoft.Data.SqlClient to 5.2.1
+********************************************************************************
+Version 7.0.3 (.NET 8.0.0)
+-[BUG FIX] allow request type for tracing to be null
+-[BUG FIX] request type record head for tracing
+-[BUG FIX] Bug fix for AttributeDictionary in CheckAPICallsAllowed
+********************************************************************************
+Version 7.0.4 (.NET 8.0.0)
+- [BUG FIX] allow request type for tracing to be null
+- [ENHANCEMENT] removed Microsoft.AspNetCore.Authentication.OpenIdConnect package
+- [ENHANCEMENT] improved error catching of performance thread
+- [ENHANCEMENT] improved how performance data gets stored
+- [BUG FIX] Bug fix for AttributeDictionary in CheckAPICallsAllowed
+- [ENHANCEMENT] upgraded Microsoft.Data.SqlClient to 5.2.1
+- [BUG FIX] request type record head for tracing
+- [BUG FIX] Bug fix for AttributeDictionary in CheckAPICallsAllowed
+********************************************************************************
+Version 7.0.5 (.NET 8.0.0)
+- [BUG FIX] trace method and params not being recorded if cache trace disable
+********************************************************************************
+Version 7.0.6 (.NET 8.0.0)
+- [BUG FIX] trace method and params not being recorded if cache trace disable
+- [ENHANCEMENT] changed when trace gets its correlationID
+- [ENHANCEMENT] removed threadAbortException as performance thread abort is handled in its own try catch. removed from middleware,static, jsonrpc and RESTful
+- [BUG FIX] added try catch around dictionary tryadd function use
+- [ENHANCEMENT] improved logging for jsonrpc and restful requests
+- [BUG FIX] returnResponseAsync now raises OperationCanceledException rather than TaskCanceledException
+- [ENHANCEMENT] wrap performance thread creation in existing try catch block
+- [BUG FIX] change from sending e.message to "Bad Request" in restful and static exception response
+- [ENHANCEMENT] changing attribute dictionarys to be ConcurrentDictionary
+********************************************************************************
+Version 7.0.7 (.NET 8.0.0)
+- [ENHANCEMENT] check that restful, head and static statuscodes for return are valid
+********************************************************************************
+Version 7.0.8 (.NET 8.0.0)
+- [ENHANCEMENT] added referrer and content length to api trace
+********************************************************************************
+Version 7.0.10 (.NET 8.0.0)
+- [ENHANCEMENT] refactored configuration insert to deployupdate table
+- [ENHANCEMENT] removed scoped ADO as never used
+- [ENHANCEMENT]refactored to use a using statement
+> using var performanceCollector = new PerformanceCollector();
+> using var cancelPerformance = new CancellationTokenSource();
+> using var apiCancellationToken = new CancellationTokenSource();
+********************************************************************************
+Version 7.0.11 (.NET 8.0.0)
+- [BUG FIX] restored microsoft.data.sqlclient to correct version
+********************************************************************************
+Version 7.0.12 (.NET 8.0.0)
+- [ENHANCEMENT] allow json config files to have strings or json objects using CombineSectionValues function
+********************************************************************************
+Version 7.0.13 (.NET 8.0.0)
+- [LIBRARY UPDATE] upgraded microsoft.data.sqlclient to 5.2.2
+********************************************************************************
+Version 7.0.14 (.NET 8.0.0)
+- [ENHANCEMENT] updated code to allow application pool to start if memcache is unavailable
+- [ENHANCEMENT] removed ApplicationLoaded flag from api as if there is no API config loaded on application startup then let an exception be thrown that is not caught
+- [ENHANCEMENT] updated ICacheConfig to allow API_MEMCACHED_ENABLED to be set in Code
+- [ENHANCEMENT] updated MemCacheD constructor to have the stats query within try catch Block
+- [ENHANCEMENT] updated ConsoleConfiguration.cs to remove ApplicationLoaded flag
+- [BUG FIX] updated ReadJSONSettings to return null if the version that is being looked for is not there
+********************************************************************************
+Version 7.0.15 (.NET 8.0.0)
+- [ENHANCEMENT] added argon2 sha256 methods -- GetArgon2SHA256 and VerifyArgon2SHA256
+- [BUG FIX] moved where  trace.TrcRequestVerb = requestMethod; as if blockedurls used then verb wouldn't be set
+- [BUG FIX] updated GatherTraceInformation to  take in an IRequest interface and check the interface type to determine the parameters
+- [ENHANCEMENT]  upgraded EnyimMemcachedCore from 3.2.1 to 3.2.3
+- [ENHANCEMENT] upgraded Microsoft.Extensions.DependencyInjection from 8.0.0 to 8.0.1
+- [ENHANCEMENT] upgraded Microsoft.Extensions.Logging from 8.0.0 to 8.0.1
+- [ENHANCEMENT] upgraded System.Diagnostics.PerformanceCounter from 8.0.0 to 8.0.1
+- [ENHANCEMENT] upgraded System.DirectoryServices.AccountManagement from 8.0.0 to 8.0.1
+********************************************************************************
+Version 7.0.16 (.NET 8.0.0)
+- [ENHANCEMENT] updated Microsoft.Extensions.DependencyInjection to 9.0.0
+- [ENHANCEMENT] updated System.Diagnostics.PerformanceCounter to 9.0.0
+- [ENHANCEMENT] updated System.DirectoryServices.AccountManagement to 9.0.0
+- [ENHANCEMENT] updated Microsoft.Extensions.Logging to 9.0.0
+- [ENHANCEMENT] change parse request from fatal logs to error logs
+- [ENHANCEMENT] change MemCacheD ValidateExpiry to log errors if changing cache expiry times rather than info
+- [ENHANCEMENT] created 3 new appsettings properties
+  &gt; int API_CACHE_LOCK_POLL_INTERVAL { get; }
+  &gt; string API_CACHE_LOCK_PREFIX { get; }
+  &gt; int API_CACHE_LOCK_MAX_TIME { get;}
+- [ENHANCEMENT] added GetSHA256 (copy of function in utility.cs) function to memcached class
+- [ENHANCEMENT] created custom configuration exception
+- [ENHANCEMENT] created private function metaCacheLock
+- [ENHANCEMENT] create new Get_BSO_WITHLOCK functionality for cache stampede protection
+- [ENHANCEMENT] create new Store_BSO_REMOVELOCK functionality for cache stampede protection
+- [ENHANCEMENT] added cache tracing for cache lock
+- [ENHANCEMENT] updated api cache trace table
+- [ENHANCEMENT] added 2 new values to MemCachedD_Value class
+  &gt; decimal cacheLockDuration
+  &gt; bool cacheLockUsed
+- [ENHANCEMENT]  validated config for memcache on application pool startup
+- [ENHANCEMENT] added new cache_lock_settings block to cachesettings block of appsettings.json with new keys
+"CacheSettings": {
+  "API_MEMCACHED_SALSA": "apd_test1_3",
+  "API_MEMCACHED_MAX_VALIDITY": "2592000",
+  "API_MEMCACHED_MAX_SIZE": "128",
+  "API_MEMCACHED_ENABLED": true,
+  "API_CACHE_TRACE_ENABLED": true,
+  "API_CACHE_LOCK_POLL_INTERVAL": "1",
+  "API_CACHE_LOCK_PREFIX1": "LCK",
+  "API_CACHE_LOCK_MAX_TIME": "10",
+  "API_CACHE_LOCK_SETTINGS": {
+  "API_CACHE_LOCK_ENABLED": false,
+  "API_CACHE_LOCK_POLL_INTERVAL": "1",
+  "API_CACHE_LOCK_PREFIX": "LCK",
+  "API_CACHE_LOCK_MAX_TIME": "30"
+  }
+},
+- [ENHANCEMENT] REMOVED  public static CacheSettings CacheSettings; from apiserviceshelper
+********************************************************************************
+Version 8.0.0 (.NET 8.0.0)
+- [ENHANCEMENT] added support for entra SSO login
+- [ENHANCEMENT] upgrade to .net8  log for JWKS success
+- [ENHANCEMENT] packages updated to latest vesion
+- [BUGFIX] moving response content length to correct if statement
+- [BUG FIX] JSONRPC AND RESTFUL threw exceptions if ParseError used in certain scenarios
+- [BUG FIX] removed unnecessary instantiation of EntraTokenAuthentication()
+- [ENHANCEMENT] log4net updated to 3.1.0
+- [ENHANCEMENT] cache external JWKS once recevied and fail back to cached copy if unable to get latest copy
+- [ENHANCEMENT] added first business phone record from graph api
+- [ENHANCEMENT] EnyimMemcachedCore updated to 3.4.0
+- [ENHANCEMENT] update Console/ConsoleConfiguration.cs -&gt; AddApiLibrary to allow for optional packages to be added at runtime
+- [ENHANCEMENT] Added GetStatsDictionary to return a Dictionary of memcache stats
+- [BUG FIX] memcache works with a DNS name
+- [ENHANCEMENT] allow machine to machine authentication using entra SSO tokens
+- [ENHANCEMENT] Added filename to byte[] streamed output
+- [ENHANCEMENT] remove transaction on trace insert
+- [ENHANCEMENT] dont log for OperationCanceledException
+- [ENHANCEMENT] changing error logs to info logs for jsopnrpc exceptionns for malformed json
+- [ENHANCEMENT] added attribute used for identity within the API when an external ENTRAID token that is a service account
+- [BUG FIX] memcache fix for on startup when node is not available. Note: appsettings.json memcached times need to be low enough to allow app to startup in time
+- [ENHANCEMENT] a white list of endpoints that can be access is now recorded
+- [ENHANCEMENT] a list of assemblies for reflection can now be supplied otherwise all assemblies have to be iterated through
+- [ENHANCEMENT] removing head as an allowed endpoint from APISettings

@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Mime;
 using System.Reflection;
 using System.Text.RegularExpressions;
-
 namespace API
 {
     /// <summary>
@@ -25,21 +24,19 @@ namespace API
         /// <summary>
         ///  allowed http methods
         /// </summary>
-        public string[] AllowedHTTPMethods = new string[] { "GET", "POST","HEAD" };
+        public string[] AllowedHTTPMethods = new string[] { "GET", "POST", "HEAD" };
 
 
         public RESTful() : base()
-           {
+        {
         }
-
-
 
         #region Methods
         /// <summary>
         /// ProcessRequest executed automatically by the iHttpHandler interface
         /// </summary>
         /// <param name="httpContext"></param>
-        public async Task ProcessRequest(HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
+        public async Task ProcessRequest(Auth auth, UserDetail userDetail, HttpContext httpContext, CancellationTokenSource apiCancellationToken, Thread performanceThread, bool API_PERFORMANCE_ENABLED, Trace trace)
         {
             // Were we already canceled?
             apiCancellationToken.Token.ThrowIfCancellationRequested();
@@ -50,7 +47,7 @@ namespace API
 
                 httpGET = GetHttpGET(httpContext);
                 httpPOST = await GetHttpPOST(httpContext);
-                
+
                 // Set Mime-Type for the Content Type and override the Charset
                 httpContext.Response.ContentType = $"charset=utf-8";
 
@@ -72,7 +69,7 @@ namespace API
 
                 IResponseOutput result = null;
 
-                bool? isAuthenticated = Authenticate(ref httpContext);
+                bool? isAuthenticated = auth.Authenticate(ref httpContext, ref userDetail, apiCancellationToken);
                 try
                 {
                     switch (isAuthenticated)
@@ -82,25 +79,36 @@ namespace API
                             {
                                 performanceThread.Start();
                             }
-                            result = GetResult(httpContext, trace,sessionCookie);
+                            result = GetResult(httpContext, userDetail, trace, auth, sessionCookie);
                             break;
                         case true: //Windows Authentication
                             if (API_PERFORMANCE_ENABLED)
                             {
                                 performanceThread.Start();
                             }
-                            result = GetResult(httpContext,trace);
+                            result = GetResult(httpContext, userDetail, trace, auth);
                             break;
                         case false: //Error
                             await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
                             break;
                     }
                 }
+                catch (OperationCanceledException e)
+                {
+                    //don't need to do anything here as operation has been cancelled
+                    //exit this try catch and go to next one
+                    throw new OperationCanceledException();
+                }
                 catch (Exception e)
                 {
                     Log.Instance.Error(e);
                     Log.Instance.Error(Utility.JsonSerialize_IgnoreLoopingReference(trace));
                     await ParseError(httpContext, HttpStatusCode.InternalServerError, apiCancellationToken, "Internal Error");
+                }
+
+                if (result != null)
+                {
+                    trace.TrcCacheUsed = result.responseUsedCache;
                 }
 
                 if (result == null)
@@ -168,10 +176,10 @@ namespace API
 
                         if (result.response?.GetType() == typeof(byte[]))
                         {
-                            Stream stream = new MemoryStream(result.response);
-                            var fullFileName = Path.GetTempFileName();
-                            File.WriteAllBytes(fullFileName, result.response);
-                            await returnResponseAsync(httpContext, fullFileName, apiCancellationToken, HttpStatusCode.OK, true);
+                            // Use MemoryStream to store the byte array
+                            using var memoryStream = new MemoryStream(result.response);
+                            
+                            await returnResponseAsync(httpContext, result.fileName, apiCancellationToken, result.statusCode, memoryStream);
                         }
                         else
                         {
@@ -208,10 +216,10 @@ namespace API
         {
             Log.Instance.Info("IP: " + ApiServicesHelper.WebUtility.GetIP() + ", Status Code: " + statusCode.ToString() + ", Status Description: " + statusDescription);
 
-           if (string.IsNullOrEmpty(statusDescription))
+            if (string.IsNullOrEmpty(statusDescription))
                 statusDescription = ((HttpStatusCode)statusCode).ToString();
 
-                await returnResponseAsync(context, statusDescription, sourceToken, statusCode);
+            await returnResponseAsync(context, statusDescription, sourceToken, statusCode);
         }
 
         /// <summary>
@@ -250,7 +258,7 @@ namespace API
 
                 string requestType = context.Request.Method.ToLower();
 
-                if(requestType != "head")
+                if (requestType != "head")
                 {
                     requestType = "RESTful";
                 }
@@ -262,13 +270,13 @@ namespace API
                 // Validate the Application path
                 if (RequestParams.Count() != 2)
                 {
-                   await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid " + requestType+" handler");
+                    await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid " + requestType + " handler");
                 }
 
-            
+
                 // Get the RESTful parameters
                 RequestParams = RequestParams[1].Split('/').ToList();
-               
+
                 Log.Instance.Info("Request params: " + Utility.JsonSerialize_IgnoreLoopingReference(RequestParams));
 
                 // Validate the request
@@ -276,13 +284,19 @@ namespace API
                 {
                     await ParseError(context, HttpStatusCode.BadRequest, sourceToken, "Invalid " + requestType + "  parameters");
                 }
-   
+
 
                 // Verify the method exists
                 if (!ValidateMethod(RequestParams))
                 {
                     await ParseError(context, HttpStatusCode.BadRequest, sourceToken, requestType + " method not found");
                 }
+            }
+            catch (OperationCanceledException e)
+            {
+                //don't need to do anything here as operation has been cancelled
+                //exit this try catch and go to next one
+                throw new OperationCanceledException();
             }
             catch (Exception e)
             {
@@ -339,13 +353,14 @@ namespace API
         /// Invoke and return the results from the mapped method
         /// </summary>
         /// <returns></returns>
-        private dynamic GetResult(HttpContext context,Trace trace, Cookie sessionCookie = null)
+        private dynamic GetResult(HttpContext context, UserDetail userDetail, Trace trace, Auth auth, Cookie sessionCookie = null)
         {
             // Set the API object
             RESTful_API apiRequest = new RESTful_API();
             apiRequest.method = RequestParams[0];
             apiRequest.parameters = RequestParams;
-            apiRequest.userPrincipal = UserPrincipal;
+            // apiRequest.userPrincipal = auth.UserPrincipal;
+            apiRequest.userDetail = userDetail;
             apiRequest.ipAddress = ApiServicesHelper.WebUtility.GetIP();
             apiRequest.userAgent = ApiServicesHelper.WebUtility.GetUserAgent();
             apiRequest.requestType = context.Request.Method;
@@ -359,7 +374,7 @@ namespace API
             //gather trace information
             GatherTraceInformation(apiRequest, trace);
 
-            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
+            Log.Instance.Info("API Request: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(userDetail)));
 
             // Verify the method exists
             MethodInfo methodInfo = MapMethod(RequestParams);
@@ -441,6 +456,11 @@ namespace API
         public Cookie sessionCookie { get; set; }
         public dynamic data { get; set; }
         public dynamic error { get; set; }
+
+        /// <summary>
+        /// request used cache 
+        /// </summary>
+        public bool? responseUsedCache { get; set; }
         #endregion
     }
 
@@ -463,7 +483,13 @@ namespace API
         /// <summary>
         /// Active Directory userPrincipal
         /// </summary>
-        public dynamic userPrincipal { get; set; }
+        //  public dynamic userPrincipal { get; set; }
+
+
+        /// <summary>
+        /// Active Directory userPrincipal
+        /// </summary>
+        public UserDetail userDetail { get; set; }
 
         /// <summary>
         /// Client IP address

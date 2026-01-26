@@ -1,4 +1,5 @@
 ﻿using Enyim.Caching.Memcached;
+using System.Net;
 
 namespace API
 {
@@ -19,5 +20,6 @@ namespace API
         bool CasRepositoryFlush(string repository);
         void FlushAll();
         ServerStats GetStats();
+        Dictionary<string, string>? GetStatsDictionary();
     }
 }

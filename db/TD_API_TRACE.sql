@@ -9,7 +9,7 @@
 	[TRC_STARTTIME] DATETIME NOT NULL, 
     [TRC_DURATION] DECIMAL(18,3) NOT NULL, 
     [TRC_STATUSCODE] INT NOT NULL, 
-    [TRC_MACHINENAME] varchar(256) NOT NULL,
+    [TRC_MACHINENAME] varchar(256) NULL,
     [TRC_REQUEST_TYPE] VARCHAR(50) NULL, 
     [TRC_REQUEST_VERB] VARCHAR(50) NOT NULL, 
     [TRC_ERROR_PATH] VARCHAR(1024) NULL,
@@ -17,6 +17,8 @@
     [TRC_JSONRPC_ERROR_CODE] int null,
     [TRC_CONTENT_LENGTH] BIGINT NULL, 
     [TRC_REFERER] VARCHAR(MAX) NULL, 
+    [TRC_RESPONSE_CONTENT_LENGTH] BIGINT NULL, 
+    [TRC_CACHE_USED] BIT NULL, 
     PRIMARY KEY CLUSTERED ([TRC_ID] ASC)
 )
 
@@ -128,3 +130,21 @@ EXEC sp_addextendedproperty @name = N'MS_Description',
     @level1name = N'TD_API_TRACE',
     @level2type = N'COLUMN',
     @level2name = N'TRC_CONTENT_LENGTH'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'response content length in bytes',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TD_API_TRACE',
+    @level2type = N'COLUMN',
+    @level2name = N'TRC_RESPONSE_CONTENT_LENGTH'
+GO
+EXEC sp_addextendedproperty @name = N'MS_Description',
+    @value = N'indicates if the application flagged that cache was used to generate the response',
+    @level0type = N'SCHEMA',
+    @level0name = N'dbo',
+    @level1type = N'TABLE',
+    @level1name = N'TD_API_TRACE',
+    @level2type = N'COLUMN',
+    @level2name = N'TRC_CACHE_USED'

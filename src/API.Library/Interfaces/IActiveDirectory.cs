@@ -5,13 +5,14 @@ namespace API
 {
     public interface IActiveDirectory
     {
-        IDictionary<string, dynamic> List<T>() where T : UserPrincipal;
-        IDictionary<string, dynamic> List();
+        IDictionary<string, UserDetail> List<T>() where T : UserPrincipal;
+        IDictionary<string, UserDetail> List();
         dynamic Search<T>(string username) where T : UserPrincipal;
         dynamic Search(string username);
+        [Obsolete]
         bool IsPasswordValid(dynamic userPrincipal, string password);
         PrincipalContext adContext { get; }
-        public dynamic CreateAPIUserPrincipalObject(dynamic userPrincipal);
-
+        public Dictionary<string, UserDetail> CreateAPIUserPrincipalObject(dynamic userPrincipal);
+        
     }
 }

@@ -5,6 +5,7 @@ using System.DirectoryServices.AccountManagement;
 using System.Dynamic;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -20,42 +21,6 @@ namespace API
         /// the type of middleware that the request is.
         /// </summary>
         public string middlewareType = null;
-
-        /// <summary>
-        /// Windows Authentication constant
-        /// </summary>
-        internal const string AUTHENTICATION_TYPE_WINDOWS = "WINDOWS";
-
-        /// <summary>
-        /// Anonymous Authentication constant
-        /// </summary>
-        internal const string AUTHENTICATION_TYPE_ANONYMOUS = "ANONYMOUS";
-
-        /// <summary>
-        /// Any Authentication constant
-        /// </summary>
-        internal const string AUTHENTICATION_TYPE_ANY = "ANY";
-
-        /// <summary>
-        /// Active Directory User Principal
-        /// </summary>
-        internal dynamic UserPrincipal = null;
-
-        /// <summary>
-        /// UserPrincipal container in Session
-        /// </summary>
-        const string UserPrincipal_Container = "UserPrincipal";
-
-        /// <summary>
-        /// Network Identity from IIS authentication
-        /// </summary>
-        internal string NetworkIdentity = null;
-
-        /// <summary>
-        /// Network Username from IIS authentication
-        /// </summary>
-        internal string NetworkUsername = null;
-
 
         /// <summary>
         /// HTTP POST Request
@@ -83,257 +48,6 @@ namespace API
         {
         }
 
-        /// <summary>
-        /// Authenticate the user in the context
-        /// </summary>
-        /// <param name="context"></param>
-        internal bool? Authenticate(ref HttpContext context)
-        {
-
-            bool? isAuthenticated = null;
-
-            Log.Instance.Info("Stateless: " + ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]);
-
-            // Get the username if any
-            if (context.User.Identity.IsAuthenticated)
-            {
-                // IIS Windows Authentication enabled
-                NetworkIdentity = context.User.Identity.Name;
-                NetworkUsername = context.User.Identity.Name.Split('\\')[1];
-            }
-            else
-            {
-                // IIS Anonymous Authentication enabled
-                NetworkIdentity = null;
-                NetworkUsername = null;
-                Log.Instance.Info("User.Identity not authenticated");
-            }
-
-            //Log.Instance.Info("Network Identity: " + NetworkIdentity);
-            //Log.Instance.Info("Network Username: " + NetworkUsername);
-            //Log.Instance.Info("AD Domain: " + ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]);
-            //Log.Instance.Info("AD Username: " + ApiServicesHelper.ApiConfiguration.Settings["API_AD_USERNAME"]);
-            //Log.Instance.Info("AD Password: ********"); // Hide API_AD_PASSWORD from logs
-
-
-
-            // Check if the request is Stateless
-            if (Convert.ToBoolean(ApiServicesHelper.ApiConfiguration.Settings["API_STATELESS"]))
-            {
-                // Check for the cached userPrincipal
-                MemCachedD_Value userPricipalCache = ApiServicesHelper.CacheD.Get_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity);
-                if (userPricipalCache.hasData)
-                {
-                    isAuthenticated = true;
-                    var userPricipalCacheDeserialized = Utility.JsonDeserialize_IgnoreLoopingReference<ExpandoObject>(userPricipalCache.data.ToString());
-                    UserPrincipal = userPricipalCacheDeserialized == null ? null : userPricipalCacheDeserialized;
-                    Log.Instance.Info("Authentication retrieved from Cache");
-                }
-                else
-                {
-                    isAuthenticated = AuthenticateByType();
-
-                    // Store the cache only when authentication works.
-                    if (isAuthenticated != null)
-                    {
-                        //set userprincipal to be a smaller object
-                        UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
-
-                        // Set the cache to expire at midnight
-                        if (ApiServicesHelper.CacheD.Store_BSO<dynamic>("API", "Common", "Authenticate", NetworkIdentity, Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal), DateTime.Today.AddDays(1)))
-                        {
-                            Log.Instance.Info("Authentication stored in Cache");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Check if a new Session has been instantiated
-                if (context.Session.IsAvailable)
-                {
-                    // Call the SessionID to initiate the Session
-                    Log.Instance.Info("Session ID: " + context.Session.Id);
-
-                    var user = context.Session.GetString(UserPrincipal_Container);
-                    if (user == null)
-                    {
-                        isAuthenticated = AuthenticateByType();
-
-                        // Initiate a new Session only when authentication works.
-                        if (isAuthenticated != null)
-                        {
-                            // Save the serialized userPrincipal in the Session
-
-                            //set userprincipal to be a smaller object
-                            UserPrincipal = ApiServicesHelper.ActiveDirectory.CreateAPIUserPrincipalObject(UserPrincipal);
-                            string upString = Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal);
-                            context.Session.SetString(UserPrincipal_Container, upString);
-                            Log.Instance.Info("Authentication stored in Session");
-                        }
-
-                    }
-
-                    else
-                    {
-                        isAuthenticated = true;
-
-                        // Call the SessionID to initiate the Session
-                        Log.Instance.Info("Session ID: " + context.Session.Id);
-                        // Deserialise userPrincipal from Session
-                        UserPrincipal = Utility.JsonDeserialize_IgnoreLoopingReference(context.Session.GetString(UserPrincipal_Container));
-                        Log.Instance.Info("Authentication retrieved from Session");
-                    }
-
-                }
-            }
-
-            // Log userPrincipal
-            Log.Instance.Info("User Principal: " + MaskParameters(Utility.JsonSerialize_IgnoreLoopingReference(UserPrincipal)));
-            return isAuthenticated;
-        }
-
-
-        /// <summary>
-        /// Authenticate the user by the relative Authentication Type
-        /// </summary>
-        private bool? AuthenticateByType()
-        {
-            string[] AuthenticationTypeAllowed = new string[]
-            {
-                AUTHENTICATION_TYPE_WINDOWS,
-                AUTHENTICATION_TYPE_ANONYMOUS,
-                AUTHENTICATION_TYPE_ANY
-            };
-
-            Log.Instance.Info("Authentication Types Allowed: " + Utility.JsonSerialize_IgnoreLoopingReference(AuthenticationTypeAllowed));
-            Log.Instance.Info("Authentication Type Selected: " + ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]);
-
-            // Validate the Authentication type
-            if (!AuthenticationTypeAllowed.Contains(ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]))
-            {
-                Log.Instance.Fatal("Invalid Authentication Type: " + ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"]);
-                return false;
-            }
-
-            switch (ApiServicesHelper.ApiConfiguration.Settings["API_AUTHENTICATION_TYPE"])
-            {
-                case AUTHENTICATION_TYPE_ANY:
-                    // Process the Any Authentication
-                    return AnyAuthentication();
-                case AUTHENTICATION_TYPE_WINDOWS:
-                    // Process the Windows Authentication
-                    return WindowsAuthentication();
-                case AUTHENTICATION_TYPE_ANONYMOUS:
-                default:
-                    // Process the Windows Authentication
-                    return AnonymousAuthentication();
-            }
-        }
-        /// <summary>
-        /// Process Windows Authentication
-        /// </summary>
-        private bool? WindowsAuthentication()
-        {
-            // Override userPrincipal for security
-            UserPrincipal = null;
-
-            // Check the username exists
-            if (string.IsNullOrEmpty(NetworkUsername))
-            {
-                Log.Instance.Fatal("Undefined Network Username");
-                return false;
-            }
-
-            if (string.IsNullOrEmpty(ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]))
-            {
-                Log.Instance.Fatal("Undefined AD Domain");
-                return false;
-            }
-
-            try
-            {
-                // Query AD
-                PrincipalContext domainContext = ApiServicesHelper.ActiveDirectory.adContext;
-
-                UserPrincipal = API_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, NetworkUsername);
-                if (UserPrincipal == null)
-                {
-                    Log.Instance.Fatal("Undefined User Principal against AD");
-                    return false;
-                }
-                else
-                {
-                    //if account is enabled
-                    if (UserPrincipal.Enabled)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        Log.Instance.Info("User Principal account not enabled for : " + UserPrincipal.SamAccountName);
-                        return false;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Instance.Fatal("Unable to connect/query AD");
-                Log.Instance.Fatal("NetworkUsername :" + NetworkUsername);
-                Log.Instance.Fatal(e);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Process Anonymous Authentication
-        /// </summary>
-        private bool? AnonymousAuthentication()
-        {
-            // Override userPrincipal for security
-            UserPrincipal = null;
-            return null;
-        }
-
-        /// <summary>
-        /// Process Any Authentication
-        /// </summary>
-        private bool? AnyAuthentication()
-        {
-            // Override userPrincipal for security
-            UserPrincipal = null;
-
-            // Check the username exists agains the domain
-            if (!string.IsNullOrEmpty(NetworkUsername) && !string.IsNullOrEmpty(ApiServicesHelper.ApiConfiguration.Settings["API_AD_DOMAIN"]))
-            {
-
-
-                try
-                {
-                    // Query AD
-                    PrincipalContext domainContext = ApiServicesHelper.ActiveDirectory.adContext;
-
-                    // Query AD and get the logged username
-                    UserPrincipal = API_UserPrincipal.FindByIdentity(domainContext, IdentityType.SamAccountName, NetworkUsername);
-                    if (UserPrincipal == null)
-                    {
-                        Log.Instance.Fatal("Undefined User Principal against AD");
-                        return false;
-                    }
-
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    Log.Instance.Fatal("Unable to connect/query AD");
-                    Log.Instance.Fatal("NetworkUsername :" + NetworkUsername);
-                    Log.Instance.Fatal(e);
-                    return false;
-                }
-            }
-
-            return null;
-        }
 
         /// <summary>
         /// Get the HTTP request for the GET method
@@ -415,7 +129,7 @@ namespace API
         /// <param name="sourceToken"></param>     
         /// <param name="statusCode"></param>
         /// <param name="isFile"></param>
-        internal async Task returnResponseAsync(HttpContext context, string message, CancellationTokenSource sourceToken, HttpStatusCode statusCode, bool isFile = false)
+        internal async Task returnResponseAsync(HttpContext context, string message, CancellationTokenSource sourceToken, HttpStatusCode statusCode, MemoryStream memoryStream = null)
         {
             Log.Instance.Info("Returning response");
             //check if already cancelled
@@ -435,17 +149,22 @@ namespace API
             }
             else
             {
-                context.Response.StatusCode = (int)statusCode;
-                if (isFile)
+                context.Response.StatusCode = context.Response.StatusCode == 0 ? (int)statusCode : context.Response.StatusCode;
+                if (memoryStream != null)
                 {
-                    await context.Response.SendFileAsync(message);
+                    await memoryStream.CopyToAsync(context.Response.Body, sourceToken.Token);
                 }
                 else
                 {
 
+
                     await context.Response.WriteAsync(message);
+
                 }
+
                 await context.Response.CompleteAsync();
+
+
                 sourceToken.Cancel(true);
 
                 if (sourceToken.IsCancellationRequested)
@@ -500,9 +219,9 @@ namespace API
                 trace.TrcUseragent = apiRequest.userAgent;
                 trace.TrcMethod = apiRequest.method;
 
-                if (apiRequest.userPrincipal != null)
+                if (apiRequest.userDetail != null)
                 {
-                    trace.TrcUsername = apiRequest.userPrincipal.SamAccountName.ToString();
+                    trace.TrcUsername = apiRequest.userDetail.Identity;
                 }
             }
         }
@@ -510,7 +229,7 @@ namespace API
         /// <summary>
         /// method to check if the an api call is allowed and return the methodinfo if it is
         /// </summary>
-        internal static MethodInfo CheckAPICallsAllowed(string methodName, string methodPath, dynamic typeOfClassType)
+        internal static MethodInfo? CheckAPICallsAllowed(string methodName, string methodPath, dynamic typeOfClassType)
         {
            
             //create key for the dictionary
@@ -527,13 +246,17 @@ namespace API
                 //return the methodInfo based on the methodInfo handle
                 MethodInfo m2 = MethodBase.GetMethodFromHandle(AttributeDictionary.AllowedAPIDictionary[serializedAPIInfo]) as MethodInfo;
                 return m2;
+            }else if(!EndpointCache.findApi(methodPath + "." + methodName))
+            {
+                    //if not in the white list bounce
+                 return null;
             }
 
-            // Search in the entire Assemplies till finding the right one
-
-            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+            // Search in the Assemplies 
+            var allAssemblies = EndpointCache.GetListAssemblies();// AppDomain.CurrentDomain.GetAssemblies();
 
             var calledClass = allAssemblies.Select(y => y.GetType(methodPath, false, true)).Where(p => p != null).FirstOrDefault();
+
 
             if (calledClass != null)
             {
@@ -555,7 +278,6 @@ namespace API
                             RuntimeMethodHandle handle = methodInfo.MethodHandle;
 
                             //add handle to dictionary for future lookup
-
                             try
                             {
                                 if (!AttributeDictionary.AllowedAPIDictionary.TryAdd(serializedAPIInfo, handle))
@@ -565,9 +287,9 @@ namespace API
                             }
                             catch (Exception ex)
                             {
-                                Log.Instance.Error(ex); 
+                                Log.Instance.Error(ex);
                             }
-                         
+
                             return methodInfo;
                         }
                     }

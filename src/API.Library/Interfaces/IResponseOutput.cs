@@ -11,5 +11,7 @@ namespace API
         string mimeType { get; set; }
         HttpStatusCode statusCode { get; set; }
         string fileName { get; set; }
+        
+        bool? responseUsedCache { get; set; }
     }
 }

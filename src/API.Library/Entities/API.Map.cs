@@ -26,7 +26,7 @@ namespace API
             {
                 method = RestfulApi.method,
                 parameters = RestfulApi.parameters,
-                userPrincipal = RestfulApi.userPrincipal,
+                userDetail = RestfulApi.userDetail,
                 ipAddress = RestfulApi.ipAddress,
                 userAgent = RestfulApi.userAgent,
                 httpGET = RestfulApi.httpGET,
@@ -51,7 +51,7 @@ namespace API
             {
                 method = JsonRpcApi.method,
                 parameters = JsonRpcApi.parameters,
-                userPrincipal = JsonRpcApi.userPrincipal,
+                userDetail = JsonRpcApi.userDetail,
                 ipAddress = JsonRpcApi.ipAddress,
                 userAgent = JsonRpcApi.userAgent,
                 httpGET = JsonRpcApi.httpGET,
